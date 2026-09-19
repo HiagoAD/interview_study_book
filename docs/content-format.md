@@ -71,6 +71,7 @@ How they play, so write accordingly:
 ## Text
 
 - Content, prompts, options and explanations are GitHub-flavoured Markdown: inline code, emphasis, tables, `$x$` math, `$$ ... $$` display math (one line or several). A literal dollar sign is `\$`. Invalid LaTeX is an error at the line where the formula starts, and so are `\href`, `\url`, `\includegraphics` and `\html...`. Raw HTML is an error: write Markdown, and show tags inside code.
+- Footnotes (`[^1]` with a `[^1]: note` line) work only in a section's content; in a prompt, option or explanation the marker shows as literal text. A link like `[text](#anchor)` reaches nothing, because headings have no anchors: refer to other sections in words.
 - Accepted answers are plain text: no Markdown, no `\$`, no `|` inside an answer.
 - Images: `![alt](images/name.png)`, a path relative to the `.md` file's folder, inside `content/`. Types: png, jpg/jpeg, gif, webp, svg. A missing file, an `http(s):` or other URL, or an absolute path is an error.
 

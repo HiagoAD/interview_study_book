@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { StorageBanner } from './components/StorageBanner'
 import { useRoute } from './router'
 import { BookPage } from './pages/Book'
 import { ChapterPage } from './pages/Chapter'
@@ -12,6 +13,7 @@ import { ProgressProvider } from './storage/ProgressProvider'
 export function App() {
   return (
     <ProgressProvider>
+      <StorageBanner />
       <Pages />
     </ProgressProvider>
   )

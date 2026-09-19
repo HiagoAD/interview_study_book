@@ -43,6 +43,8 @@ export interface ProgressStore {
   resetBook(bookId: string): Promise<void>
   /** Dev builds only: see `Clock.setToday`. */
   setToday(date: string | null): void
+  /** Reads the date again, for a page that was left open past midnight. A simulated date stays as it is. */
+  refreshToday(): void
   /** Resolves when every write started so far has finished, or failed. */
   flush(): Promise<void>
 }
@@ -74,6 +76,10 @@ export async function createProgressStore(db: StudyDb | null, clock: Clock): Pro
   function update(changes: Partial<Pick<ProgressSnapshot, 'concepts' | 'sections' | 'persistent'>>): void {
     snapshot = { ...snapshot, ...changes, today: clock.today() }
     for (const listener of [...listeners]) listener()
+  }
+
+  function refreshToday(): void {
+    if (clock.today() !== snapshot.today) update({})
   }
 
   /** Starts a write now, so writes reach IndexedDB in the order the changes were made. Never rejects. */
@@ -154,8 +160,10 @@ export async function createProgressStore(db: StudyDb | null, clock: Clock): Pro
 
     setToday(date) {
       clock.setToday(date)
-      if (clock.today() !== snapshot.today) update({})
+      refreshToday()
     },
+
+    refreshToday,
 
     async flush() {
       while (writes.size > 0) await Promise.all([...writes])
@@ -163,20 +171,50 @@ export async function createProgressStore(db: StudyDb | null, clock: Clock): Pro
   }
 }
 
+/** How long opening and reading the database may take before the store gives up on it. */
+export const OPEN_TIMEOUT_MS = 3000
+
+interface Opened {
+  store: ProgressStore
+  db: StudyDb
+}
+
+/** Opens the database and reads it. Resolves to null if either fails, having closed what it opened. */
+async function tryOpen(clock: Clock, open: () => Promise<StudyDb>): Promise<Opened | null> {
+  let db: StudyDb | null = null
+  try {
+    db = await open()
+    return { store: await createProgressStore(db, clock), db }
+  } catch {
+    db?.close()
+    return null
+  }
+}
+
 /**
  * Opens the database and the store. When the database can't be opened or read, which some browsers do for
- * `file://` pages and in private mode, returns a store that keeps progress in memory only.
+ * `file://` pages and in private mode, or hasn't done either after `timeoutMs` because the request never
+ * settles, returns a store that keeps progress in memory only.
  */
 export async function openProgressStore(
   clock: Clock,
   open: () => Promise<StudyDb> = openStudyDb,
+  timeoutMs = OPEN_TIMEOUT_MS,
 ): Promise<ProgressStore> {
-  let db: StudyDb | null = null
-  try {
-    db = await open()
-    return await createProgressStore(db, clock)
-  } catch {
-    db?.close()
-    return createProgressStore(null, clock)
+  const attempt = tryOpen(clock, open)
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<'timeout'>((resolve) => {
+    timer = setTimeout(() => resolve('timeout'), timeoutMs)
+  })
+
+  const outcome = await Promise.race([attempt, deadline])
+  clearTimeout(timer)
+
+  if (outcome === 'timeout') {
+    // The request may still finish. Nothing will use its database, so close it when it does.
+    void attempt.then((late) => late?.db.close())
+  } else if (outcome !== null) {
+    return outcome.store
   }
+  return createProgressStore(null, clock)
 }

@@ -46,6 +46,12 @@ for (const styleMatch of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
   }
 }
 
+// The dev-only "Simulate today" section is drawn only when `import.meta.env.DEV` is true, so the bundler
+// drops it from a production build. Its marker attribute survives only if that stopped working.
+if (html.includes('data-dev-only')) {
+  errors.push('index.html contains the dev-only "Simulate today" section (data-dev-only)')
+}
+
 if (errors.length > 0) {
   console.error('verify-dist failed:')
   for (const error of errors) console.error(`  - ${error}`)

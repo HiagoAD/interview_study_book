@@ -1,10 +1,12 @@
 import { books } from 'virtual:content'
 import { ProgressMeter } from '../components/ProgressMeter'
+import { dueConcepts } from '../engine/due'
 import { countCompleteSections } from '../engine/sections'
 import { useProgress } from '../storage/useProgress'
 
 export function HomePage() {
   const progress = useProgress()
+  const due = dueConcepts(books, progress, progress.today).length
 
   return (
     <main>
@@ -32,7 +34,9 @@ export function HomePage() {
       )}
 
       <nav className="page-links" aria-label="More">
-        <a href="#/review">Review</a>
+        <a href="#/review" className={due > 0 ? 'has-due' : undefined}>
+          Review ({due} due)
+        </a>
         <a href="#/data">Data</a>
       </nav>
     </main>

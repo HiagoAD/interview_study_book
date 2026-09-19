@@ -320,6 +320,8 @@ Build:
 - The Review page and the due count on Home.
 - The Data page: export, import and reset per book, plus the dev "Simulate today" input.
 - The banner shown when IndexedDB is unavailable.
+- If opening IndexedDB hasn't settled after 3 seconds, fall back to memory and show that banner. While it is opening, show a short loading state rather than a blank page.
+- Refresh `today` when the page becomes visible again (`visibilitychange`), so a tab left open overnight shows the right due count.
 - The Not-found page.
 - A final pass on the styles.
 - A short `README.md` covering how to build, how to open the site, how to add content (pointing to `docs/content-format.md`) and how to back up progress.
@@ -375,3 +377,11 @@ Built the Home, Book, Chapter and Section pages, `QuestionCard`, `styles.css`, t
 Rules the plan left open: True/False answer on click, choice questions need Submit; both short-answer buttons record and move on, Enter is Continue; locked sections are not links; `SectionPage` is keyed per section and `QuestionCard` per question (state leaked between them without it); the route scrolls to the top on change; **Reread content** moves focus to the content (left on the button, Enter would repeat it). Home has a plain Review link: the due count is Phase 6.
 
 Next phase: for Review, call `prepareQuestion(concept, record, Math.random)` once per due concept, hold it in state, and key `QuestionCard` by question; `onAnswer(ok)` is where to call `recordAnswer({ ..., mode: 'review' })`. Show all rendered HTML through `Html`. Headings get no ids, so `[x](#id)` can only reach footnotes; footnote definitions are only allowed in section content.
+
+### Phase 6: Review, data page and finish
+
+Built the Review page, the due count on Home, the Data page, `StorageBanner`, a loading state, the Not-found page, a style pass, README.md and the CLAUDE.md update. **Review opens on the live due count with a Start review button; Start captures the queue once (`prepareReview`) and the page walks that copy, never the live due list.** The store gives up on IndexedDB after 3 seconds (`OPEN_TIMEOUT_MS`, covering the open and the first read; a connection that opens late is closed), `refreshToday` runs on `visibilitychange` (`storage/visibility.ts`), and `ProgressProvider` shows a loading note meanwhile. 25 new tests (529 in all); breaking the timer, the deadline, the late close and `refreshToday` one at a time failed the suite each time. Driven in headless Chrome, against `npm run dev` and `dist/index.html` from `file://` with the network offline (no request but the inlined `data:` fonts): 108 assertions on manual checks 1-3, the queue staying fixed while answering, a real hanging `indexedDB.open` (app up at 3.05 s, with the banner), blocked storage, phone width and dark mode. `dist/index.html` is 711,260 bytes.
+
+Rules the plan left open: import and reset confirm in an inline panel (Esc cancels), not `window.confirm`; the loading note fades in after 0.4 s, so a normal open shows nothing; the Review summary reads each concept's new box and due date from its record instead of recomputing them; the dev section carries `data-dev-only`, and `verify-dist.mjs` now fails the build if that marker is in `dist/` (checked against a build with `DEV` forced on, which does contain it). Docs: `content-format.md` gained a line saying footnotes work only in section content and `[x](#id)` links reach nothing (both checked against the pipeline); README.md is new; CLAUDE.md matches the finished project.
+
+Left for the user: manual check 4 in Safari (does it open IndexedDB on `file://`, and does the banner show if not), and how it feels to use. Chrome's Network tab lists the inlined `data:` fonts; they are not requests. The dev server logs a `favicon.ico` 404, as it has since Phase 1.

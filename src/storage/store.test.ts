@@ -9,7 +9,7 @@ import { createClock } from './clock'
 import type { Clock } from './clock'
 import { loadRecords, openStudyDb, putConcept, putSection } from './database'
 import type { StudyDb } from './database'
-import { createProgressStore, openProgressStore } from './store'
+import { createProgressStore, OPEN_TIMEOUT_MS, openProgressStore } from './store'
 import type { ProgressStore, RecordAnswerInput } from './store'
 
 // A new, empty IndexedDB for every test.
@@ -626,6 +626,77 @@ describe('setToday', () => {
   })
 })
 
+describe('refreshToday', () => {
+  /** A clock on real time that the test can move, with `setToday` as in a dev build. */
+  function movingClock(start: Date) {
+    const time = { now: start }
+    return { time, clock: createClock(() => time.now) }
+  }
+
+  test('picks up a new day for a page that was left open, and tells the subscribers once', async () => {
+    const { time, clock } = movingClock(new Date(2026, 8, 19, 23, 50))
+    const { store } = await openWith(clock)
+    const { calls } = listener(store)
+    expect(store.getSnapshot().today).toBe('2026-09-19')
+
+    time.now = new Date(2026, 8, 20, 8, 0)
+    expect(store.getSnapshot().today).toBe('2026-09-19') // nothing has looked yet
+    store.refreshToday()
+    expect(store.getSnapshot().today).toBe('2026-09-20')
+    expect(calls).toHaveBeenCalledTimes(1)
+  })
+
+  test('does nothing while it is still the same day', async () => {
+    const { time, clock } = movingClock(new Date(2026, 8, 19, 8, 0))
+    const { store } = await openWith(clock)
+    const snapshot = store.getSnapshot()
+    const { calls } = listener(store)
+
+    time.now = new Date(2026, 8, 19, 23, 59)
+    store.refreshToday()
+    expect(store.getSnapshot()).toBe(snapshot)
+    expect(calls).not.toHaveBeenCalled()
+  })
+
+  test('keeps a simulated date, and still notices the real date changing under it', async () => {
+    const { time, clock } = movingClock(new Date(2026, 8, 19, 23, 50))
+    const { store } = await openWith(clock)
+    store.setToday('2026-12-25')
+
+    time.now = new Date(2026, 8, 20, 8, 0)
+    store.refreshToday()
+    expect(store.getSnapshot().today).toBe('2026-12-25')
+
+    store.setToday(null)
+    expect(store.getSnapshot().today).toBe('2026-09-20')
+  })
+
+  test('the new day makes concepts due, and answers are dated with it', async () => {
+    const { time, clock } = movingClock(new Date(2026, 8, 19, 23, 50))
+    const { store } = await openWith(clock)
+    answer(store, 'c1', false)
+    expect(conceptOf(store, 'c1').due).toBe('2026-09-20')
+
+    time.now = new Date(2026, 8, 20, 8, 0)
+    store.refreshToday()
+    answer(store, 'c1', true)
+    expect(conceptOf(store, 'c1')).toMatchObject({ box: 2, due: '2026-09-23' })
+  })
+
+  test('does not touch the records or IndexedDB', async () => {
+    const { time, clock } = movingClock(new Date(2026, 8, 19, 23, 50))
+    const { store } = await openWith(clock)
+    answer(store, 'c1', false)
+    await store.flush()
+    const before = { memory: held(store), saved: await stored() }
+
+    time.now = new Date(2026, 8, 20, 8, 0)
+    store.refreshToday()
+    await store.flush()
+    expect({ memory: held(store), saved: await stored() }).toEqual(before)
+  })
+})
+
 describe('when IndexedDB cannot be opened', () => {
   const failures: [reason: string, arrange: () => Promise<unknown>, open: () => Promise<StudyDb>][] = [
     ['the browser holds a newer version of the database', () => openDB('study', 2), openStudyDb],
@@ -704,6 +775,105 @@ describe('when IndexedDB cannot be opened', () => {
     answer(store, 'c1', false)
     await store.flush()
     expect((await stored()).concepts).toHaveLength(1)
+  })
+})
+
+describe('when opening IndexedDB never settles', () => {
+  // Only the timer is faked: fake-indexeddb runs on setImmediate.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const hang = () => new Promise<StudyDb>(() => {})
+
+  test('gives up after 3 seconds, not before, and keeps progress in memory', async () => {
+    expect(OPEN_TIMEOUT_MS).toBe(3000)
+    let store: ProgressStore | undefined
+    void openProgressStore(fakeClock(), hang).then((opened) => (store = opened))
+
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(store).toBeUndefined()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(store).toBeDefined()
+    expect(store?.getSnapshot().persistent).toBe(false)
+    expect(store?.getSnapshot().concepts.size).toBe(0)
+  })
+
+  test('the store it falls back to works: answers, unlocking, export and import', async () => {
+    const opening = openProgressStore(fakeClock(), hang)
+    await vi.advanceTimersByTimeAsync(OPEN_TIMEOUT_MS)
+    const store = await opening
+
+    answer(store, 'c1', false)
+    answer(store, 'c2', true)
+    store.markRead(BOOK, chapter, 's1')
+    expect(conceptOf(store, 'c1')).toMatchObject({ box: 1, due: '2026-09-20' })
+    expect(isSectionUnlocked(BOOK, chapter, 1, store.getSnapshot())).toBe(true)
+    await expect(store.flush()).resolves.toBeUndefined()
+
+    const other = openProgressStore(fakeClock(), hang)
+    await vi.advanceTimersByTimeAsync(OPEN_TIMEOUT_MS)
+    const restored = await other
+    expect(await restored.importProgress(JSON.stringify(store.exportData()))).toEqual({ ok: true, concepts: 2, sections: 1 })
+    expect(held(restored)).toEqual(held(store))
+  })
+
+  test('a database that opens in time is used, and the timer is cleared', async () => {
+    const store = await openProgressStore(fakeClock())
+    expect(store.getSnapshot().persistent).toBe(true)
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(OPEN_TIMEOUT_MS * 2)
+    expect(store.getSnapshot().persistent).toBe(true)
+  })
+
+  test('a failure before the deadline falls back at once and leaves no timer behind', async () => {
+    const store = await openProgressStore(fakeClock(), () => Promise.reject(new Error('blocked')))
+    expect(store.getSnapshot().persistent).toBe(false)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  test('takes the wait from its argument', async () => {
+    let store: ProgressStore | undefined
+    void openProgressStore(fakeClock(), hang, 500).then((opened) => (store = opened))
+    await vi.advanceTimersByTimeAsync(499)
+    expect(store).toBeUndefined()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(store?.getSnapshot().persistent).toBe(false)
+  })
+
+  test('a database that opens after the deadline is closed, and its records are not used', async () => {
+    const late = await openStudyDb()
+    await putConcept(late, answeredRecord(BOOK, 'c1'))
+
+    let release: () => void = () => {}
+    const slow = () =>
+      new Promise<StudyDb>((resolve) => {
+        release = () => resolve(late)
+      })
+    const opening = openProgressStore(fakeClock(), slow)
+    await vi.advanceTimersByTimeAsync(OPEN_TIMEOUT_MS)
+    const store = await opening
+    expect(store.getSnapshot().persistent).toBe(false)
+
+    release()
+    // A closed connection refuses new transactions. Waiting on real time lets fake-indexeddb finish loading.
+    await vi.waitFor(() => expect(() => late.transaction('concepts')).toThrow())
+    expect(store.getSnapshot().concepts.size).toBe(0)
+    expect(store.getSnapshot().persistent).toBe(false)
+  })
+
+  test('reading that never finishes counts too: the database opened, but its records never arrive', async () => {
+    const stuck = {
+      transaction: () => ({ objectStore: () => ({ getAll: () => new Promise(() => {}) }), done: new Promise(() => {}) }),
+      close: vi.fn(),
+    } as unknown as StudyDb
+    const opening = openProgressStore(fakeClock(), () => Promise.resolve(stuck))
+    await vi.advanceTimersByTimeAsync(OPEN_TIMEOUT_MS)
+    expect((await opening).getSnapshot().persistent).toBe(false)
   })
 })
 

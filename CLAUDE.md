@@ -31,13 +31,18 @@ content/        study material: *.md files and their images (format: docs/conten
 pipeline/       build-time Node code (parser, renderer, loader, Vite plugin); never imported by src/
 src/
   types/        content model types, and the declaration of the virtual:content module
-  engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list, preparing a question (variant + options). Takes today, now and an rng as parameters; never reads the clock or Math.random
-  storage/      progress: IndexedDB layer, the in-memory store written through to it, export/import, ProgressProvider and its hooks
-  components/   QuestionCard (study and review), Html (rendered content; handles in-page links), and the small pieces they use
-  pages/        Home, Book, Chapter and Section (Review and Data are still placeholders); they read the books from virtual:content and progress from useProgress
+  engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list, preparing a question or a whole review (variant + options). Takes today, now and an rng as parameters; never reads the clock or Math.random
+  storage/      progress: IndexedDB layer, the in-memory store written through to it, export/import, ProgressProvider and its hooks. Opening the database is given up on after 3 seconds and progress stays in memory (`persistent` is false)
+  components/   QuestionCard (study and review), Html (rendered content; handles in-page links), StorageBanner (shown while progress isn't being saved), and the small pieces they use
+  pages/        Home, Book, Chapter, Section, Review, Data and Not found; they read the books from virtual:content and progress from useProgress
   router.ts     hash router (#/...)
   styles.css
-scripts/verify-dist.mjs   checks dist/ has only index.html and no external references
+scripts/verify-dist.mjs   checks dist/ has only index.html, no external references and none of the dev-only UI
 ```
 
-The site is being built in phases. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered.
+The site was built in six phases, all done. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
+
+## Notes
+
+- **Simulate today** is a date field on the Data page that sets the date every due date and the due count use, so review can be tried without waiting. It exists only under `npm run dev`: `import.meta.env.DEV` guards it, and `verify-dist` fails the build if any of it reaches `dist/`.
+- Review works from a queue captured when it starts: answering removes a concept from the due list, so the page never walks the live list.

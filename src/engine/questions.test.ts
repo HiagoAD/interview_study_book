@@ -1,7 +1,22 @@
 import { describe, expect, test } from 'vitest'
-import { answeredRecord, choice, concept, conceptRecord, deepFreeze, seededRng, short, trueFalse } from '../test-helpers'
+import {
+  answeredRecord,
+  book,
+  chapter,
+  choice,
+  concept,
+  conceptRecord,
+  deepFreeze,
+  records,
+  section,
+  seededRng,
+  short,
+  trueFalse,
+} from '../test-helpers'
 import type { Concept } from '../types/content'
-import { prepareQuestion, prepareQuestions } from './questions'
+import { dueConcepts } from './due'
+import { prepareQuestion, prepareQuestions, prepareReview } from './questions'
+import type { Box, ConceptRecord } from './records'
 import { applyAnswer } from './scheduling'
 
 const B = 'book'
@@ -98,5 +113,98 @@ describe('prepareQuestions', () => {
   test('a record with a stale variant index is handled by pickVariant', () => {
     const stale = new Map([[`${B}/a`, conceptRecord(B, 'a', { variants: { 5: { lastShownAt: NOW, lastOk: true } } })]])
     expect(prepareQuestions(B, [{ id: 'a', variants: [mc, trueFalse(true)] }], stale, seededRng(1))[0].v).toBe(0)
+  })
+})
+
+describe('prepareReview', () => {
+  function queued(bookId: string, conceptId: string, due: string, box: Box = 1): ConceptRecord {
+    return conceptRecord(bookId, conceptId, { box, due })
+  }
+
+  function ids(items: ReturnType<typeof prepareReview>): string[] {
+    return items.map((item) => `${item.book.id}/${item.question.conceptId}`)
+  }
+
+  const books = [
+    book('alpha', [chapter('ch1', [section('s1', ['a1', 'a2']), section('s2', ['a3'])])]),
+    book('beta', [chapter('ch1', [section('s1', ['b1'])])]),
+  ]
+
+  test('makes one question per due concept, in the order of the due list', () => {
+    const progress = records([
+      queued('alpha', 'a3', '2026-09-10'),
+      queued('beta', 'b1', '2026-09-05'),
+      queued('alpha', 'a1', '2026-09-10'),
+      queued('alpha', 'a2', '2026-09-30'), // not due yet
+    ])
+    const review = prepareReview(books, progress, TODAY, seededRng(1))
+    expect(ids(review)).toEqual(['beta/b1', 'alpha/a1', 'alpha/a3'])
+    expect(ids(review)).toEqual(dueConcepts(books, progress, TODAY).map((due) => `${due.book.id}/${due.concept.id}`))
+  })
+
+  test('says where each concept lives, so the page can link back to its section', () => {
+    const [item] = prepareReview(books, records([queued('alpha', 'a3', '2026-09-10')]), TODAY, seededRng(1))
+    expect(item.book).toBe(books[0])
+    expect(item.chapter).toBe(books[0].chapters[0])
+    expect(item.section).toBe(books[0].chapters[0].sections[1])
+  })
+
+  test('is empty when nothing is due, and depends on the date it is given', () => {
+    const progress = records([queued('alpha', 'a1', '2026-09-20')])
+    expect(prepareReview(books, records(), TODAY, seededRng(1))).toEqual([])
+    expect(prepareReview(books, progress, TODAY, seededRng(1))).toEqual([])
+    expect(ids(prepareReview(books, progress, '2026-09-20', seededRng(1)))).toEqual(['alpha/a1'])
+  })
+
+  test("picks each variant from that concept's own record, as a review of one concept would", () => {
+    const withTwo = [book('alpha', [chapter('ch1', [{ ...section('s1', []), concepts: [twoVariants, { ...twoVariants, id: 'other' }] }])])]
+    const progress = records([
+      { ...answeredRecord('alpha', 'two'), box: 1, due: '2026-09-10' }, // variant 0 shown: 1 is next
+      queued('alpha', 'other', '2026-09-11'), // nothing shown: 0 is next
+    ])
+    const review = prepareReview(withTwo, progress, TODAY, seededRng(5))
+    expect(review.map((item) => item.question.v)).toEqual([1, 0])
+    expect(review[0].question).toEqual(prepareQuestion(twoVariants, progress.concepts.get('alpha/two'), seededRng(5)))
+  })
+
+  test('samples the options with the rng it is given', () => {
+    const one = [book('alpha', [chapter('ch1', [{ ...section('s1', []), concepts: [{ id: 'c', variants: [mc] }] }])])]
+    const progress = records([queued('alpha', 'c', '2026-09-10')])
+    const first = prepareReview(one, progress, TODAY, seededRng(9))
+    expect(first).toEqual(prepareReview(one, progress, TODAY, seededRng(9)))
+    expect(first[0].question.options).toHaveLength(4)
+  })
+
+  test('is frozen: answering every concept empties the due list but not the review already made', () => {
+    const progress = records([queued('alpha', 'a1', '2026-09-10'), queued('alpha', 'a2', '2026-09-11'), queued('beta', 'b1', '2026-09-12')])
+    const review = prepareReview(books, progress, TODAY, seededRng(1))
+    expect(review).toHaveLength(3)
+
+    // Answer the first question right and the second wrong, the way a review does.
+    const answers = [true, false]
+    const after = new Map(progress.concepts)
+    review.slice(0, 2).forEach(({ book: b, question }, i) => {
+      const key = `${b.id}/${question.conceptId}`
+      const record = applyAnswer(after.get(key), {
+        bookId: b.id,
+        conceptId: question.conceptId,
+        v: question.v,
+        ok: answers[i],
+        mode: 'review',
+        now: NOW,
+        today: TODAY,
+      })
+      after.set(key, record)
+    })
+
+    // Both leave the due list: the right one moved up a box, the wrong one is due tomorrow.
+    const live = dueConcepts(books, { concepts: after, sections: new Map() }, TODAY)
+    expect(live.map((due) => due.concept.id)).toEqual(['b1'])
+    expect(ids(review)).toEqual(['alpha/a1', 'alpha/a2', 'beta/b1'])
+  })
+
+  test('does not change what it is given', () => {
+    const progress = deepFreeze(records([queued('alpha', 'a1', '2026-09-10')]))
+    expect(() => prepareReview(deepFreeze(books), progress, TODAY, seededRng(1))).not.toThrow()
   })
 })

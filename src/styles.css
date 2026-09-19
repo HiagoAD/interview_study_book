@@ -352,6 +352,10 @@ sup {
   gap: 0.25rem 1rem;
 }
 
+.row-head-centered {
+  align-items: center;
+}
+
 .row-title {
   font-size: 1.15rem;
   font-weight: 600;
@@ -439,6 +443,10 @@ progress::-moz-progress-bar {
   margin-top: 2rem;
 }
 
+.page-links .has-due {
+  font-weight: 700;
+}
+
 .notice {
   margin: 1.5rem 0;
   padding: 1rem 1.25rem;
@@ -450,6 +458,37 @@ progress::-moz-progress-bar {
 
 .notice p {
   margin: 0;
+}
+
+/* Shown while the database opens. A fast open never gets to show it: it appears only after the delay, and
+   with no movement, so the wait is not a flicker. */
+.loading {
+  margin: 3rem 0;
+  color: var(--muted);
+  animation: appear 0s 0.4s both;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Above every page while progress isn't being saved. */
+.banner {
+  border-bottom: 1px solid var(--bad);
+  background: var(--bad-bg);
+}
+
+.banner p {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 /* Buttons */
@@ -501,6 +540,16 @@ progress::-moz-progress-bar {
 .button-primary:disabled:hover {
   background: var(--accent);
   filter: none;
+}
+
+/* For the button that deletes or replaces progress. */
+.button-danger {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.button-danger:hover {
+  background: var(--bad-bg);
 }
 
 .link-button {
@@ -807,6 +856,90 @@ progress::-moz-progress-bar {
 
 .review-list pre {
   display: none;
+}
+
+.outcome {
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.outcome-good {
+  color: var(--good);
+}
+
+.outcome-bad {
+  color: var(--bad);
+}
+
+.outcome .muted {
+  font-weight: 400;
+}
+
+/* In review, the card's own trail says which section the question came from. */
+.card-header .breadcrumb ol {
+  font-size: 0.85rem;
+}
+
+/* The Data page */
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+}
+
+.file-input {
+  max-width: 100%;
+  font: inherit;
+}
+
+.file-input::file-selector-button {
+  min-height: 2.75rem;
+  margin-right: 0.75rem;
+  padding: 0.5rem 1.15rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.file-input::file-selector-button:hover {
+  background: var(--accent-soft);
+}
+
+.confirm {
+  scroll-margin-top: 1rem;
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--bad);
+  border-radius: 8px;
+  background: var(--bad-bg);
+}
+
+.confirm-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.confirm p {
+  margin: 0 0 0.6rem;
+}
+
+.message {
+  margin: 1rem 0 0;
+  font-weight: 600;
+}
+
+.message-good {
+  color: var(--good);
+}
+
+.message-bad {
+  color: var(--bad);
 }
 
 /* A touch screen has no keys to hint at. */
