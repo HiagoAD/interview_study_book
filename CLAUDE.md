@@ -31,6 +31,8 @@ content/        study material: *.md files and their images (format: docs/conten
 pipeline/       build-time Node code (parser, renderer, loader, Vite plugin); never imported by src/
 src/
   types/        content model types, and the declaration of the virtual:content module
+  engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list. Takes today, now and an rng as parameters; never reads the clock or Math.random
+  storage/      progress: IndexedDB layer, the in-memory store written through to it, export/import, ProgressProvider and its hooks
   pages/        one placeholder component per route; they read the books from virtual:content
   router.ts     hash router (#/...)
   styles.css

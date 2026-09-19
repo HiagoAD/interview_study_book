@@ -6,8 +6,17 @@ import { HomePage } from './pages/Home'
 import { NotFoundPage } from './pages/NotFound'
 import { ReviewPage } from './pages/Review'
 import { SectionPage } from './pages/Section'
+import { ProgressProvider } from './storage/ProgressProvider'
 
 export function App() {
+  return (
+    <ProgressProvider>
+      <Pages />
+    </ProgressProvider>
+  )
+}
+
+function Pages() {
   const route = useRoute()
 
   switch (route.name) {
