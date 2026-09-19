@@ -127,8 +127,8 @@ function ImportSection() {
   const progress = useProgress()
   const { importProgress } = useProgressActions()
   const titleId = useId()
-  const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const [pending, setPending] = useState<Pending | null>(null)
   const [notice, setNotice] = useState<Message | null>(null)
   const [busy, setBusy] = useState(false)
@@ -177,7 +177,7 @@ function ImportSection() {
 
   function cancel() {
     setPending(null)
-    inputRef.current?.focus()
+    buttonRef.current?.focus()
   }
 
   return (
@@ -187,19 +187,17 @@ function ImportSection() {
         Replaces all the progress in this browser with the contents of a backup file. Nothing changes until you
         confirm.
       </p>
-      <div className="field">
-        <label className="field-label" htmlFor={inputId}>
-          Backup file
-        </label>
-        <input
-          ref={inputRef}
-          id={inputId}
-          className="file-input"
-          type="file"
-          accept=".json,application/json"
-          onChange={(event) => void choose(event)}
-        />
-      </div>
+      {/* A button drives the hidden input, because the native control's text follows the browser's language. */}
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(event) => void choose(event)}
+      />
+      <button ref={buttonRef} type="button" className="button" onClick={() => inputRef.current?.click()}>
+        Choose backup file…
+      </button>
 
       {pending && (
         <Confirm
@@ -211,7 +209,7 @@ function ImportSection() {
         >
           <p>
             <strong>{pending.fileName}</strong> was exported on{' '}
-            {new Date(pending.data.exportedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}{' '}
+            {new Date(pending.data.exportedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}{' '}
             and holds progress on {plural(pending.data.concepts.length, 'concept')} and{' '}
             {plural(pending.data.sections.length, 'section')}.
           </p>

@@ -334,7 +334,7 @@ Manual check (user):
 1. Answer something wrong. Simulate tomorrow; it appears in Review, and Home shows the count.
 2. A correct review moves it to the next box. Simulate later dates through box 5; it leaves the queue.
 3. Export, reset the book, then import. Progress comes back.
-4. With Wi-Fi off, `dist/index.html` from `file://` works in Safari and in Chrome, and DevTools' Network tab shows no requests. If Safari blocks IndexedDB on `file://`, the banner appears.
+4. With Wi-Fi off, `dist/index.html` from `file://` works in Firefox (the user's browser), and DevTools' Network tab shows no requests. The Storage tab lists a `study` IndexedDB database that survives a reload. If Firefox blocks IndexedDB on `file://`, the banner appears.
 
 ## Phase log
 
@@ -385,3 +385,7 @@ Built the Review page, the due count on Home, the Data page, `StorageBanner`, a 
 Rules the plan left open: import and reset confirm in an inline panel (Esc cancels), not `window.confirm`; the loading note fades in after 0.4 s, so a normal open shows nothing; the Review summary reads each concept's new box and due date from its record instead of recomputing them; the dev section carries `data-dev-only`, and `verify-dist.mjs` now fails the build if that marker is in `dist/` (checked against a build with `DEV` forced on, which does contain it). Docs: `content-format.md` gained a line saying footnotes work only in section content and `[x](#id)` links reach nothing (both checked against the pipeline); README.md is new; CLAUDE.md matches the finished project.
 
 Left for the user: manual check 4 in Safari (does it open IndexedDB on `file://`, and does the banner show if not), and how it feels to use. Chrome's Network tab lists the inlined `data:` fonts; they are not requests. The dev server logs a `favicon.ico` 404, as it has since Phase 1.
+
+### Final touches (after Phase 6)
+
+Verified in headless Firefox 156 (the user's browser), driving `dist/index.html` from `file://` over WebDriver BiDi with scratch scripts kept outside the repo: IndexedDB opens (no banner), a study session records answers and unlocks the next section, progress survives a reload and a full browser restart, export downloads `study-progress-YYYY-MM-DD.json`, and reset then import restores it. No console errors and no network requests; dark mode and a 390px viewport have no horizontal scroll. Changes: the import's native file control (whose text follows the browser's language) is now a "Choose backup file…" button driving a hidden input; the backup's export date is formatted as `en-GB` so it matches the English page; `index.html` has a `data:,` favicon, so the dev server no longer logs a `favicon.ico` 404. Manual check 4 now names Firefox.
