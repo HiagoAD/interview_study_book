@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useRoute } from './router'
 import { BookPage } from './pages/Book'
 import { ChapterPage } from './pages/Chapter'
@@ -18,6 +19,13 @@ export function App() {
 
 function Pages() {
   const route = useRoute()
+
+  // Following a link to another page changes only the hash, and the browser keeps the scroll position: without
+  // this, "Next section" would open the next page scrolled to the bottom.
+  const page = JSON.stringify(route)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [page])
 
   switch (route.name) {
     case 'home':

@@ -31,9 +31,10 @@ content/        study material: *.md files and their images (format: docs/conten
 pipeline/       build-time Node code (parser, renderer, loader, Vite plugin); never imported by src/
 src/
   types/        content model types, and the declaration of the virtual:content module
-  engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list. Takes today, now and an rng as parameters; never reads the clock or Math.random
+  engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list, preparing a question (variant + options). Takes today, now and an rng as parameters; never reads the clock or Math.random
   storage/      progress: IndexedDB layer, the in-memory store written through to it, export/import, ProgressProvider and its hooks
-  pages/        one placeholder component per route; they read the books from virtual:content
+  components/   QuestionCard (study and review), Html (rendered content; handles in-page links), and the small pieces they use
+  pages/        Home, Book, Chapter and Section (Review and Data are still placeholders); they read the books from virtual:content and progress from useProgress
   router.ts     hash router (#/...)
   styles.css
 scripts/verify-dist.mjs   checks dist/ has only index.html and no external references

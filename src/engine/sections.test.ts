@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { answeredRecord, conceptRecord, records, section, sectionRecord } from '../test-helpers'
-import { allConceptsAnswered, isSectionComplete, isSectionUnlocked } from './sections'
+import { allConceptsAnswered, countCompleteSections, countInReview, isSectionComplete, isSectionUnlocked } from './sections'
 
 const B = 'book'
 
@@ -145,5 +145,40 @@ describe('unlock state after the content changes', () => {
     )
     expect(isSectionComplete(B, s1, stale)).toBe(false)
     expect(isSectionUnlocked(B, chapter, 1, stale)).toBe(false)
+  })
+})
+
+describe('section counts', () => {
+  test('countCompleteSections counts the sections that are complete', () => {
+    expect(countCompleteSections(B, chapter.sections, none)).toBe(0)
+    expect(countCompleteSections(B, chapter.sections, records(answeredS1))).toBe(1)
+    expect(countCompleteSections(B, chapter.sections, records([...answeredS1, answeredRecord(B, 'c3'), answeredRecord(B, 'c4')]))).toBe(3)
+  })
+
+  test('countCompleteSections counts a section with completedAt, and ignores other books', () => {
+    const completed = records([answeredRecord('other', 'c3')], [sectionRecord(B, 's2', { completedAt: '2026-09-01T10:00:00.000Z' })])
+    expect(countCompleteSections(B, chapter.sections, completed)).toBe(1)
+  })
+
+  test('countCompleteSections of no sections is 0', () => {
+    expect(countCompleteSections(B, [], none)).toBe(0)
+  })
+
+  test('countInReview counts concepts in any box, due or not', () => {
+    const queued = records([
+      conceptRecord(B, 'c1', { box: 1, due: '2026-09-20' }),
+      conceptRecord(B, 'c2', { box: 5, due: '2030-01-01' }),
+    ])
+    expect(countInReview(B, s1, queued.concepts)).toBe(2)
+  })
+
+  test('countInReview skips concepts that never entered the queue or graduated out of it', () => {
+    const progress = records([conceptRecord(B, 'c1', { box: 3, due: '2026-09-20' }), answeredRecord(B, 'c2'), conceptRecord(B, 'c3', { box: 2, due: '2026-09-20' })])
+    expect(countInReview(B, s1, progress.concepts)).toBe(1)
+    expect(countInReview(B, s1, none.concepts)).toBe(0)
+  })
+
+  test('countInReview ignores the same concept id in another book', () => {
+    expect(countInReview(B, s1, records([conceptRecord('other', 'c1', { box: 1, due: '2026-09-20' })]).concepts)).toBe(0)
   })
 })

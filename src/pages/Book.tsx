@@ -1,25 +1,37 @@
 import { books } from 'virtual:content'
+import { Breadcrumb } from '../components/Breadcrumb'
+import { ProgressMeter } from '../components/ProgressMeter'
+import { countCompleteSections } from '../engine/sections'
+import { useProgress } from '../storage/useProgress'
 import { NotFoundPage } from './NotFound'
 
-// Placeholder: Phase 5 replaces this with the real book page.
 export function BookPage({ book: bookId }: { book: string }) {
+  const progress = useProgress()
   const book = books.find((candidate) => candidate.id === bookId)
   if (!book) return <NotFoundPage />
 
+  const sections = book.chapters.flatMap((chapter) => chapter.sections)
+
   return (
     <main>
+      <Breadcrumb trail={[{ label: 'Home', href: '#/' }]} />
       <h1>{book.title}</h1>
-      <p>Placeholder: will list this book's chapters with progress.</p>
-      <ul>
+      <ProgressMeter done={countCompleteSections(book.id, sections, progress)} total={sections.length} noun="sections" />
+
+      <ul className="rows">
         {book.chapters.map((chapter) => (
-          <li key={chapter.id}>
-            <a href={`#/b/${book.id}/${chapter.id}`}>{chapter.title}</a>
+          <li key={chapter.id} className="row">
+            <a className="row-title" href={`#/b/${book.id}/${chapter.id}`}>
+              {chapter.title}
+            </a>
+            <ProgressMeter
+              done={countCompleteSections(book.id, chapter.sections, progress)}
+              total={chapter.sections.length}
+              noun="sections"
+            />
           </li>
         ))}
       </ul>
-      <p>
-        <a href="#/">Home</a>
-      </p>
     </main>
   )
 }

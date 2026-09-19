@@ -31,6 +31,24 @@ export function isSectionComplete(bookId: string, section: SectionRef, records: 
   )
 }
 
+/** How many of `sections` are complete. */
+export function countCompleteSections(
+  bookId: string,
+  sections: readonly SectionRef[],
+  records: ProgressRecords,
+): number {
+  return sections.filter((section) => isSectionComplete(bookId, section, records)).length
+}
+
+/** How many of the section's concepts are in the review queue, due yet or not. */
+export function countInReview(
+  bookId: string,
+  section: SectionRef,
+  concepts: ReadonlyMap<string, ConceptRecord>,
+): number {
+  return section.concepts.filter((concept) => concepts.get(conceptKey(bookId, concept.id))?.box != null).length
+}
+
 /**
  * The section at `index` in its chapter is unlocked when it is the first one, has been read, or the section
  * before it is complete. Chapters are independent of each other.
