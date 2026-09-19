@@ -1,5 +1,6 @@
 // Content model shared by the build-time pipeline and the browser app.
-// Every string is HTML except `accepted`, which is plain text.
+// Rendered text (section html, prompts, options, explanations) is HTML. Ids, titles and `accepted` are
+// plain text: escape them when they go into a page.
 
 export interface Book {
   id: string

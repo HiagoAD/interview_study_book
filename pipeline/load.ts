@@ -1,8 +1,11 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import type { Dirent } from 'node:fs'
 import path from 'node:path'
+import type { Book, Chapter, Concept, Section, Variant } from '../src/types/content.ts'
 import { parseContentFile, slug } from './parse.ts'
-import type { ContentError, RawChapter, RawFile } from './parse.ts'
+import type { ContentError, RawChapter, RawFile, RawVariant, Text } from './parse.ts'
+import { renderMarkdown, renderOption } from './render.ts'
+import type { Rendered } from './render.ts'
 
 export interface RawBook {
   id: string
@@ -10,8 +13,14 @@ export interface RawBook {
   chapters: RawChapter[]
 }
 
-export interface LoadResult {
+/** The result of parsing and assembling, before anything is rendered. */
+export interface AssembleResult {
   books: RawBook[]
+  errors: ContentError[]
+}
+
+export interface LoadResult {
+  books: Book[]
   errors: ContentError[]
 }
 
@@ -30,6 +39,7 @@ export interface Totals {
 }
 
 const byString = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+const byLocation = (a: ContentError, b: ContentError) => byString(a.file, b.file) || a.line - b.line
 
 /** Every `.md` file under `dir`, as repo-relative paths with `/` separators, in plain string order. */
 export function findContentFiles(root: string, dir = 'content'): string[] {
@@ -51,7 +61,7 @@ export function findContentFiles(root: string, dir = 'content'): string[] {
  * titles have the same slug belong together. Never throws on bad content: every problem, in every
  * file, comes back in `errors`, and `books` is best-effort when there are any.
  */
-export function assembleBooks(sources: Source[]): LoadResult {
+export function assembleBooks(sources: Source[]): AssembleResult {
   const errors: ContentError[] = []
   const files: RawFile[] = []
   for (const source of [...sources].sort((a, b) => byString(a.path, b.path))) {
@@ -130,19 +140,87 @@ export function assembleBooks(sources: Source[]): LoadResult {
   }
 
   books.sort((a, b) => a.title.localeCompare(b.title, 'en'))
-  errors.sort((a, b) => byString(a.file, b.file) || a.line - b.line)
+  errors.sort(byLocation)
   return { books, errors }
 }
 
-export function loadContent(root: string, dir = 'content'): LoadResult {
+/**
+ * Renders every chunk of Markdown in the books. Each chunk is rendered on its own, so an error's
+ * line is mapped from the chunk back to the file (see `renderMarkdown`). Like `assembleBooks` it
+ * never throws on bad content: `books` is best-effort when there are errors, and a chunk that
+ * failed has empty HTML.
+ */
+export async function renderBooks(rawBooks: RawBook[], root: string, dir = 'content'): Promise<LoadResult> {
+  const errors: ContentError[] = []
+  const collect = ({ html, errors: found }: Rendered) => {
+    errors.push(...found)
+    return html
+  }
+
+  async function renderVariant(variant: RawVariant, block: (text: Text) => Promise<string>, option: (text: Text) => Promise<string>): Promise<Variant> {
+    const prompt = await block(variant.prompt)
+    const explanation = await block(variant.explanation)
+    switch (variant.type) {
+      case 'tf':
+        return { type: 'tf', prompt, explanation, answer: variant.answer }
+      case 'short':
+        return { type: 'short', prompt, explanation, accepted: variant.accepted }
+      default: {
+        const correct: string[] = []
+        for (const text of variant.correct) correct.push(await option(text))
+        const wrong: string[] = []
+        for (const text of variant.wrong) wrong.push(await option(text))
+        return { type: variant.type, prompt, explanation, correct, wrong, n: variant.n }
+      }
+    }
+  }
+
+  const books: Book[] = []
+  for (const rawBook of rawBooks) {
+    const chapters: Chapter[] = []
+    for (const rawChapter of rawBook.chapters) {
+      const context = { root, dir, file: rawChapter.file }
+      const block = async (text: Text) => collect(await renderMarkdown(text, context))
+      const option = async (text: Text) => collect(await renderOption(text, context))
+
+      const sections: Section[] = []
+      for (const rawSection of rawChapter.sections) {
+        const html = await block(rawSection.content)
+        const concepts: Concept[] = []
+        for (const rawConcept of rawSection.concepts) {
+          const variants: Variant[] = []
+          for (const rawVariant of rawConcept.variants) variants.push(await renderVariant(rawVariant, block, option))
+          concepts.push({ id: rawConcept.id, variants })
+        }
+        sections.push({ id: rawSection.id, title: rawSection.title, html, concepts })
+      }
+      chapters.push({ id: rawChapter.id, title: rawChapter.title, sections })
+    }
+    books.push({ id: rawBook.id, title: rawBook.title, chapters })
+  }
+  return { books, errors: errors.sort(byLocation) }
+}
+
+/**
+ * Finds, parses and renders every content file. Every error from every stage comes back together,
+ * sorted by file and line, so one run lists all of them. `books` is best-effort when there are any.
+ */
+export async function loadContent(root: string, dir = 'content'): Promise<LoadResult> {
   const sources = findContentFiles(root, dir).map((file) => ({
     path: file,
     text: readFileSync(path.join(root, file), 'utf8'),
   }))
-  return assembleBooks(sources)
+  const assembled = assembleBooks(sources)
+  const rendered = await renderBooks(assembled.books, root, dir)
+  return { books: rendered.books, errors: [...assembled.errors, ...rendered.errors].sort(byLocation) }
 }
 
-export function summarize(books: RawBook[]): Totals {
+/** Anything with the book shape: raw books from the parser and rendered books count alike. */
+interface Countable {
+  chapters: { sections: { concepts: { variants: unknown[] }[] }[] }[]
+}
+
+export function summarize(books: Countable[]): Totals {
   const totals: Totals = { books: books.length, chapters: 0, sections: 0, concepts: 0, variants: 0 }
   for (const book of books) {
     totals.chapters += book.chapters.length

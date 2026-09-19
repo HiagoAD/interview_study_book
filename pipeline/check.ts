@@ -3,7 +3,7 @@ import { loadContent, summarize } from './load.ts'
 import { formatError } from './parse.ts'
 
 const root = path.resolve(import.meta.dirname, '..')
-const { books, errors } = loadContent(root)
+const { books, errors } = await loadContent(root)
 
 if (errors.length > 0) {
   for (const error of errors) console.error(formatError(error))

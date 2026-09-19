@@ -31,14 +31,14 @@ Lines at column 0, outside code fences, define structure.
 - Only blank lines may sit between the front matter (or a `# Chapter` line) and the first `##` section.
 - Section ids and concept ids match `[a-z0-9]+(-[a-z0-9]+)*`. Each must be unique within the whole book, across chapters and files.
 - A section is content, then questions. Content runs from the heading to the first `??` line and must not be empty. A section needs at least one concept.
-- Headings inside content are `###` or deeper. No content line may start with `# `, `## `, `??` or `?+`, even inside `$$` math or HTML; put such text in a code fence.
+- Headings inside content are `###` or deeper. No content line may start with `# `, `## `, `??` or `?+`, even inside `$$` math; put such text in a code fence.
 
 ## Code fences
 
 - A fence opens with 3+ backticks or 3+ tildes (up to 3 spaces of indent) and closes with a line holding only the same character, at least as many times. A backtick fence's info string cannot contain a backtick. To show a fence inside code, open with a longer one.
 - Inside a fence nothing is structure: `#`, `##`, `??`, `?+`, `*`, `-`, `=`, `>` lines are plain code.
 - An unclosed fence is an error at its opening line.
-- The language after the opening must be one the highlighter knows (`python`, `ts`, `sql`, ...); an unknown one is an error. Omit it for plain text.
+- The language after the opening must be one the highlighter knows (`python`, `ts`, `sql`, `bash`, `json`, ... in lowercase, or `text`); an unknown one is an error at the fence's line. Omit it for plain text.
 
 ## Questions
 
@@ -70,9 +70,9 @@ How they play, so write accordingly:
 
 ## Text
 
-- Content, prompts, options and explanations are GitHub-flavoured Markdown: inline code, emphasis, `$x$` math, `$$ ... $$` display math. A literal dollar sign is `\$`. Invalid LaTeX is an error.
+- Content, prompts, options and explanations are GitHub-flavoured Markdown: inline code, emphasis, tables, `$x$` math, `$$ ... $$` display math (one line or several). A literal dollar sign is `\$`. Invalid LaTeX is an error at the line where the formula starts, and so are `\href`, `\url`, `\includegraphics` and `\html...`. Raw HTML is an error: write Markdown, and show tags inside code.
 - Accepted answers are plain text: no Markdown, no `\$`, no `|` inside an answer.
-- Images: `![alt](images/name.png)`, a path relative to the `.md` file's folder. Types: png, jpg/jpeg, gif, webp, svg. A missing file or any `http(s):` URL is an error.
+- Images: `![alt](images/name.png)`, a path relative to the `.md` file's folder, inside `content/`. Types: png, jpg/jpeg, gif, webp, svg. A missing file, an `http(s):` or other URL, or an absolute path is an error.
 
 ## Example
 
@@ -152,4 +152,5 @@ print(r + w > n)
 - A prompt beginning with `[`: start with a word, since `[` always opens settings.
 - `$5` in prose: write `\$5`.
 - A `# Title` line in content meant as a heading: it starts a chapter; use `###`.
+- `<br>`, `<details>`, `<img src="https://...">` or any other raw HTML: an error; use Markdown and local images.
 - The same chapter title in two files, or a section or concept id reused in another chapter: both must be unique in the book.

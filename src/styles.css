@@ -19,3 +19,47 @@ main {
   margin: 0 auto;
   padding: 1rem;
 }
+
+/* Rendered content (Phase 3). Phase 5 restyles the page but must keep the code-block rules below. */
+img {
+  max-width: 100%;
+}
+
+pre {
+  overflow-x: auto;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+
+.katex-display {
+  overflow-x: auto;
+}
+
+/* Shiki emits both themes as custom properties (--shiki-light, --shiki-dark, and the -bg pair for the
+   block); prefers-color-scheme picks which one applies. */
+.shiki {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+.shiki span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+
+  .shiki span {
+    color: var(--shiki-dark);
+    font-style: var(--shiki-dark-font-style);
+    font-weight: var(--shiki-dark-font-weight);
+    text-decoration: var(--shiki-dark-text-decoration);
+  }
+}

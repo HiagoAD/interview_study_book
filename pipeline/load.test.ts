@@ -156,18 +156,18 @@ test('findContentFiles returns every .md file under content/ in plain string ord
   expect(findContentFiles(root)).toEqual(['content/A.md', 'content/a/z.md', 'content/b.md', 'content/folder.md/x.md'])
 })
 
-test('a missing content directory means no files, not a crash', () => {
+test('a missing content directory means no files, not a crash', async () => {
   const root = tempRepo({ 'other/file.md': '' })
   expect(findContentFiles(root)).toEqual([])
-  expect(loadContent(root)).toEqual({ books: [], errors: [] })
+  expect(await loadContent(root)).toEqual({ books: [], errors: [] })
 })
 
-test('loadContent reads files from disk and reports errors with repo-relative paths', () => {
+test('loadContent reads files from disk and reports errors with repo-relative paths', async () => {
   const root = tempRepo({
     'content/good.md': file('Book', 'One', ...section('one')),
     'content/sub/bad.md': file('Book', 'Two', '## Sec', 'Content.', ...MC_LINES),
   })
-  const { books, errors } = loadContent(root)
+  const { books, errors } = await loadContent(root)
   expect(books[0].chapters.map((c) => c.title)).toEqual(['One', 'Two'])
   expect(errors).toHaveLength(1)
   expect(errors[0]).toMatchObject({ file: 'content/sub/bad.md', line: 5 })

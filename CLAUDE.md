@@ -22,16 +22,16 @@ Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm 
 - `npm run preview` — serves the production build.
 - `npm test` — runs the Vitest suite.
 - `npm run typecheck` — type-checks without emitting.
-- `npm run check` — parses everything under `content/` and prints each problem as `file:line: message`.
+- `npm run check` — parses and renders everything under `content/` (Markdown, KaTeX, Shiki, images) and prints each problem as `file:line: message`.
 
 ## Layout
 
 ```
-content/        study material: *.md files and their images (format: docs/content-format.md)
-pipeline/       build-time Node code (content parser and loader); never imported by src/
+content/        study material: *.md files and their images (format: docs/content-format.md); sample/ is a demo book
+pipeline/       build-time Node code (parser, renderer, loader, Vite plugin); never imported by src/
 src/
-  types/        content model types
-  pages/        one placeholder component per route
+  types/        content model types, and the declaration of the virtual:content module
+  pages/        one placeholder component per route; they read the books from virtual:content
   router.ts     hash router (#/...)
   styles.css
 scripts/verify-dist.mjs   checks dist/ has only index.html and no external references

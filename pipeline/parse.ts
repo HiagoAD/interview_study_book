@@ -37,6 +37,8 @@ export interface RawChapter {
   id: string
   title: string
   line: number
+  /** The file it was written in; a chapter never spans files, so renderers resolve images from here. */
+  file: string
   sections: RawSection[]
 }
 
@@ -352,7 +354,7 @@ export function parseContentFile(path: string, source: string): ParseResult {
       err(line, `chapter title "${title}" needs at least one letter or digit (a-z, 0-9), because the chapter id is made from it`)
       valid = false
     }
-    const node: RawChapter = { id: valid ? slug(title) : '', title: valid ? title : '', line, sections: [] }
+    const node: RawChapter = { id: valid ? slug(title) : '', title: valid ? title : '', line, file: path, sections: [] }
     if (valid) chapters.push(node)
     chapter = { node, valid, sawSection: false }
   }
