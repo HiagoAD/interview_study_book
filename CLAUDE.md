@@ -22,11 +22,15 @@ Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm 
 - `npm run preview` — serves the production build.
 - `npm test` — runs the Vitest suite.
 - `npm run typecheck` — type-checks without emitting.
+- `npm run check` — parses everything under `content/` and prints each problem as `file:line: message`.
 
 ## Layout
 
 ```
+content/        study material: *.md files and their images (format: docs/content-format.md)
+pipeline/       build-time Node code (content parser and loader); never imported by src/
 src/
+  types/        content model types
   pages/        one placeholder component per route
   router.ts     hash router (#/...)
   styles.css
