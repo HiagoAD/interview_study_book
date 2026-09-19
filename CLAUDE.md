@@ -13,6 +13,24 @@ A website that runs entirely on the user's device. Nothing is deployed or hosted
 
 An interactive study textbook: portions of content followed by questions, loaded from local files. [PROJECT.md](PROJECT.md) is the source of truth for scope and behaviour; read it before making changes.
 
-## Project status
+## Stack
 
-Newly initialized; no stack chosen yet. Update this file with the stack, how to run it, and the project layout once they exist.
+Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm run build` outputs a single `dist/index.html`.
+
+- `npm run dev` — local dev server with hot reload.
+- `npm run build` — type-checks, builds, then verifies `dist/` is a single self-contained file.
+- `npm run preview` — serves the production build.
+- `npm test` — runs the Vitest suite.
+- `npm run typecheck` — type-checks without emitting.
+
+## Layout
+
+```
+src/
+  pages/        one placeholder component per route
+  router.ts     hash router (#/...)
+  styles.css
+scripts/verify-dist.mjs   checks dist/ has only index.html and no external references
+```
+
+The site is being built in phases. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered.
