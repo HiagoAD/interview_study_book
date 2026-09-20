@@ -27,7 +27,7 @@ Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm 
 ## Layout
 
 ```
-content/        study material: *.md files and their images (format: docs/content-format.md); sample/ is a demo book
+content/        study material: *.md files and their images (format: docs/content-format.md)
 pipeline/       build-time Node code (parser, renderer, loader, Vite plugin); never imported by src/
 src/
   types/        content model types, and the declaration of the virtual:content module
