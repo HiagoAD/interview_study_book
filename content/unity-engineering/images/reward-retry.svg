@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="550" viewBox="0 0 760 550" role="img" aria-labelledby="title desc">
+  <title id="title">An idempotent reward claim after a lost response</title>
+  <desc id="desc">The client sends claim K. The authority commits the reward and record for K atomically. The response is lost, so the client retries the same K. The authority finds its stored result and returns it without granting again.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#334155" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="760" height="550" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#172033">
+    <text x="28" y="38" font-size="22" font-weight="700">A timeout does not prove that the claim failed</text>
+    <rect x="56" y="64" width="160" height="46" rx="9" fill="#e0f2fe" stroke="#0369a1"/>
+    <text x="136" y="94" text-anchor="middle" font-size="18" font-weight="600">Client</text>
+    <rect x="480" y="64" width="224" height="46" rx="9" fill="#dcfce7" stroke="#15803d"/>
+    <text x="592" y="94" text-anchor="middle" font-size="18" font-weight="600">Reward authority</text>
+    <path d="M136 110V498M592 110V498" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 6"/>
+    <path d="M136 154H590" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="350" y="143" text-anchor="middle" font-size="17">Claim K</text>
+    <rect x="440" y="177" width="286" height="71" rx="10" fill="#dcfce7" stroke="#15803d"/>
+    <text x="583" y="202" text-anchor="middle" font-size="17" font-weight="600">One atomic commitment</text>
+    <text x="583" y="228" text-anchor="middle" font-size="16">Reward + result recorded for K</text>
+    <path d="M592 280H327" stroke="#b45309" stroke-width="2" stroke-dasharray="6 5"/>
+    <path d="M313 270L333 290M333 270L313 290" stroke="#b45309" stroke-width="3"/>
+    <text x="438" y="268" text-anchor="middle" font-size="17">Response lost</text>
+    <text x="151" y="306" font-size="16">Outcome unknown</text>
+    <path d="M136 347H590" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="350" y="336" text-anchor="middle" font-size="17">Retry the same claim K</text>
+    <rect x="440" y="369" width="286" height="65" rx="10" fill="#dcfce7" stroke="#15803d"/>
+    <text x="583" y="394" text-anchor="middle" font-size="17" font-weight="600">Find recorded result for K</text>
+    <text x="583" y="419" text-anchor="middle" font-size="16">No second reward</text>
+    <path d="M592 469H138" stroke="#334155" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="350" y="458" text-anchor="middle" font-size="17">Return original successful outcome</text>
+    <text x="380" y="529" text-anchor="middle" font-size="17" font-weight="600">Repeated delivery; one logical reward effect.</text>
+  </g>
+</svg>

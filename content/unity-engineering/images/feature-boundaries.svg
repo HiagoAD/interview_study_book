@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480" role="img" aria-labelledby="title desc">
+  <title id="title">Gameplay feature boundaries</title>
+  <desc id="desc">Player intent enters the run-owned operation. Validated definitions and the simulation clock supply inputs. The operation commits authoritative state before sending a result to presentation. Persistence has an explicit transaction boundary.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#334155" stroke-width="1.5"/></marker>
+  </defs>
+  <rect width="760" height="480" rx="16" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#172033">
+    <text x="28" y="38" font-size="22" font-weight="700">One owner for each authoritative state</text>
+    <rect x="28" y="65" width="210" height="72" rx="10" fill="#e0f2fe" stroke="#0369a1"/>
+    <text x="133" y="95" text-anchor="middle" font-size="18" font-weight="600">Validated definition</text>
+    <text x="133" y="120" text-anchor="middle" font-size="16">Shared configuration</text>
+    <rect x="282" y="65" width="196" height="72" rx="10" fill="#e0f2fe" stroke="#0369a1"/>
+    <text x="380" y="95" text-anchor="middle" font-size="18" font-weight="600">Simulation clock</text>
+    <text x="380" y="120" text-anchor="middle" font-size="16">Explicit time input</text>
+    <rect x="522" y="65" width="210" height="72" rx="10" fill="#e0f2fe" stroke="#0369a1"/>
+    <text x="627" y="95" text-anchor="middle" font-size="18" font-weight="600">Player intent</text>
+    <text x="627" y="120" text-anchor="middle" font-size="16">Command, not a grant</text>
+    <g stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrow)">
+      <path d="M133 137V167H285V196"/>
+      <path d="M380 137V196"/>
+      <path d="M627 137V167H475V196"/>
+    </g>
+    <rect x="170" y="198" width="420" height="102" rx="12" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+    <text x="380" y="230" text-anchor="middle" font-size="20" font-weight="700">Run-owned operation and state</text>
+    <text x="380" y="258" text-anchor="middle" font-size="17">Validate → commit → return outcome</text>
+    <text x="380" y="282" text-anchor="middle" font-size="16">Identity, invariants, and lifetime live here</text>
+    <g stroke="#334155" stroke-width="2" fill="none" marker-end="url(#arrow)">
+      <path d="M280 300V363"/>
+      <path d="M480 300V336H595V363"/>
+    </g>
+    <text x="268" y="332" text-anchor="end" font-size="15">Save contract</text>
+    <text x="621" y="330" text-anchor="middle" font-size="15">Committed result</text>
+    <rect x="100" y="365" width="300" height="70" rx="10" fill="#ede9fe" stroke="#6d28d9"/>
+    <text x="250" y="394" text-anchor="middle" font-size="18" font-weight="600">Persistence adapter</text>
+    <text x="250" y="419" text-anchor="middle" font-size="16">Explicit commitment guarantee</text>
+    <rect x="455" y="365" width="277" height="70" rx="10" fill="#fff7ed" stroke="#c2410c"/>
+    <text x="594" y="394" text-anchor="middle" font-size="18" font-weight="600">Presentation observers</text>
+    <text x="594" y="419" text-anchor="middle" font-size="16">HUD, sound, animation</text>
+    <text x="380" y="462" text-anchor="middle" font-size="15">Arrows show interactions; observers do not become state owners.</text>
+  </g>
+</svg>
