@@ -96,6 +96,7 @@ cache = LRUCache(capacity=100)
 - `*` is a correct option, `-` a wrong one.
 - `= a | b` lists accepted short answers.
 - `>` is the explanation for that variant.
+- `[[strategy]]` links to a glossary entry, and `[[#section-id]]` to another section. Both show a preview card on hover.
 - Optional settings go in the brackets: `[n=5]` shows five options instead of the default four; `[multi]` makes it multiple select.
 
 Concept IDs must be stable, so that editing a file does not wipe the progress of unrelated concepts. Variants are identified by their position under the concept; reordering them only affects which variant is picked next, not the concept's progress.
@@ -123,6 +124,46 @@ Each variant has an **explanation**. It is shown automatically when the answer i
 **Unlocking:** a section unlocks once every concept in the previous section has been answered. Wrong answers do not block progress; the concept goes to the review queue instead.
 
 You can go back and reread the content while answering, and revisit any unlocked section.
+
+## Glossary and previews
+
+The book teaches what its sections cover, but it also uses terms it never stops to define, and it refers to sections you may not have read. Looking one of those up should not mean leaving the site, and it should not mean reading a whole section you did not need.
+
+A **glossary** holds those terms. An entry is a term, any other names for it, a one-paragraph summary, and a longer explanation when the term needs one. Entries live in the content files and belong to one book, but they sit outside the reading order: nothing unlocks them, and no question tests them. A term is explained once, where it can be looked up, instead of being worked into the prose of every section that uses it.
+
+Two link forms reach that material from anywhere in the book:
+
+- `[[strategy]]` links to a glossary entry.
+- `[[#oop-composition]]` links to another section of the same book.
+
+Both are written by hand, so a link is always one the author meant, and both render as a marked link in the text.
+
+**Hovering** a link shows a preview card beside it: the term and its summary, or the section's title and its first paragraph. **Clicking** it opens the entry page or the section. Focusing the link with the keyboard shows the same card, Escape closes it, and Enter follows the link. A touch screen has no hover, so a tap follows the link.
+
+The preview of a section that is still locked says so, and says what unlocks it, instead of showing its first paragraph. Clicking it lands on the locked notice the section page already shows. Unlocking is otherwise unchanged.
+
+Each book has a glossary page listing its terms, and every entry has a page of its own. An entry's page also lists the sections that link to it, so a term leads back into the book.
+
+### Glossary format
+
+A glossary file is a content file whose front matter says `kind: glossary`. Each entry is a `##` heading with a stable id, then optional `=` lines naming its other names and `->` lines pointing at related entries, then a summary paragraph and an optional body.
+
+````markdown
+---
+book: Unity Game Engineering
+kind: glossary
+---
+
+## Strategy {#strategy}
+= strategy pattern | strategies
+-> state-pattern | composition
+
+An object holding one interchangeable policy behind a small interface, so a caller can swap the rule without knowing which one it has.
+
+The paragraphs, code and tables after the summary are the rest of the entry. They appear on its page and never in the preview card.
+````
+
+The first paragraph is the summary, and it is what a preview card shows, so it stays short. Everything after it is the body. An entry id must be stable for the links that point at it, but no progress is stored against it, so renaming one costs nothing but the links.
 
 ## Spaced repetition
 
@@ -183,3 +224,6 @@ Later, the site may connect to LLM services (Claude, ChatGPT, Gemini), for examp
 - No hosting, deployment, accounts, or sync between devices.
 - No in-browser content editor.
 - No LLM or remote API calls in the first version.
+- No glossary shared between books: a glossary belongs to one book, and a term used by two books is written twice.
+- No automatic linking: prose becomes a link only where a `[[...]]` was written.
+- No preview inside a preview: a link in a card navigates instead of opening another card.

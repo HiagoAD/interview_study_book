@@ -336,6 +336,182 @@ Manual check (user):
 3. Export, reset the book, then import. Progress comes back.
 4. With Wi-Fi off, `dist/index.html` from `file://` works in Firefox (the user's browser), and DevTools' Network tab shows no requests. The Storage tab lists a `study` IndexedDB database that survives a reload. If Firefox blocks IndexedDB on `file://`, the banner appears.
 
+## Feature: glossary and previews
+
+[PROJECT.md](../PROJECT.md) says what this is; this section says how. It continues the numbering: Phases 7 to 10 build it, under the same rules as **How to run a phase** at the top of this file. Everything in **Decisions** still holds, and what follows adds to it.
+
+Two things it does not change. **Storage is untouched:** glossary entries carry no progress, so `src/storage/`, the IndexedDB schema and an existing export all stay as they are. **`verify-dist.mjs` is untouched:** the glossary is inlined content like the rest, and none of it is dev-only.
+
+### Decisions: glossary files
+
+**Front matter.** A third optional key, `kind`. Its only value is `glossary`; anything else is an error. A file with `kind: glossary` holds entries and nothing else, so `chapter:` beside it is an error, and so is a `#` chapter line, a `##` heading with no `{#id}`, or a `??` or `?+` marker inside it. `book:` is still required: a glossary belongs to one book, and several glossary files in a book merge the way chapters do.
+
+**Entries.** `## Term {#entry-id}` starts an entry. The id matches `ID_PATTERN`, as section and concept ids do. The heading text is the term, shown as written.
+
+**Header lines.** Directly under the heading, before any content, an entry may have:
+
+- `= other name | another name` gives the term more names. Split on `|`, trimmed, empties dropped, as accepted answers are. Several `=` lines are allowed.
+- `-> entry-id | another-id` lists related entries, shown as "See also". Several `->` lines are allowed. Each target is an entry id in this book's glossary; an unknown one, or the entry itself, is an error.
+
+Both are read only directly after the heading. Once a content line has appeared, a line starting with `=` or `->` is ordinary Markdown.
+
+**Summary and body.** After the header lines, the first paragraph, meaning the run of non-blank lines up to the first blank line, is the **summary**. Everything after it is the **body**, which may be empty. The summary has to be a paragraph, so a first content line that opens a fence, a list, a table, a blockquote or a heading is an error that says to put it in the body. Its Markdown source is limited to 400 characters, because a preview card shows it whole; over that is an error giving the count.
+
+**Uniqueness.** Within a book, every entry id and every other name, slugged, is one name in one namespace, so two entries cannot claim the same word. A collision is an error naming both places. Glossary ids and section ids are separate namespaces, so a section and an entry may share an id.
+
+**Order.** The glossary page lists entries by term with `localeCompare(..., 'en')`, as books already are. File order decides nothing.
+
+### Decisions: cross-reference links
+
+**Syntax.** `[[target]]` and `[[target|text]]`, anywhere Markdown is rendered: section content, prompts, options, explanations, and glossary summaries and bodies.
+
+- A target starting with `#` is a **section of the same book**, named by its `{#id}`.
+- Any other target is a **glossary entry**, matched by `slug(target)` against entry ids and other names.
+- The text shown is what is written before the `|`. A section target with no `|` shows the section's title instead, since `#oop-composition` is not a phrase. So `[[Strategy]]` reads "Strategy", `[[strategies|strategy objects]]` reads "strategy objects", and `[[#oop-composition]]` reads the section's title.
+
+**Errors**, each at the line the link is on: an empty target; `[[` with no `]]` on the same line; an unknown term, naming the target and suggesting an entry when exactly one id or other name contains it; an unknown section id; a link to the entry or section it is written in. To show a literal `[[`, put it in a code span or a fence, where nothing is read as a link.
+
+**Resolution happens while rendering**, because a target is usually defined in another file. `renderBooks` already walks one book at a time: build that book's name-to-entry map and its section index (id to chapter id, title) first, then render its chapters and its glossary with both in the render context.
+
+**Output** is one `<a>` carrying the route, so the hash router, the keyboard, the back button and a middle click all work with no extra code:
+
+```html
+<a class="ref ref-term" href="#/g/unity-engineering/strategy">Strategy</a>
+<a class="ref ref-section" href="#/b/unity-engineering/05-oop-principles-and-patterns-with-tradeoffs/oop-composition">Interfaces, inheritance, and composition</a>
+```
+
+The browser reads the target back out of the href with `parseRoute`, so nothing is copied into data attributes.
+
+**Backlinks.** While rendering, each resolved term link records the chapter and section it sits in. `renderBooks` collects them per entry, deduplicated, in content order. A term link written inside a glossary entry records nothing: `->` is what relates entries to each other.
+
+### Decisions: content model
+
+`src/types/content.ts` gains one array on `Book` and one type. Every string is HTML except `term` and `names`.
+
+```ts
+export interface Book { id: string; title: string; chapters: Chapter[]; glossary: GlossaryEntry[] }
+
+export interface GlossaryEntry {
+  id: string
+  term: string    // plain text, the heading
+  names: string[] // plain text, the `=` lines
+  summary: string // HTML, one paragraph
+  html: string    // HTML, the body; '' when the entry is only a summary
+  see: string[]   // entry ids, the `->` lines
+  uses: { chapter: string; section: string }[] // the sections that link here
+}
+```
+
+`Section` does not change. A section card's lead is taken from the first `<p>` of `section.html` in the browser (`sectionLead`, below), so no prose is stored twice and `dist/index.html` grows only by the glossary itself.
+
+The raw model in `pipeline/parse.ts` mirrors this with `{ md, line }` chunks, as the rest of it does: `parseContentFile` returns entries on `RawFile`, and `assembleBooks` merges them into the `RawBook` and checks uniqueness.
+
+`npm run check` prints two more totals, `terms` and `links`, and after them a line naming any entry nothing links to. That is a note, not an error: an entry can be worth having and only ever reached from the glossary page.
+
+### Decisions: routes and pages
+
+| Route | Page |
+|---|---|
+| `#/g/:book` | Glossary: every term in the book |
+| `#/g/:book/:term` | One entry |
+
+A top-level `#/g/...` leaves the book's own routes alone, so no chapter slug has to become a reserved word.
+
+- **Glossary page.** Breadcrumb Home > Book. The term count, a filter box matching the term and its other names by case-insensitive substring, and the list: each term, its other names and its summary. The filter is page state and is not stored.
+- **Entry page.** Breadcrumb Home > Book > Glossary. The term as `h1`, "Also called ..." when it has other names, the summary, the body, "See also", and **Where this appears**: the sections that link to the entry, labelled chapter > section. A locked section there is plain text with the note the chapter page already uses, so the list never offers a link into a locked page.
+- **Book page** gains a "Glossary (N terms)" link. A book with no entries shows nothing new.
+- An unknown book or term falls through to the existing Not-found page.
+
+### Decisions: preview cards
+
+- One card at a time, rendered with `createPortal` into `document.body` by a provider inside `App`, positioned `absolute` in page coordinates so it travels with the page and needs no scroll listener.
+- `Html` gains the delegated handlers that open and close it, so every block of rendered content gets previews from one place: section content, prompts, options, explanations, and the card's own content.
+- **Hover** opens after 300 ms and closes 200 ms after the pointer has left both the link and the card, so the pointer can travel into the card. **Focus** opens at once. **Escape** closes, and so does a route change. `(hover: hover)` gates the hover half, so a touch screen only follows the tap.
+- **A link inside a card never opens a second card.** It navigates on click like any other link.
+- A **term card** shows the term and its summary. A **section card** shows the chapter and section titles and the section's lead, or, when that section is locked, the sentence the section page shows, naming what unlocks it.
+- The card is `aria-hidden` and the link gets no `aria-describedby`. Everything in a card is one Enter away on a page of its own, and a preview that narrated itself would read the same text twice.
+- At most `min(22rem, 100vw - 2rem)` wide, with the body capped in height and faded at the bottom, so a long section lead cannot fill the screen.
+
+Three pure modules carry the logic that can be tested the way the rest of the code is:
+
+- `previewTarget(href, books)`: an href to what a card would show, or nothing. Built on `parseRoute`.
+- `placePreview(anchor, card, viewport, gap)`: page coordinates and which side, preferring below the link, flipping above when there is more room there, clamped into the viewport.
+- `sectionLead(html)`: the first `<p>...</p>` of a section's HTML, anchored at the start, or `''`. That HTML comes from the pipeline and a `<p>` never nests, so this needs no parser.
+
+The timers and the measure-then-place pass stay in the component, and the manual checks cover them.
+
+### Decisions: styles
+
+`.ref` is an accent-coloured link with a dotted underline, so a link that previews reads differently from a plain link without a second colour. `.preview-card` uses the existing `--surface`, `--border` and `--muted`, takes a small shadow, and fades in only under `prefers-reduced-motion: no-preference`. Both themes come from the variables already in `styles.css`.
+
+### Phase 7: Glossary format and pipeline
+
+Build:
+
+- `pipeline/parse.ts`: the `kind` front-matter key, glossary files, entries, header lines, the summary and body split, and every error above.
+- `pipeline/load.ts`: entries merged into the book, the id and name namespace check, and `summarize` counting terms.
+- `pipeline/render.ts`: `[[...]]` as a remark transformer, after `remarkInlineImages` and before `remark-rehype`. It visits `text` nodes only, which is what keeps code spans, fences and math out of it: the parser has already made those `inlineCode`, `code` and `inlineMath` nodes, whatever order the transformers run in. It resolves from the render context and records backlinks through a sink on the chunk context, like the image plugin's.
+- `src/types/content.ts` per Content model above, and `glossary: []` in `src/test-helpers.ts`'s `book()`.
+- `pipeline/check.ts`: the `terms` and `links` totals and the unlinked-entry note.
+- `docs/content-format.md`: the glossary file, both link forms, the rules and the new common mistakes.
+- Tests in the style of the existing ones: one per error rule, asserting file and line; resolution by id, by other name and by section id; the display-text defaults; `[[x]]` inside a fence and a code span staying literal; backlinks deduplicated and in content order; one glossary split across two files; a link in a prompt, an option and an explanation.
+
+Done when: `npm test`, `npm run typecheck`, `npm run check` and `npm run build` pass, with two or three real entries and a handful of links added to the Unity book to exercise it. Keep them; Phase 10 extends them.
+
+Note for whoever runs it: nothing renders the glossary yet, and a term link goes to Not found until Phase 8 adds the route. That is expected. Do not add the pages early.
+
+### Phase 8: Glossary pages and links
+
+Build:
+
+- `#/g/:book` and `#/g/:book/:term` in `src/router.ts`, with tests beside the existing route tests.
+- `src/pages/Glossary.tsx` and `src/pages/GlossaryEntry.tsx` per Routes and pages, wired into `App`.
+- The "Glossary (N terms)" link on the Book page.
+- Styles for `.ref` and for both pages.
+
+Done when: `npm test`, `npm run typecheck` and `npm run build` pass.
+
+Manual check (user), in `npm run dev`:
+
+1. A term link in chapter 05 opens its entry, and the browser's back button returns to the same place in the section.
+2. The entry lists the sections that link to it, and a locked one is not a link.
+3. The filter on the glossary page finds a term by one of its other names.
+4. A `[[#id]]` link opens the right section.
+5. Phone width and dark mode have no horizontal scroll.
+
+### Phase 9: Preview cards
+
+Build the provider, the card, the `Html` handlers, the three pure modules with their tests, and the styles, per Preview cards above.
+
+Done when: `npm test`, `npm run typecheck` and `npm run build` pass.
+
+Manual check (user), in Firefox, on `npm run dev` and on `dist/index.html` from `file://` with the network off:
+
+1. Hovering a term shows the card after a beat; moving the pointer into the card keeps it open; leaving closes it.
+2. Tab to a link shows the card, Escape closes it, and Enter opens the page.
+3. A card near the bottom of the window flips above the link, and one near the right edge stays on screen.
+4. A link to a locked section previews the locked notice, not the text.
+5. A link inside a card opens no second card.
+6. Phone width and dark mode work, and a tap on a phone-sized touch screen simply follows the link.
+
+### Phase 10: First glossary batch for the Unity book
+
+Write `content/unity-engineering/glossary.md`, and link first mentions, starting where the problem was found: the pattern table in chapter 05, where a reader who does not know Strategy has nowhere to go.
+
+The first batch is the terms the book already uses as though they were known. A survey of the current text puts it at, at least: Strategy, State, Observer, Command, Factory, Adapter, Decorator, object pool, singleton, service locator, composition root, dependency injection, substitutability, cohesion and coupling, assembly definition, coroutine, Burst, the Job System, Addressables, ScriptableObject, IL2CPP, draw call, the SRP batcher, idempotence, and feature flag. Several appear in four or more chapters, so one entry pays for itself many times over.
+
+Rules for the pass:
+
+- **Prose only. Never touch a question block.** Concept ids and option text are progress, and editing them loses it.
+- The book's prose style applies to entries too: no em dashes, no contractions, curly quotes, and the plain voice the chapters use.
+- Link the first mention in a section, not every mention, and never inside a heading or a code span.
+- Where the book already explains a term properly, write a `[[#section-id]]` link to that section instead of an entry repeating it.
+- Work chapter by chapter, run `npm run check` after each, and commit per chapter.
+
+Done when: `npm run check`, `npm test` and `npm run build` pass, and every pattern named in chapter 05's table previews.
+
+After this, the glossary grows as reading finds gaps: an entry and its links are a two-line change, and `npm run check` catches a link to a term that does not exist yet.
+
 ## Phase log
 
 ### Phase 1: Scaffold and single-file build
