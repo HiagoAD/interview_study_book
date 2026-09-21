@@ -1,5 +1,6 @@
 import { books } from 'virtual:content'
 import { Breadcrumb } from '../components/Breadcrumb'
+import { plural } from '../components/plural'
 import { ProgressMeter } from '../components/ProgressMeter'
 import { countCompleteSections } from '../engine/sections'
 import { useProgress } from '../storage/useProgress'
@@ -32,6 +33,12 @@ export function BookPage({ book: bookId }: { book: string }) {
           </li>
         ))}
       </ul>
+
+      {book.glossary.length > 0 && (
+        <nav className="page-links" aria-label="More">
+          <a href={`#/g/${book.id}`}>Glossary ({plural(book.glossary.length, 'term')})</a>
+        </nav>
+      )}
     </main>
   )
 }

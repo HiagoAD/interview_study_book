@@ -16,6 +16,14 @@ test('parseRoute resolves every route shape', () => {
     chapter: 'caching',
     section: 'cache-eviction',
   })
+  expect(parseRoute('#/g/system-design')).toEqual({ name: 'glossary', book: 'system-design' })
+  expect(parseRoute('#/g/system-design/write-through')).toEqual({
+    name: 'term',
+    book: 'system-design',
+    term: 'write-through',
+  })
+  expect(parseRoute('#/g')).toEqual({ name: 'not-found' })
+  expect(parseRoute('#/g/system-design/write-through/extra')).toEqual({ name: 'not-found' })
   expect(parseRoute('#/review')).toEqual({ name: 'review' })
   expect(parseRoute('#/data')).toEqual({ name: 'data' })
   expect(parseRoute('#/nonsense')).toEqual({ name: 'not-found' })

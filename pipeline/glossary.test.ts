@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import { assembleBooks, summarize } from './load.ts'
 import { SUMMARY_LIMIT, parseContentFile } from './parse.ts'
+import { docExample } from './test-helpers.ts'
 
 const FM = ['---', 'book: Test', 'kind: glossary', '---'] // lines 1-4
 /** A valid entry, starting on line 5. */
@@ -13,6 +14,21 @@ function parseOk(...lines: string[]) {
   expect(errors).toEqual([])
   return file
 }
+
+test('the glossary example in docs/content-format.md is a valid glossary', () => {
+  const { books, errors } = assembleBooks([{ path: 'content/g.md', text: docExample('docs/content-format.md', '## Glossary files') }])
+  expect(errors).toEqual([])
+  expect(books[0].entries.map((entry) => [entry.id, entry.names.map((name) => name.text), entry.see.map((see) => see.id)])).toEqual([
+    ['read-through', ['lazy loading'], []],
+    ['write-through', ['synchronous write'], ['read-through']],
+  ])
+})
+
+test('the glossary example in PROJECT.md is a valid glossary', () => {
+  const { books, errors } = assembleBooks([{ path: 'content/g.md', text: docExample('PROJECT.md', '### Glossary format') }])
+  expect(errors).toEqual([])
+  expect(books[0].entries.map((entry) => entry.id)).toEqual(['strategy'])
+})
 
 test('an entry parses to its term, names, related entries, summary and body', () => {
   const file = parseOk(

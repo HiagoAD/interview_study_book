@@ -80,9 +80,14 @@ book: System Design
 kind: glossary
 ---
 
+## Read-through cache {#read-through}
+= lazy loading
+
+A cache that fetches from the store on a miss, fills itself, then returns the value, so a caller never talks to the store.
+
 ## Write-through cache {#write-through}
-= write through | write-through
--> cache-eviction
+= synchronous write
+-> read-through
 
 Every write goes to the cache and to the store together, so a read straight after a write never misses.
 
@@ -90,7 +95,7 @@ The body continues here, with as many paragraphs, fences, tables and images as t
 ````
 
 - `## Term {#term-id}` starts an entry. Ids match `[a-z0-9]+(-[a-z0-9]+)*`, as section ids do, and the heading text is the term.
-- `= a | b` gives the term other names, split on `|` and trimmed. Several `=` lines are allowed.
+- `= a | b` gives the term other names, split on `|` and trimmed. Several `=` lines are allowed. A name is matched by its letters, so `= write through` on `{#write-through}` is that id written again, and an error.
 - `-> id | id` lists related entries, shown as "See also". Each is the id of another entry in the same book, and never the entry's own id. Several `->` lines are allowed.
 - Both markers sit directly under the heading, before any content. Blank lines between them are fine. Below the content they are ordinary text.
 - The **summary** is the first paragraph: from the first content line to the first blank line. It has to be one paragraph and at most 400 characters, because a preview card shows it whole. Everything after it is the **body**, which may be empty.

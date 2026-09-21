@@ -4,6 +4,8 @@ import { useRoute } from './router'
 import { BookPage } from './pages/Book'
 import { ChapterPage } from './pages/Chapter'
 import { DataPage } from './pages/Data'
+import { GlossaryPage } from './pages/Glossary'
+import { TermPage } from './pages/Term'
 import { HomePage } from './pages/Home'
 import { NotFoundPage } from './pages/NotFound'
 import { ReviewPage } from './pages/Review'
@@ -38,6 +40,10 @@ function Pages() {
       return <ChapterPage book={route.book} chapter={route.chapter} />
     case 'section':
       return <SectionPage book={route.book} chapter={route.chapter} section={route.section} />
+    case 'glossary':
+      return <GlossaryPage book={route.book} />
+    case 'term':
+      return <TermPage book={route.book} term={route.term} />
     case 'review':
       return <ReviewPage />
     case 'data':

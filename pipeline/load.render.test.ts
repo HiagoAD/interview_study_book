@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { loadContent } from './load.ts'
-import { tempRepo } from './test-helpers.ts'
+import { docExample, tempRepo } from './test-helpers.ts'
 
 /** The 1-based line of the first line containing `needle`, so each expectation names the text it points at. */
 const lineOf = (lines: string[], needle: string) => lines.findIndex((line) => line.includes(needle)) + 1
@@ -163,8 +162,7 @@ test('images resolve from the folder of the file that names them, so two books c
 })
 
 test('the example in docs/content-format.md loads and renders without errors', async () => {
-  const doc = readFileSync(new URL('../docs/content-format.md', import.meta.url), 'utf8')
-  const example = /````markdown\n([\s\S]*?)\n````/.exec(doc)![1]
+  const example = docExample('docs/content-format.md', '## Example')
   const root = tempRepo({
     'content/example.md': example,
     'content/images/lru.svg': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>',

@@ -5,6 +5,8 @@ export type Route =
   | { name: 'book'; book: string }
   | { name: 'chapter'; book: string; chapter: string }
   | { name: 'section'; book: string; chapter: string; section: string }
+  | { name: 'glossary'; book: string }
+  | { name: 'term'; book: string; term: string }
   | { name: 'review' }
   | { name: 'data' }
   | { name: 'not-found' }
@@ -23,6 +25,13 @@ export function parseRoute(hash: string): Route {
     if (parts.length === 4 && book && chapter && section) {
       return { name: 'section', book, chapter, section }
     }
+  }
+
+  // The glossary sits beside the books rather than inside one, so no chapter slug has to be reserved.
+  if (parts[0] === 'g') {
+    const [, book, term] = parts
+    if (parts.length === 2 && book) return { name: 'glossary', book }
+    if (parts.length === 3 && book && term) return { name: 'term', book, term }
   }
 
   return { name: 'not-found' }

@@ -146,7 +146,7 @@ Each book has a glossary page listing its terms, and every entry has a page of i
 
 ### Glossary format
 
-A glossary file is a content file whose front matter says `kind: glossary`. Each entry is a `##` heading with a stable id, then optional `=` lines naming its other names and `->` lines pointing at related entries, then a summary paragraph and an optional body.
+A glossary file is a content file whose front matter says `kind: glossary`. Each entry is a `##` heading with a stable id, then optional `=` lines naming its other names and `->` lines pointing at related entries, then a summary paragraph and an optional body. The entry below has no related entries to point at.
 
 ````markdown
 ---
@@ -156,7 +156,6 @@ kind: glossary
 
 ## Strategy {#strategy}
 = strategy pattern | strategies
--> state-pattern | composition
 
 An object holding one interchangeable policy behind a small interface, so a caller can swap the rule without knowing which one it has.
 

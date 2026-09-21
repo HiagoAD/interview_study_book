@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { parseContentFile, slug } from './parse.ts'
+import { docExample } from './test-helpers.ts'
 
 const parse = (...lines: string[]) => parseContentFile('content/t.md', lines.join('\n'))
 
@@ -14,8 +14,7 @@ const FM = ['---', 'book: Test', 'chapter: Intro', '---']
 const MC = ['?? q1 Question?', '* right', '- wrong', '> because']
 
 test('the PROJECT.md example parses to the expected structure', () => {
-  const projectMd = readFileSync(new URL('../PROJECT.md', import.meta.url), 'utf8')
-  const example = /````markdown\n([\s\S]*?)\n````/.exec(projectMd)![1]
+  const example = docExample('PROJECT.md', '### File format')
   const { file, errors } = parseContentFile('content/example.md', example)
 
   expect(errors).toEqual([])
@@ -96,8 +95,7 @@ test('the PROJECT.md example parses to the expected structure', () => {
 })
 
 test('the example in docs/content-format.md parses cleanly and uses every question type', () => {
-  const doc = readFileSync(new URL('../docs/content-format.md', import.meta.url), 'utf8')
-  const example = /````markdown\n([\s\S]*?)\n````/.exec(doc)![1]
+  const example = docExample('docs/content-format.md', '## Example')
   const { file, errors } = parseContentFile('content/example.md', example)
 
   expect(errors).toEqual([])

@@ -210,6 +210,18 @@ a {
   font-weight: 600;
 }
 
+/* A link to a glossary entry or another section. It is an ordinary link in an ordinary colour, with a dotted
+   underline, so a reader can tell which words have something behind them before pointing at any of them. */
+.ref {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+}
+
+.ref:hover {
+  text-decoration-style: solid;
+}
+
 /* Code */
 
 code,
@@ -879,6 +891,28 @@ progress::-moz-progress-bar {
 /* In review, the card's own trail says which section the question came from. */
 .card-header .breadcrumb ol {
   font-size: 0.85rem;
+}
+
+/* The glossary */
+
+/* The summary, on the page of one term. */
+.lead {
+  font-size: 1.1rem;
+}
+
+/* The same summary in the list of every term, where it is the note under the name. */
+.term-summary {
+  margin-top: 0.35rem;
+  color: var(--muted);
+}
+
+.inline-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* The Data page */

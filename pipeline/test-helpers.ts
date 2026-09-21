@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach } from 'vitest'
@@ -18,4 +18,17 @@ export function tempRepo(files: Record<string, string | Uint8Array>): string {
     writeFileSync(path.join(root, name), data)
   }
   return root
+}
+
+/**
+ * The first ````markdown block below `heading` in a repo file. The docs hold several examples, so a test
+ * names the one it means rather than taking whichever comes first.
+ */
+export function docExample(file: string, heading: string): string {
+  const doc = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
+  const start = doc.indexOf(`\n${heading}\n`)
+  if (start < 0) throw new Error(`${file} has no heading "${heading}"`)
+  const example = /````markdown\n([\s\S]*?)\n````/.exec(doc.slice(start))
+  if (!example) throw new Error(`${file} has no example below "${heading}"`)
+  return example[1]
 }
