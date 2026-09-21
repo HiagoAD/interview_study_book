@@ -5,7 +5,7 @@ chapter: 04: C# semantics that affect gameplay correctness
 
 ## Value types, reference types, and copying {#csharp-value-reference}
 
-A variable of a value type contains a value; assignment normally copies that value. A variable of a reference type contains a reference; assignment copies the reference, so two variables can refer to the same object. A struct can contain references, and copying it copies those references rather than cloning their objects. [Microsoft's value-type reference](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types) describes these copy semantics.
+A value-type variable holds a value, and assignment normally copies it. A reference-type variable holds a reference to an object; assignment copies that reference, so two variables can refer to the same object. A struct can contain reference fields too. Copying the struct copies those references, leaving both structs pointing to the same referenced objects. [Microsoft's value-type reference](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types) describes these copy semantics.
 
 ```csharp
 using System.Collections.Generic;
@@ -26,13 +26,13 @@ public struct InventorySnapshot
 // a.Coins is still 10, but a.Items now contains both items.
 ```
 
-This is why “struct means deep copy” is incorrect. It is also why “structs live on the stack and classes live on the heap” is a poor design rule. A struct can be a field of a heap object, an element of an array, or boxed. Choose by semantics, size, mutation, and measured usage rather than by that slogan.
+The example shows why “struct means deep copy” is incorrect: the integer is copied, but both structs still refer to the same list. The rule “structs live on the stack and classes live on the heap” is also too simple to guide a design. A struct can be a field in a heap object, an array element, or a boxed value. Choose a type based on how it should be copied and changed, its size, and how the program uses it.
 
-Small immutable values suit coordinates, IDs, and compact command results. Shared mutable entities suit reference identity and controlled ownership. Large structs can be expensive to copy. A `readonly struct` prevents reassignment of its instance fields but does not make an object referenced by a field immutable.
+Small immutable values work well for coordinates, IDs, and compact command results. Use reference identity and clear ownership for mutable entities that several callers share. Large structs can cost more to copy. Also remember the limit of `readonly struct`: its instance fields cannot be reassigned, but an object referenced by one of those fields may still be mutable.
 
-A method parameter also receives a copy by default. Passing a class reference lets the method mutate the referenced object, but assigning that parameter to another object does not replace the caller's variable. `ref` exposes the caller's storage; `out` requires assignment before normal return; `in` is a readonly reference with subtleties around defensive copies. Choose these modifiers for the passing semantics you need, then measure any claimed performance benefit.
+By default, a method parameter receives a copy. If that copy is a reference, the method can change the referenced object. Assigning a different object to the parameter, however, does not replace the caller's variable. The parameter modifiers change this contract: `ref` exposes the caller's storage, `out` requires assignment before a normal return, and `in` passes a readonly reference. Some uses of `in` still cause defensive copies. Choose the passing behavior you need first, then measure any expected performance benefit.
 
-With `List<T>`, indexing a struct returns a value. To update an ordinary mutable struct element, copy it, modify the copy, and assign it back. An array element can behave differently because it is a variable location. Prefer immutable updates when they make ownership clearer.
+Reading a struct through a `List<T>` index returns a value. To change an ordinary mutable struct in that list, copy the element, change the copy, and assign it back. An array element can behave differently because it is itself a variable location. Immutable updates can make ownership easier to follow when they fit the problem.
 
 ?? csharp-shallow-copy A struct contains an integer and a `List<string>`. After copying the struct, what is shared?
 * The list object referenced by both copies.
@@ -67,13 +67,13 @@ static void Example()
 
 ## Equality, hashing, and stable identifiers {#csharp-equality-hashing}
 
-Identity asks whether two references represent the same object. Value equality asks whether two values represent the same logical value. A mission ID should usually compare by its identifier value; two scene components are not interchangeable merely because their visible properties match.
+Object identity asks whether two references point to the same object. Value equality asks whether two values mean the same thing. Mission IDs should usually compare by identifier value. Two scene components, however, do not become interchangeable just because their visible properties match.
 
-Hash collections require a contract: values considered equal must have equal hash codes. Unequal values may collide. A hash code is therefore not a globally unique ID, and runtime hash codes should not be saved as persistent identifiers.
+Hash collections depend on one rule: values that compare equal must have equal hash codes. Different values can still have the same hash; that is a collision. A hash code is therefore unsuitable as a globally unique ID. Runtime hash codes should not be saved as persistent identifiers either.
 
 Microsoft's [GetHashCode contract](https://learn.microsoft.com/en-us/dotnet/api/system.object.gethashcode) documents these equality and persistence restrictions.
 
-Never mutate fields used for equality or hashing while an object is a key in a dictionary or set. Its current hash can lead to a different bucket than the one used when it was inserted, making lookup or removal fail.
+While an object is a key in a dictionary or set, keep the fields used for equality and hashing unchanged. If those fields change, a lookup may calculate a different bucket from the one used at insertion. The collection can then fail to find or remove a key that it still contains.
 
 A pooled entity key can combine its slot and generation:
 
@@ -104,9 +104,9 @@ public readonly struct SpawnId : IEquatable<SpawnId>
 }
 ```
 
-The hash function can collide; the collection resolves equality using the key's fields. This example omits domain checks such as valid slot bounds. Generation wraparound must also be considered for extremely long-lived pools; a wider generation or a policy that prevents stale identities surviving wraparound can address it.
+This hash function can produce collisions. The collection uses the key's fields to check equality and distinguish those keys. The example leaves out validation, such as checking whether a slot is in range. Very long-lived pools also need a plan for generation numbers wrapping around: use a wider number, or ensure that old identities cannot survive until a generation is reused.
 
-For string IDs, specify a comparer such as `StringComparer.Ordinal` when identifiers are case-sensitive technical tokens. User-facing language comparisons are a different problem. A case-insensitive identifier scheme is possible, but must be consistent in authoring, storage, and lookup.
+Choose a comparer explicitly for string IDs. `StringComparer.Ordinal`, for example, fits case-sensitive technical identifiers. Comparing text for display to a user is a different task. Case-insensitive IDs can also work, provided authoring, storage, and lookup all follow the same rule.
 
 ?? csharp-hash-contract Which hashing rule must an equality comparer satisfy?
 * Equal values must produce equal hash codes.
@@ -131,7 +131,7 @@ For string IDs, specify a comparer such as `StringComparer.Ordinal` when identif
 
 ## Generics, boxing, and allocation claims {#csharp-generics-boxing}
 
-Generics allow a collection or algorithm to retain its element type. A `List<int>` stores integers without boxing each one as `object`. Boxing a value type to `object`, or to an implemented interface reference, ordinarily creates a managed object containing a copy. Unboxing expects the boxed value's actual type; a boxed `int` cannot be directly unboxed as `long`. [Microsoft's conversions guide](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/types/conversions) explains the conversion rules.
+Generics let a collection or algorithm keep its element type. A `List<int>`, for example, stores integers without boxing each one as an `object`. Converting a value type to `object`, or to an interface reference that it implements, ordinarily creates a managed object containing a copy; this is boxing. Unboxing must recover the actual boxed type. A boxed `int` cannot be directly unboxed as `long`. [Microsoft's conversions guide](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/types/conversions) explains the conversion rules.
 
 ```csharp
 int count = 7;
@@ -141,13 +141,13 @@ int recovered = (int)boxed; // 7: boxing captured a copy.
 long widened = (int)boxed; // Unbox int, then widen to long.
 ```
 
-Interface-based architecture does not inherently allocate on every call. A class reference converted to an interface reference does not box the object. A struct assigned to an interface variable may box. Constrained generic calls can avoid some boxing, depending on the operation and generated code. Measure the relevant build instead of banning interfaces.
+Using an interface does not necessarily allocate an object on each call. Converting a class reference to an interface reference does not box the object. Assigning a struct to an interface variable may box it, while some constrained generic calls can avoid boxing. The result depends on the operation and generated code, so measure the relevant build before deciding to remove interfaces.
 
-Other common allocation sources include closures that capture state, new arrays, string formatting, iterator state machines, and collection capacity growth. The exact behavior depends on the API and compiler/runtime combination. Small allocations add up when the operation runs for every object on every frame.
+Allocations can also come from captured variables in closures, new arrays, string formatting, iterator state machines, and collections growing their capacity. The details depend on the API, compiler, and runtime. Check how often the work happens: a small allocation repeated for every object in every frame can add up quickly.
 
-For example, allocating 128 bytes per active object per frame across 500 objects at 60 frames per second produces 3,840,000 bytes per second of allocation traffic. That is about 3.84 MB/s in decimal units, not necessarily a 3.84 MB increase in retained memory each second. Garbage collection may reclaim those objects.
+Suppose 500 active objects each allocate 128 bytes per frame at 60 frames per second. That produces 3,840,000 bytes of allocations per second, or about 3.84 MB/s in decimal units. It does not necessarily add 3.84 MB to retained memory every second: the garbage collector may reclaim those objects.
 
-Check how often the query runs. A LINQ query during rare setup may cost little enough to keep; the same query in every object's `Update` deserves measurement. Introduce pooling only when its saved work justifies the additional cleanup and ownership rules.
+Apply the same reasoning to queries. A LINQ query used during occasional setup may cost little enough to keep. The same query in every object's `Update` needs measurement. Pooling is another tradeoff: use it when the saved work justifies the extra rules for ownership and cleanup.
 
 ?? csharp-boxing-copy What value does `recovered` contain in the boxing example?
 * 7.
@@ -178,35 +178,35 @@ struct Counter : System.IComparable<Counter>
 
 ## Delegates, events, closures, and lifetime {#csharp-events-lifetime}
 
-A delegate represents a callable target. An event exposes subscription while restricting invocation to the declaring type's implementation. Events help describe notifications, but they do not define delivery durability, thread safety, or error isolation.
+A delegate represents a callable target. An event lets other code subscribe, while leaving invocation under the control of the declaring type's implementation. That makes events useful for notifications, but does not guarantee reliable delivery, thread safety, or isolation between handler errors.
 
-An instance-method subscription retains a reference to the subscriber through the delegate. If the publisher outlives the subscriber's intended scope, unsubscribe at that scope boundary. An anonymous lambda is difficult to remove unless the exact delegate instance is retained. Microsoft documents the retention and unsubscription concerns in its [event subscription guide](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-subscribe-to-and-unsubscribe-from-events).
+When you subscribe an instance method, its delegate keeps a reference to the subscriber. If the publisher lives longer than the intended subscription, unsubscribe when that subscription should end. For an anonymous lambda, keep the exact delegate instance if you will need to remove it later. Microsoft documents these concerns in its [event subscription guide](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/how-to-subscribe-to-and-unsubscribe-from-events).
 
-For a view that listens only while visible, pair binding and unbinding. In Unity that can be `OnEnable` and `OnDisable` if the reference is ready and visibility matches the subscription lifetime. An explicitly bound presenter may instead expose `Bind(model)` and `Unbind()`.
+Pair subscription and unsubscription with the period during which a view should listen. In Unity, `OnEnable` and `OnDisable` can work if the model reference is ready and the view should listen whenever it is enabled. A presenter with an explicit binding lifetime may instead use `Bind(model)` and `Unbind()`.
 
-A closure captures variables, not necessarily their values at the point you imagine. In a `for` loop that creates callbacks, copy the index into a per-iteration local if each callback should retain a distinct value. Also consider what the closure retains: a lambda that references a large owner object can keep its entire reachable graph alive.
+A closure captures variables, which may change before the callback runs. If callbacks created in a `for` loop each need their own index value, copy the index into a new local variable inside each iteration. Also check which objects the closure keeps alive. A lambda that references a large owner can retain that owner and everything still reachable through it.
 
-Define event payloads as facts. A payload containing a mutable collection that changes after publication can make observers see inconsistent history. Copy the necessary values or use an immutable representation when a durable snapshot is required.
+Event data should describe what happened at the time of the event. If it contains a mutable collection that changes later, observers may see different versions of the same event. Copy the required values, or use immutable data, when observers need a lasting snapshot.
 
-Whichever binding method you choose, subscribe once. Repeated activation can attach the same handler repeatedly, resulting in duplicate callbacks. Test enable-disable-enable sequences and bind-to-another-model transitions. “The event fires twice” often begins with a lifecycle defect rather than a faulty dispatcher.
+Whichever binding method you use, ensure each subscription is added only once. Repeated activation can attach the same handler again and cause duplicate callbacks. Test enable-disable-enable sequences, as well as switching a view to another model. A report that “The event fires twice” may come from duplicate subscriptions.
 
 ?? csharp-event-retention Why can a long-lived publisher retain an otherwise unused subscriber?
 * Its event delegate references the subscriber's instance method target.
 - C# garbage collection never collects classes.
 - Every event permanently stores all local variables in the program.
 - Unloading a scene always removes every C# delegate automatically.
-> Reachability through a delegate is still reachability. End subscriptions when the subscriber's intended binding ends.
+> A delegate can keep the subscriber reachable, so garbage collection cannot reclaim it. Unsubscribe when the subscriber should stop listening.
 
 ?? csharp-closure-index Several callbacks created in a `for` loop all use the final index. What is a direct fix?
 * Capture a distinct local copy of the index for each iteration.
 - Increase the list capacity.
 - Change every callback into a static event.
 - Invoke garbage collection before the callbacks run.
-> A captured loop variable can be shared among callbacks. A per-iteration local provides separate captured storage.
+> Several callbacks may capture the same loop variable and read its later value. A local variable created in each iteration gives each callback a separate value to capture.
 
 ## Enumeration, deferred execution, and mutation {#csharp-enumeration}
 
-An `IEnumerable<T>` describes how to enumerate values; it does not promise a materialized snapshot. Many LINQ operations defer work until enumeration. Enumerating the same query twice can repeat work and observe different source state.
+An `IEnumerable<T>` describes how to visit a sequence of values. It does not guarantee that the values have already been collected into a snapshot. Many LINQ operations wait until enumeration to do their work. Enumerating the same query twice can therefore repeat that work and read different source state.
 
 ```csharp
 // Illustrative fragment; players is a collection of player models.
@@ -216,13 +216,13 @@ An `IEnumerable<T>` describes how to enumerate values; it does not promise a mat
 // The predicate sees state at enumeration, not query construction.
 ```
 
-Call `ToArray` or `ToList` when a snapshot of the membership is required, while acknowledging the allocation and copy cost. A shallow snapshot of references does not freeze each referenced object's fields.
+Use `ToArray` or `ToList` when you need to capture which elements are in a sequence at a particular moment. That allocates storage and copies the elements. If the elements are references, the copy still points to the original objects; it does not freeze their fields.
 
-Changing a typical list while enumerating it with `foreach` invalidates its enumerator. Safe alternatives include gathering removals for a second pass, walking indices backward for removals, or using a data structure and algorithm with an explicit mutation contract. Do not generalize one collection's behavior to every collection or runtime version.
+Changing a typical list during a `foreach` loop invalidates its enumerator. You can instead collect the removals and apply them afterward, or walk indices backward when removing elements. Other collections may support different rules for changes during iteration. Check the contract of the collection and runtime you use.
 
-Backward index removal avoids skipping shifted entries, but each `RemoveAt` can still shift data. A large filtering pass may be better implemented by compacting survivors once. If order is irrelevant, swap-back removal can avoid shifting, provided any index mappings are repaired.
+Walking backward prevents removal from skipping an element that shifts into an earlier index. Each `RemoveAt` can still move data, though. For a large filtering pass, it may be cheaper to compact the surviving elements once. If order does not matter, move the last element into the removed slot instead; this is swap-back removal, and any stored index mappings must be updated.
 
-Repeated enumeration is another hidden cost. A method accepting `IEnumerable<T>` should not assume that `Count()` and then a second pass are cheap or side-effect-free. Materialize once when appropriate, or require a more specific read-only collection contract if the method needs count and indexing.
+Check for hidden repeated enumeration. A method that accepts `IEnumerable<T>` cannot assume that calling `Count()` and then looping over the sequence is cheap or free of side effects. If appropriate, collect the values once. If the method requires a count and indexed access, consider requesting a more specific read-only collection type.
 
 ?? csharp-deferred-query When does a deferred filtering query usually evaluate its predicate?
 * When the sequence is enumerated.
@@ -236,28 +236,28 @@ Repeated enumeration is another hidden cost. A method accepting `IEnumerable<T>`
 - Every player's entire reachable object graph.
 - Only the list capacity.
 - Future membership changes in the original list.
-> Materializing a reference sequence copies its membership at that moment. It does not deep-copy the referenced models.
+> `ToArray` records which references are in the sequence at that moment. It does not copy the player objects, whose fields can still change.
 
 ## Errors, cleanup, and numeric boundaries {#csharp-errors-numbers}
 
-Separate expected rejection from exceptional failure. Insufficient currency, a mission that is not complete, and a cancelled view load can be normal outcomes. A missing required dependency or corrupt definition is a broken precondition. An I/O failure is an operational failure requiring a recovery policy.
+Distinguish normal rejection from a failure that needs recovery. Insufficient currency, an incomplete mission, or a cancelled view load can be expected outcomes. A missing required dependency or a corrupt definition means an assumption is broken. An I/O error needs a policy for retrying, reporting failure, or otherwise recovering.
 
-Return a result or use a `Try...` method for frequent expected rejection. Use exceptions when normal execution cannot continue at that layer. Catch where you can recover, translate the error into the caller's terms, or add diagnostic context before rethrowing. A catch-all that logs and returns success destroys the caller's ability to reason about state.
+For frequent, expected rejection, return a result or use a `Try...` method. Use an exception when normal execution cannot continue at that layer. Catch it where you can recover, explain it in terms the caller understands, or add debugging context before rethrowing. Logging every exception and then returning success leaves the caller unable to tell what happened.
 
-`using` and `try/finally` establish deterministic cleanup for owned resources. Garbage collection manages reachability of managed memory; it does not replace releasing a file handle, disposing a native allocation, or releasing a package-specific asset handle.
+Use `using` or `try/finally` to clean up resources at a defined point. Garbage collection handles managed memory that is no longer reachable. It does not replace closing a file handle, disposing a native allocation, or releasing an asset handle according to a package's rules.
 
-Numeric behavior is also part of the contract. Use integer units for discrete quantities such as coins. An integer type can still overflow. Validate ranges, use checked arithmetic where appropriate, and decide whether excessive input rejects or saturates. Never let a malicious or corrupt negative amount turn a spend operation into a grant.
+Define the valid numeric inputs and what happens at their limits. Coins, for example, are discrete quantities and suit integer units, but integers can still overflow. Validate ranges, use checked arithmetic where appropriate, and decide whether an excessive amount is rejected or capped. Reject negative spend amounts, so corrupt or malicious input cannot turn spending into a grant.
 
-Floating-point values represent approximations. Do not use arbitrary exact comparisons for computed geometry. Choose tolerances based on scale and purpose. Conversely, do not introduce a vague epsilon into every rule: a timer boundary with an explicit clock contract may legitimately use an exact comparison against its deadline.
+Floating-point calculations produce approximations. For computed geometry, choose comparison tolerances that fit the scale and purpose of the calculation. A tolerance is not appropriate for every rule, however. A timer with a precise clock contract may correctly use an exact comparison against its deadline.
 
-`NaN` needs explicit attention. Comparisons such as `value <= 0` are false for `NaN`, so that check alone does not validate a positive finite duration. Infinity can similarly pass a positivity test. Validate the whole domain of content and external inputs.
+Check non-finite values explicitly. For `NaN`, a comparison such as `value <= 0` is false, so that test alone cannot establish that a duration is positive and finite. Positive infinity also passes a positivity check. Validate all the allowed values for content and external input.
 
 ?? csharp-nan-validation Why does `duration <= 0` alone fail to validate a positive finite duration?
 * `NaN` does not satisfy that comparison, and positive infinity also passes it.
 - All floating-point values are negative.
 - C# converts `NaN` to zero before comparison.
 - Every duration requires a string representation.
-> Domain validation must explicitly handle non-finite values as well as sign and range.
+> Check for `NaN` and infinity explicitly, as well as checking the sign and allowed range.
 
 ?? csharp-result-vs-exception Which outcome is normally best represented as an expected purchase rejection?
 * The player lacks the required currency.

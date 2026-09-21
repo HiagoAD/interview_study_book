@@ -5,20 +5,20 @@ chapter: 05: OOP, principles, and patterns with tradeoffs
 
 ## Encapsulation and polymorphism in gameplay {#oop-encapsulation}
 
-Object-oriented programming combines state and behavior behind contracts. Encapsulation controls valid state changes. Abstraction exposes the relevant operations while hiding unnecessary details. Inheritance establishes a derived relationship. Polymorphism allows callers to use a contract without selecting behavior through concrete-type checks. These terms describe different tools, as outlined in [Microsoft's OOP overview](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/object-oriented/).
+Object-oriented programming brings state and behavior together behind defined operations. Encapsulation controls how state can change. Abstraction shows callers the operations they need, while hiding details they do not need. Inheritance lets one type derive from another. Polymorphism lets a caller use a shared contract without checking each concrete type to choose its behavior. These are distinct tools, as described in [Microsoft's OOP overview](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/object-oriented/).
 
-For a wallet, encapsulation means callers cannot arbitrarily assign a negative balance. The wallet exposes operations such as grant and spend, validates the amount, and preserves its invariant. A class containing only public mutable fields may organize data without enforcing such a boundary.
+For a wallet, encapsulation means a caller cannot simply assign a negative balance. Callers use operations such as grant and spend; the wallet validates the amount and keeps the balance within its rules. A class of public mutable fields can organize the data, but cannot enforce those rules on its own.
 
-For damage, an `IDamageReceiver` contract can let an attack deliver a damage request without knowing whether the target is a destructible crate or an enemy. The contract still needs semantics: can it reject damage, can the target already be dead, and is the result synchronous?
+An `IDamageReceiver` interface can let an attack request damage without knowing whether its target is a crate or an enemy. The interface still needs a clear contract: whether the target can reject damage, what happens if it is already dead, and whether the result is available immediately.
 
-Polymorphism is useful when behavior varies. A simple data discriminator and switch may be clearer for a small closed set of states. If every call site immediately casts an interface back to concrete types, the abstraction may not describe what callers really need.
+Polymorphism helps when the same operation needs different behavior from different implementations. For a small, fixed set of states, a value identifying the state and a switch may be easier to read. If callers routinely cast an interface back to concrete types, check whether the interface actually provides what they need.
 
-Keep domain language in APIs. `TrySpend` communicates more than `SetValue`. `BeginRun` communicates more than `ChangeState(2)`. Types should prevent invalid combinations when doing so is practical: a run ID and a catalog ID may both be strings, but wrappers can prevent passing one where the other belongs.
+Use the game's vocabulary in APIs. `TrySpend` explains the intent better than `SetValue`; `BeginRun` explains more than `ChangeState(2)`. Types can also prevent mistakes. A run ID and a catalog ID may both contain strings, but separate wrapper types can stop a caller from passing one where the other belongs.
 
-Do not equate OO with allocating one object for every conceptual thing. A dense array of compact states can still have an encapsulated owner. Objects at system boundaries can coexist with data-oriented processing in a hot loop.
+Object-oriented design does not require an object for every concept. One owner can control access to a dense array of compact states. You can use objects to define the operations between systems, while processing arrays efficiently inside a frequently executed loop.
 
 ?? oop-encapsulation-purpose What does encapsulation contribute to a wallet?
-* It controls state transitions so invalid balances cannot be created through ordinary callers.
+* It controls how the balance changes, so ordinary callers cannot create an invalid balance.
 - It requires every balance update to allocate a new GameObject.
 - It prevents the wallet from being tested.
 - It means all fields must be globally accessible.
@@ -29,21 +29,21 @@ Do not equate OO with allocating one object for every conceptual thing. A dense 
 - Whether inheritance should replace every collection.
 - Whether all methods should become static.
 - Whether type checks automatically improve extensibility.
-> Frequent downcasts suggest the abstraction may be incomplete or inappropriate. A smaller, clearer contract or an explicit closed-set model may work better.
+> Repeatedly casting to concrete types suggests the interface is missing a needed operation, or does not fit the problem. Consider a clearer contract or an explicit model for a small, fixed set of cases.
 
 ## Interfaces, inheritance, and composition {#oop-composition}
 
-An interface states a capability. An abstract base class can also supply shared implementation and protected state. Composition builds behavior by connecting collaborators. These choices are not mutually exclusive.
+An interface describes a capability. An abstract base class can also provide implementation and protected state for derived classes. Composition builds behavior by connecting separate objects that work together. A design can use all three.
 
-Suppose enemies vary by movement, attack, and reward. An inheritance tree can start as `Enemy -> FlyingEnemy -> FlyingRangedEnemy`, then struggle when a grounded ranged enemy or a flying melee boss arrives. Independent movement and attack policies often represent these combinations more directly.
+Suppose enemies vary independently in movement, attack, and reward. An inheritance tree might start with `Enemy -> FlyingEnemy -> FlyingRangedEnemy`. It becomes awkward when the design adds a grounded ranged enemy or a flying melee boss. Separate movement and attack policies can express those combinations more directly.
 
-That flexibility requires more wiring. Assign an owner to each collaborator, validate required references, and provide presets so designers can choose supported combinations. A base class can still be appropriate for a stable lifecycle template where all derived types obey the same contract.
+Those separate policies need to be connected correctly. Assign an owner to each object, validate required references, and give designers presets for supported combinations. A base class can still be useful when every derived type follows the same stable sequence of lifecycle operations.
 
-Apply the substitution test: can a caller use the subtype without needing to know that it is special? If a base inventory promises that adding an item succeeds when capacity is available, a subtype that throws for ordinary items violates that expectation unless rejection is already part of the contract.
+Check whether a caller can use a subtype without special handling. Suppose an inventory contract promises to accept an item whenever capacity is available. A subtype that throws for ordinary items breaks that promise, unless rejection was already allowed by the contract.
 
-Do not use inheritance merely to reuse three lines. A helper function, contained object, or immutable value can share implementation without coupling lifecycles. Conversely, do not split a cohesive algorithm into many strategies solely to avoid a short conditional.
+Choose inheritance for the relationship it expresses, rather than just to reuse a few lines. A helper function, contained object, or immutable value may share that code without tying two lifecycles together. Keep related logic together too: splitting one small algorithm into many strategies can make it harder to follow than a short conditional.
 
-For Unity components, composition is already present at the GameObject level. That does not automatically make a design modular. Components that all reach into each other's mutable fields can be more tightly coupled than a well-encapsulated ordinary class.
+Unity already supports composition through the components attached to a GameObject. Those components still need clear boundaries. If each one reaches into the others' mutable fields, changing any component may affect the whole group.
 
 Exercise: Design three enemy variants with independent movement and attack behavior. Explain how a designer chooses a valid combination and how the composition is tested without relying on scene-name lookups.
 
@@ -52,21 +52,21 @@ Exercise: Design three enemy variants with independent movement and attack behav
 - It guarantees zero runtime overhead.
 - It removes the need to initialize dependencies.
 - It makes invalid combinations impossible without validation.
-> Composition can avoid a combinatorial inheritance tree, but the graph still needs valid construction and ownership.
+> Separate movement and attack objects avoid a subclass for every combination. The objects still need valid connections and clear owners.
 
 ?+ A composed enemy has movement and attack policies, but designers can omit either required reference. Which addition addresses the actual weakness?
-* Validated construction and authoring feedback for required collaborators.
+* Check required references during construction and show designers which references are missing.
 - A deeper inheritance tree while leaving the missing-reference behavior undefined.
 - Runtime scene searches for a random compatible component.
 - An empty catch block around every attack.
-> Composition moves some correctness responsibility into wiring. Factories, defaults, and validation make the combinations usable and diagnosable.
+> A composed enemy only works when its parts are connected correctly. Factories, defaults, and validation help designers build valid combinations and locate missing references.
 
 ?? oop-substitution A subtype rejects ordinary inputs that the base contract promises to accept. Which principle is threatened?
 * Substitutability.
 - Hash collision resistance.
 - Frame pacing.
 - Asset compression.
-> A caller relying on the base contract must remain correct when given a subtype. Stronger hidden preconditions break that relationship.
+> A caller that follows the base contract should still work with a subtype. Hidden extra requirements in the subtype break that promise.
 
 ## Use SOLID to examine a design {#oop-solid}
 
@@ -80,20 +80,20 @@ Use the five SOLID principles to check responsibilities and dependency contracts
 | Interface segregation | Does each consumer depend only on operations it needs? | Hundreds of meaningless one-method interfaces |
 | Dependency inversion | Do high-level rules depend on appropriate contracts? | Hiding a service locator behind an interface |
 
-A mission evaluator should not know which file format stores its progress. It can depend on a persistence boundary or return the next state to an application layer. However, if persistence must atomically update rewards and claims, two unrelated tiny interfaces may hide that essential transaction. Keep operations that must commit together under a contract that exposes that requirement.
+A mission evaluator should not need to know the file format used to save progress. It can use a persistence contract, or return the next state for an application layer to save. That contract must still express which changes belong together. If rewards and claim records must be saved atomically, splitting them into unrelated interfaces can hide the requirement that both succeed or fail together.
 
-The open/closed principle does not mean existing code must never change. It means stable code can accommodate expected variation through a suitable extension point. If requirements reveal that the original boundary was wrong, revising it is healthier than accumulating adapters around a mistake.
+The open/closed principle encourages extension points for variations you expect. It does not require existing code to remain untouched forever. When a new requirement shows that the original boundary was wrong, revise it; adding more adapters around the mistake can make it harder to fix.
 
-Dependency inversion concerns direction of knowledge. Domain rules should not need a concrete scene controller to decide eligibility. The outer integration layer can depend on the domain and provide the infrastructure. A DI framework is optional.
+Dependency inversion asks which layer needs to know about the other. Gameplay rules should not need a concrete scene controller to decide eligibility. The outer integration layer can depend on those rules and supply the infrastructure they need. A dependency-injection framework is optional.
 
-Use cohesion and coupling to judge the result. Cohesion asks whether the parts of a unit belong together. Coupling asks what a change forces other units to know or change. For example, a claim operation needs the wallet's transaction contract; it should not need the reward screen's animation state.
+Judge the result by cohesion and coupling. Cohesion asks whether the work inside a unit belongs together. Coupling asks how a change in one unit affects other units. A claim operation, for example, needs to understand the wallet's transaction rules. It should not need to know the current animation state of the reward screen.
 
 ?? oop-solid-boundary A reward and claim marker must commit together. What is wrong with splitting them into unrelated storage operations with no transaction contract?
-* The abstraction hides a consistency requirement that callers must preserve.
+* The separate operations hide the requirement that the reward and claim marker must be saved together.
 - Interfaces cannot contain methods with return values.
 - Small interfaces always improve correctness.
 - Persistence should always happen in the HUD.
-> An abstraction should expose the unit of consistency. Mechanical interface splitting can make an essential invariant harder to enforce.
+> The contract should make it possible to commit the reward and claim record together. Splitting the operations without a shared transaction makes that rule harder to enforce.
 
 ?? oop-open-closed [tf] The open/closed principle forbids changing existing code even when new requirements invalidate its original abstraction.
 * false
@@ -114,20 +114,20 @@ A design pattern describes an arrangement of responsibilities and its tradeoffs.
 | Decorator | Add tracing or rate limits around an operation | Deep chains that obscure errors |
 | Object pool | Reuse costly short-lived objects | Stale state and retained memory |
 
-For a run state machine, first draw allowed transitions: ready to running, running to paused, paused to running, running to dead, dead to revived or finished. A switch can be sufficient. Use separate state objects when behavior becomes substantial and transition responsibilities remain clear.
+Before choosing an implementation for a run state machine, draw the allowed transitions: ready to running, running to paused, paused to running, running to dead, and dead to revived or finished. A switch may be enough. Separate state objects become useful when each state has substantial behavior and the rules for moving between states remain clear.
 
-Undo requires more than storing a command. A local editing operation may be reversible with a captured previous state. Granting an online reward or sending a platform purchase request is not safely undone by applying an inverse integer operation. External side effects may require compensation with their own rules.
+Storing a command does not by itself make an action reversible. A local editing command may be undone by restoring the previous state. An online reward or platform purchase has effects outside that local state; subtracting a number cannot reliably undo them. Reversing their effect may require a separate compensating operation, with its own rules.
 
-A singleton answers “one instance is accessible here.” It does not answer initialization order, ownership, test isolation, scene reload, or whether one instance is actually correct. An explicitly owned application service may have one instance without global static access.
+A singleton answers “one instance is accessible here.” You still need to decide when it is initialized, who owns it, how tests isolate it, and what happens on scene reload. First check whether one instance is even correct for the feature. An application service can have a single, explicitly owned instance without exposing global static access.
 
 When discussing a pattern, explain when its cost outweighs its benefit. For instance, a state hierarchy may add more navigation than it saves for three short transitions.
 
 ?? patterns-command-undo Why does representing a purchase as a command not automatically make it undoable?
-* External side effects and authoritative transactions may require compensation rather than simple reversal.
+* Effects outside the local program may need a separate compensating operation, with its own rules.
 - Commands cannot contain parameters.
 - Every purchase is an animation.
 - Undo always means subtracting the same number later.
-> Reversibility depends on domain semantics and external effects, not on the object used to represent the request.
+> Whether a purchase can be undone depends on the purchase rules and its external effects. Representing it as a command does not reverse those effects automatically.
 
 ?? patterns-state-choice A run has three small states and a clear transition table. What is a reasonable initial implementation?
 * An explicit enum and transition logic, expanding only if behavior warrants separate state objects.
@@ -138,7 +138,7 @@ When discussing a pattern, explain when its cost outweighs its benefit. For inst
 
 ## Enforce module boundaries and review for change cost {#patterns-modules}
 
-Folders communicate organization; they do not enforce dependency direction. In Unity, assembly definitions can establish compilation boundaries and explicit references. Keep editor-only authoring tools out of runtime assemblies, and avoid cycles between gameplay domains. [Unity's assembly-definition manual](https://docs.unity3d.com/6000.0/Documentation/Manual/assembly-definition-files.html) explains these compilation units.
+Folders show how code is organized, but do not control which modules can reference each other. Unity assembly definitions let you compile modules separately and declare their references. Keep editor-only tools out of runtime assemblies, and avoid circular dependencies between gameplay modules. [Unity's assembly-definition manual](https://docs.unity3d.com/6000.0/Documentation/Manual/assembly-definition-files.html) explains these compilation units.
 
 A possible dependency graph is:
 
@@ -153,13 +153,13 @@ Game.Editor          authoring tools referencing relevant runtime contracts
 Game.Tests           tests referencing the units under test
 ```
 
-Arrows here mean “is depended on by the layer below.” This is one arrangement, not a requirement to create five assemblies in every project. Package integration may need additional adapter assemblies. Keep test access deliberate rather than making every method public for convenience.
+The arrows mean “is depended on by the layer below.” This is one possible arrangement; a small project does not automatically need five assemblies. Package integrations may need their own adapter assemblies. Also decide deliberately which internals tests can access, rather than making every method public for convenience.
 
-Review a feature through one complete scenario. Can a reviewer identify the state owner, understand a rejection result, see resource cleanup, and locate tests? Does a new mission type require edits in six unrelated systems? Does deleting the view accidentally stop progression? The answers show which changes would cross module boundaries and which rules depend on a view's lifetime.
+Review one complete scenario through the feature. Follow the state owner, any rejection result, resource cleanup, and the relevant tests. Then try a change: would adding a mission type require edits in six unrelated systems? Would deleting the view stop progression? These checks reveal dependencies between modules and rules that accidentally depend on a view staying alive.
 
-Useful comments explain why: a compatibility constraint, an engine ordering caveat, or an unusual numerical rule. Comments that paraphrase every assignment become stale noise. Prefer names and operations that carry ordinary intent.
+Use comments for reasoning that the code cannot make obvious: a save compatibility requirement, a Unity callback ordering issue, or an unusual numeric rule. Comments that repeat each assignment add work when the code changes. Clear names and operations should explain the ordinary steps.
 
-Refactor when a concrete change exposes repeated work or unsafe coupling. Name the expected benefit and keep behavior-preserving steps separate from feature changes where practical. “Cleaner” is not enough if the refactor breaks saves or consumes the release window without reducing a demonstrated cost.
+Refactor when an actual change reveals duplicated work or dependencies that make edits unsafe. State the benefit you expect, and keep refactoring steps that preserve behavior separate from feature changes where practical. A refactor justified only as “Cleaner” may still break saves or consume the release window without solving a demonstrated problem.
 
 ?? patterns-assembly-direction What should a plain gameplay rule assembly generally avoid depending on?
 * A concrete scene HUD or platform SDK implementation.
@@ -173,4 +173,4 @@ Refactor when a concrete change exposes repeated work or unsafe coupling. Name t
 - Is every file shorter than an arbitrary line limit?
 - Do all classes end with the same suffix?
 - Has every conditional been replaced with inheritance?
-> Gameplay progression should follow its ownership and lifetime contract. A view's existence should not accidentally determine whether core rules execute.
+> Progress should be recorded according to the gameplay rules and the lifetime of their owner. Closing a view must not accidentally stop those rules from running.
