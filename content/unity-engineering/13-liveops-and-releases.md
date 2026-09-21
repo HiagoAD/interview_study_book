@@ -5,9 +5,9 @@ chapter: 13: LiveOps, persistence, and safe releases
 
 ## Design a seasonal event as a versioned product feature {#liveops-event-model}
 
-A seasonal event combines availability, content, progression, rewards, presentation, and operational controls. Treating it as “a timer and a new screen” misses most of its production behavior.
+A seasonal event needs rules for availability, content, progress, rewards, presentation, and operational controls. Describing it as “a timer and a new screen” leaves out decisions such as who can participate, what happens when it ends, and how to stop it if something goes wrong.
 
-Define an immutable event identity and a content revision. The event definition contains availability instants, eligible player conditions, mission or level references, reward tables, and supported client capabilities. Player state contains participation, progress, claims, and any pending operations.
+Give the event a stable identity and version its content. Its definition contains start and end times, player eligibility rules, mission or level references, reward tables, and required client capabilities. Keep player state separate: it records participation, progress, claims, and pending operations.
 
 Represent the lifecycle explicitly:
 
@@ -16,31 +16,31 @@ Unavailable -> Upcoming -> Active -> Claim-only -> Archived
                          -> Suspended, according to incident policy
 ```
 
-Use the states the event requires, keeping earning progress separate from claiming an already earned reward. Ending participation at midnight does not automatically answer whether a player may claim afterward.
+Choose the states the event actually needs. Keep earning progress separate from claiming a reward already earned. If participation ends at midnight, the design must still say whether players can claim their rewards afterward.
 
-Specify time authority. Online reward eligibility should use a trusted authority when the economy requires it. A device clock can be changed, and a stored offset alone cannot make an offline client fully trustworthy. Offline participation needs an explicit policy: allow provisional progress, limit eligibility, or reconcile later.
+Decide which source of time controls eligibility. An online economy may need a trusted service to make that decision. Players can change the device clock, and saving an offset locally does not make an offline client fully trustworthy. Specify what offline participation allows: provisional progress, limited eligibility, or later reconciliation with the authority.
 
-Use UTC instants for shared global boundaries and localize their display. If the product requires “local midnight,” specify timezone and daylight-saving behavior rather than treating a calendar date as a universal instant.
+Represent shared global boundaries as UTC instants, then display them in the player's local time. If the requirement is “local midnight,” specify the timezone and what happens around daylight-saving changes. A calendar date alone does not identify one instant for every player.
 
-Define what happens to a run started just before the event ends. Eligibility can be based on start time, completion time, or a captured event instance. Choose one and test the boundary. Persist the relevant revision so a resumed run does not silently change rules halfway through.
+Decide what happens when a run starts just before the event ends. Eligibility could depend on the start time, completion time, or event instance captured at the start. Choose a rule and test its exact boundary. Save the relevant revision so a resumed run does not silently switch rules.
 
 ?? liveops-claim-window Why separate “Active” from “Claim-only” in an event model?
 * Earning new progress and claiming previously earned rewards can have different eligibility windows.
 - Every event must last exactly one day.
 - Claims are only presentation and cannot affect inventory.
 - A client clock always provides trusted authority.
-> Event closure has several meanings. Separate states make the earning and claiming policies explicit.
+> Ending an event may stop new progress while still allowing earned rewards to be claimed. Separate states make both rules explicit.
 
 ?? liveops-time-authority Can a client-side clock offset by itself provide strong authority against device tampering?
 * No; an offline client-controlled value is not equivalent to trusted server validation.
 - Yes, if it is stored in a ScriptableObject.
 - Yes, if it is converted to a string.
 - Yes, if the countdown uses double precision.
-> Clock representation does not establish trust. Offline behavior and later reconciliation require an explicit product and authority policy.
+> Changing how time is stored does not make it trusted. Decide what an offline client may do and how the authority will validate or reconcile it later.
 
 ## Version saves and migrate without losing player state {#liveops-save-migration}
 
-A save is a long-lived contract. Include a schema version, stable content identities, and enough state to recover interrupted operations. Do not use scene object instance IDs, array positions that can reorder, or display text as durable identity.
+A save must remain understandable beyond the version that created it. Include a schema version, stable content IDs, and enough state to recover interrupted operations. Scene object instance IDs, reorderable array positions, and display text are unsuitable as lasting identities.
 
 A migration transforms one supported schema into the next:
 
@@ -54,15 +54,15 @@ Commit migrated data safely
 Load runtime state
 ```
 
-Keep migration steps deterministic and test them with real historical fixtures where possible. A migration may assume its stated input version; the overall migration runner should record the new version so loading again does not reapply a grant or conversion. Retain an original backup or recovery path until commitment is confirmed.
+Make each migration step deterministic, and test it against real historical saves where possible. A step may rely on its declared input version. The migration runner must then save the new version with the converted data, so the next load does not repeat a conversion or grant. Keep the original backup or another recovery path until the commit is confirmed.
 
-For local file persistence, a common approach writes a complete temporary file and then replaces the previous save using appropriate platform facilities. Atomic replacement, flushing, and crash durability depend on the platform and filesystem; a rename alone is not a universal durability guarantee. Test recovery through the project's storage adapter.
+A common local-save approach writes a complete temporary file, then replaces the previous save using the platform's storage facilities. The guarantees depend on the platform and filesystem: atomic replacement, flushing, and survival after a crash are distinct concerns. A rename alone is not a universal durability guarantee. Test failure recovery through the project's storage adapter.
 
-Distinguish missing, corrupt, unsupported-future, and old-valid saves. Resetting everything to defaults for every parse error can destroy recoverable progress. An unsupported newer schema after rollback should trigger a deliberate compatibility path, not silent truncation.
+Handle missing, corrupt, valid older, and unsupported newer saves as different cases. Resetting to defaults after every parse error can destroy progress that could have been recovered. After a rollback, an older binary may encounter a newer schema; follow a defined compatibility policy and preserve the original data.
 
-Checksums detect accidental corruption; they do not make client data authoritative against an attacker. Encryption similarly does not turn a client-owned economy into a trusted server.
+Checksums help detect accidental corruption. They do not make client-owned data trustworthy against deliberate tampering. Encryption also does not give a client-owned economy the authority of a trusted server.
 
-Decide how unknown content IDs behave. Preserve unknown records for possible future recovery, map retired content through an explicit table, or compensate under a documented policy. Deleting unknown items during every load can make temporary catalog mismatches permanent.
+Decide how to handle IDs missing from the current catalog. You might preserve their records for later recovery, map retired content through an explicit table, or compensate under a documented policy. Deleting unknown items on every load can turn a temporary catalog mismatch into permanent loss.
 
 ?? liveops-future-save An older binary encounters a save from a newer unsupported schema. What should it do?
 * Follow an explicit compatibility or recovery policy while preserving the original data.
@@ -76,57 +76,57 @@ Decide how unknown content IDs behave. Preserve unknown records for possible fut
 - So display text becomes the new item ID.
 - So validation can be skipped forever.
 - So all future schemas become automatically readable.
-> Migration sequencing is versioned state. Reapplying a nontrivial transformation can corrupt balances or duplicate rewards.
+> The saved version tells the loader which transformations have already happened. Without that update, another load may convert values again or duplicate rewards.
 
 ?+ A migration doubles a legacy currency balance but leaves the schema version unchanged. What can happen on the next load?
 * The migration can double the already converted balance again.
 - The loader necessarily knows the transformation already happened from the number alone.
 - The balance automatically returns to its original value.
 - The version field is irrelevant to migration sequencing.
-> A transformation and its version transition must be committed coherently. Otherwise repeated loading can repeat the transformation.
+> Save the converted balance and new schema version together. Otherwise the next load may treat an already converted balance as legacy data.
 
 ## Feature flags and configuration need complete states {#liveops-flags-config}
 
-A feature flag controls exposure or behavior. It should have a safe default when configuration is unavailable, malformed, stale, or incompatible.
+A feature flag decides whether a feature is exposed or how it behaves. Define a safe default for configuration that is unavailable, malformed, stale, or incompatible with the client.
 
-Separate assignment from activation. A player can belong to an experiment cohort while the feature remains disabled because required content is missing or the client lacks a capability. Stable assignment avoids players switching treatment groups every launch.
+Keep experiment assignment separate from feature activation. A player may belong to a test group while the feature remains disabled because content is missing or the client lacks a required capability. Keep that assignment stable, so the player does not switch groups on every launch.
 
-Capture the relevant configuration for operations that must remain consistent. If a reward multiplier changes halfway through a run, decide whether the run uses its starting revision or adopts the new value at a defined boundary. Avoid reading mutable configuration independently in every component.
+For an operation that needs consistent rules, capture the configuration it should use. If a reward multiplier changes during a run, decide whether the run keeps its starting revision or adopts the new value at a defined point. Reading changing configuration independently in every component can produce conflicting results.
 
-Configuration is input and needs validation. Check ranges, finite numbers, required references, supported enum values, and minimum client capabilities before accepting a revision. Keep a known valid fallback if the product requires continued operation.
+Validate configuration before accepting a revision. Check numeric ranges, finite values, required references, supported enum values, and minimum client capabilities. If the game must continue when a new revision is invalid, keep a known valid fallback.
 
-A kill switch must reach the operation that causes the problem. Hiding a button does not stop an already queued claim, a background grant, or a task that captured old configuration. Define whether in-flight work finishes, cancels, or reconciles, and preserve already committed player outcomes.
+A kill switch must stop the operation causing the problem. Hiding a button does not stop a queued claim, a background grant, or a task using previously captured configuration. Decide whether work already in progress should finish, cancel, or have its result reconciled. Preserve outcomes that have already been committed.
 
-Test disabled, enabled, partially available, stale, and mid-operation transition states. Flags increase the number of valid configurations; remove obsolete flags once their operational purpose ends.
+Test the feature while disabled and enabled, with only some dependencies available, with stale configuration, and while configuration changes during an operation. Flags add valid combinations that the game must handle. Remove old flags once they no longer serve an operational purpose.
 
 ?? liveops-kill-switch A faulty reward feature is disabled by hiding its button, but queued grant operations still run. What is missing?
-* A policy that gates or reconciles the authoritative in-flight operations.
+* Rules that stop the actual grant operations or recover the results of operations already in progress.
 - A different button color.
 - A larger image cache.
 - A guarantee that presentation visibility is authority.
-> A kill switch must reach the behavior it is intended to stop. Existing operations need explicit handling at the state or authority boundary.
+> Disabling the view does not stop the code that grants rewards. Apply the switch where that operation is controlled, and define how existing requests are handled.
 
 ?+ A kill switch activates after a reward has already committed. Which policy preserves the transaction's meaning?
 * Keep the committed outcome and handle any compensation through an explicit separate policy.
 - Pretend the original commitment never occurred because the button is now hidden.
 - Delete the idempotency record so the client can retry as a new grant.
 - Allow the animation to decide whether the balance should remain.
-> Disabling future behavior does not retroactively erase a committed transaction. Reversal or compensation is a separate domain operation.
+> A switch can stop future claims, but the earlier transaction already changed the player's state. Any reversal or compensation needs a separate, explicit operation.
 
 ?? liveops-config-snapshot Why might a run capture a configuration revision at startup?
 * To keep its rules consistent if configuration changes during play.
 - To prevent all future content updates.
 - To replace the need for input validation.
 - To make a client automatically authoritative over server rewards.
-> A captured revision establishes which rules apply to that operation. Trust and validation remain separate concerns.
+> Capturing a revision makes it clear which rules the run uses. It does not replace validation or make the client a trusted reward authority.
 
 ## Ship compatible code and content in controlled stages {#liveops-release-compatibility}
 
-In a live game, multiple binary versions can coexist. Content and services must account for older clients that have not updated. A new event referencing a new component cannot work on a binary that lacks that component.
+Players in a live game may run several binary versions at once. Content and services must support the older clients that have not updated. An event requiring a new component cannot run on a binary that lacks that component.
 
-Use an explicit capability or compatibility contract: schema version, supported feature IDs, required assets, and fallback behavior. Validate content before exposure. Downloaded content still needs to be compatible with the receiving client.
+Define compatibility in terms the client can check: schema version, supported feature IDs, required assets, and fallback behavior. Validate content before exposing it. A successful download does not establish that the receiving client can use the content.
 
-An expand-and-contract change introduces compatible support first, then transitions usage, and removes the old path only after it is safe. For a renamed field, a reader can temporarily accept old and new representations while the writer moves to the new format. The exact plan depends on which versions must coexist.
+An expand-and-contract migration adds compatible support first, moves usage to the new form, then removes the old form when it is safe. For a renamed field, readers might temporarily accept both names while writers move to the new name. Plan those stages around the versions that must coexist.
 
 A release sequence might be:
 
@@ -137,9 +137,9 @@ A release sequence might be:
 5. Retain a compatible fallback until risk is understood.
 6. Remove transitional code and flags in a deliberate follow-up.
 
-Guardrails can include crash or error rates, claim failures, save failures, frame-time regressions, and unexpected economy changes. Compare like cohorts and account for sample size; a tiny cohort with no observed crash is not proof of zero risk.
+Choose measurements that tell the team when to stop increasing exposure. These can include crash and error rates, failed claims or saves, slower frames, and unexpected economy changes. Compare similar groups and account for sample size. Seeing no crashes in a tiny group does not prove that the release has no crash risk.
 
-Rollback has limits. Reverting code does not undo a save migration or already granted rewards. Prefer reversible exposure changes and backward-compatible data transitions; otherwise plan a forward repair or compensation.
+Reverting code does not undo a save migration or take back rewards already granted. Prefer exposure changes that can be reversed and data changes compatible with older versions. When those are not possible, plan a repair in a newer version or a separate compensation operation.
 
 In an interview, describe the release gates you used rather than presenting an idealized process as your history.
 
@@ -155,21 +155,21 @@ In an interview, describe the release gates you used rather than presenting an i
 - Source code can never be reverted.
 - Every feature flag automatically repairs old saves.
 - Rollback always erases all external effects safely.
-> Operational recovery must account for persistent effects, not just executable code.
+> Restoring old code leaves saved data and earlier grants in place. Recovery must handle those effects as well.
 
 ## Treat outages, retries, and reconciliation as normal paths {#liveops-network-failures}
 
 A live client must handle disconnection, latency, duplicate delivery, process suspension, and ambiguous completion. These are ordinary operating conditions.
 
-Use bounded retries with increasing delays and jitter for retryable failures. Jitter reduces synchronized retry bursts across clients. Respect the operation's idempotency contract; retries are unsafe if every attempt creates a new reward.
+For retryable failures, limit the number of attempts and increase the delay between them. Add random variation, called jitter, so clients do not all retry at the same moment. Reuse the operation's identity and follow its duplicate-handling rules; a retry must not create another reward.
 
-Classify errors. Invalid input and unsupported content usually require correction, not rapid retry. Temporary unavailability may justify retry. Authentication expiry may require a controlled refresh. A timeout after a request was sent can require querying the operation's status.
+Choose recovery according to the error. Invalid input or unsupported content usually needs correction. Temporary unavailability may justify a retry. Expired authentication may need a controlled refresh. If a sent request times out, check whether it completed before deciding what to do next.
 
-Persist pending operation identity when the action must survive process restart. Otherwise the client may lose the only key that distinguishes a retry from a new action. Reconciliation compares the local view with authoritative results and applies missing presentation or local state updates.
+Save a pending operation's identity when recovery must survive a process restart. Otherwise the client can lose the key that tells the authority this is a retry of an existing action. During reconciliation, compare local state with the authoritative result, then apply any missing local updates or presentation.
 
-Offline queues need bounds and ordering rules. A queue that grows forever can exhaust storage; an old action may no longer be valid when the event closes. Define expiration, rejection, and player feedback. Do not promise an offline reward that the authority can later reject without a clear product policy.
+Limit offline queue size and define processing order. An unlimited queue can exhaust storage, and an action may become invalid before the client reconnects, such as when an event closes. Specify expiry, rejection, and player feedback. If an offline reward can later be rejected by the authority, make that possibility part of the product's policy.
 
-If several systems must react to a committed operation, a transactional outbox is one possible server-side design: save the state change and pending notification in the same transaction, then deliver the notification with retry. Consumers still need idempotency. Use an outbox when a committed change must reliably produce notifications despite a process failure.
+A server can use a transactional outbox when a committed change must reliably produce notifications. Save the state change and a pending notification in the same transaction, then send the notification with retries. A process failure can then be recovered without forgetting the notification. Receivers still need to recognize duplicates.
 
 ?? liveops-retry-classification Which failure most clearly calls for correction rather than repeated immediate retries?
 * A request violates the supported schema with an invalid required field.
@@ -179,32 +179,32 @@ If several systems must react to a committed operation, a transactional outbox i
 > Retrying the same invalid request cannot make its schema valid. Classify failures so recovery matches the cause.
 
 ?? liveops-pending-persistence Why persist a pending reward operation's identity before relying on later recovery?
-* Restart must be able to reconcile the same logical operation instead of inventing another grant.
+* After restart, the client must recover the same claim's result instead of creating another grant.
 - It guarantees the network cannot fail.
 - It makes every client-provided reward amount trusted.
 - It removes the need for an authoritative result.
-> Stable operation identity connects attempts across process lifetimes. Authority and reconciliation still determine the result.
+> The saved ID lets the client resume the same logical operation after restart. It still needs the authority's result to determine what happened.
 
 ## Handle production incidents with containment and evidence {#liveops-incidents}
 
-When a live defect appears, first establish player impact and scope. Is the game crashing, losing progress, duplicating currency, or showing a cosmetic error? Which builds, content revisions, cohorts, and devices are affected?
+First establish the impact and scope of a live defect. Determine whether it crashes the game, loses progress, duplicates currency, or only affects presentation. Identify the affected builds, content revisions, test groups, and devices.
 
-Contain the problem with the smallest effective intervention: pause exposure, disable a risky operation, withdraw incompatible content, or revert a safe configuration revision. Assign an incident owner and communicate known facts, current impact, mitigation, and the next update. Distinguish confirmed facts from suspected causes.
+Use the smallest intervention that stops further harm: pause exposure, disable the failing operation, withdraw incompatible content, or restore a safe configuration. Assign an incident owner. Communicate confirmed facts, current impact, the mitigation, and when the next update is due; label suspected causes as unconfirmed.
 
-Preserve evidence: operation IDs, error categories, configuration revisions, relevant traces, and a timeline. Handle player information according to the organization's policies and incident-response needs. Avoid collecting broad sensitive data merely because it might be convenient.
+Keep the evidence needed to investigate: operation IDs, error categories, configuration revisions, relevant traces, and a timeline. Handle player information according to organizational policies and the incident's needs. Avoid collecting broad sensitive data without a specific reason.
 
-Then reproduce, fix, and validate. A duplicate reward incident may require both stopping new duplicates and reconciling affected accounts. Compensation is a product and operations decision with its own correctness requirements; do not improvise a mass balance change while still unsure of the cause.
+Once the problem is contained, reproduce it, fix it, and validate the repair. A duplicate-reward incident may also need account reconciliation. Compensation has its own product and correctness requirements; agree on those before making a mass balance change, especially while the cause is still uncertain.
 
-After containment, write a blameless causal analysis. Include the triggering change, the conditions that allowed it, why checks missed it, how it was detected, and specific prevention work. “Be more careful” is not a useful action item. “Validate reward IDs before event publication and add a timeout-after-commit regression test” is.
+Write a causal analysis without assigning blame. Explain the triggering change, the conditions that allowed the failure, why checks missed it, and how it was detected. Follow with specific prevention work. “Be more careful” gives the team nothing concrete to verify. “Validate reward IDs before event publication and add a timeout-after-commit regression test” does.
 
-Measure the effectiveness of follow-up work. If every seasonal event requires a manual rescue, the problem may be the authoring and validation system rather than individual mistakes.
+Check whether the follow-up work prevents recurrence. If every seasonal event needs a manual rescue, investigate the authoring and validation process instead of treating each incident as an isolated mistake.
 
 ?? liveops-incident-first Which response best begins an incident involving duplicated rewards?
-* Establish scope and contain further grants while preserving evidence for reconciliation.
+* Identify who is affected, stop further duplicate grants, and preserve the records needed to reconcile results.
 - Immediately rewrite the whole economy system.
 - Delete all operation records to simplify the database.
 - Assume the UI is wrong and tell players to restart.
-> Containment limits ongoing impact. Evidence supports a correct repair and avoids compounding the problem.
+> Stopping further duplicates limits the impact. Keeping the operation records lets the team investigate and repair affected state without making the problem worse.
 
 ?? liveops-actionable-postmortem Which postmortem action is most concrete?
 * Add pre-publication validation for duplicate reward IDs and a regression test for the triggering retry.

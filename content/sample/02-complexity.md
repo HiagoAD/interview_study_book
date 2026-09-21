@@ -6,11 +6,11 @@ book: Sample Book
 
 ## Big-O basics {#big-o-basics}
 
-Big-O notation describes how the running time of an algorithm grows with the input size $n$. Constants and lower-order terms are dropped, so $3n^2 + 5n + 2$ is $O(n^2)$. Adding up the first $n$ numbers shows where a quadratic comes from:
+Big-O notation describes how an algorithm's running time grows with input size $n$. Ignore constant factors and lower-order terms when describing that growth: $3n^2 + 5n + 2$ becomes $O(n^2)$. Summing the first $n$ numbers gives an example of quadratic growth:
 
 $$ \sum_{i=1}^{n} i = \frac{n(n+1)}{2} = O(n^2) $$
 
-A loop over $n$ items does $O(n)$ work. A loop inside a loop over the same items does $O(n^2)$.
+A single pass over $n$ items does $O(n)$ work. If each iteration also loops over those same items, the work grows to $O(n^2)$.
 
 ```python
 def has_duplicate(items):
@@ -27,7 +27,7 @@ def has_duplicate(items):
 - $O(\log n)$
 - $O(1)$
 - $O(n \log n)$
-> The inner loop runs about $n/2$ times for each of the $n$ outer iterations, so the work grows as $n^2$.
+> In the worst case, the inner loop averages about $n/2$ iterations for each of the $n$ outer iterations. Multiplying them gives work that grows as $n^2$.
 
 ?+ [tf] Doubling the length of the list roughly doubles the running time of `has_duplicate`.
 * false
@@ -51,11 +51,11 @@ print(count)
 - 8
 - 10
 - 16
-> The inner loop runs 3, 2, 1 and 0 times, and $3 + 2 + 1 + 0 = 6$. In general that is $n(n-1)/2$.
+> The inner loop runs 3, 2, 1, and 0 times, so $3 + 2 + 1 + 0 = 6$. For a general list length, the total is $n(n-1)/2$.
 
 ## Space and time {#space-time}
 
-Trading memory for speed is common. A hash set answers "have I seen this?" in $O(1)$ on average, at the cost of $O(n)$ extra space.
+You can often make an algorithm faster by storing information it would otherwise need to calculate again. A hash set answers "have I seen this?" in $O(1)$ on average, using up to $O(n)$ extra space to remember the items.
 
 ```ts
 function hasDuplicate(items: number[]): boolean {
@@ -68,7 +68,7 @@ function hasDuplicate(items: number[]): boolean {
 }
 ```
 
-This version makes one pass, so it runs in $O(n)$ time instead of $O(n^2)$.
+This version checks each item once and remembers it in the set. Its expected running time is $O(n)$, compared with $O(n^2)$ for the nested loops.
 
 ?? set-lookup What is the average cost of `seen.has(item)`?
 * $O(1)$
@@ -80,4 +80,4 @@ This version makes one pass, so it runs in $O(n)$ time instead of $O(n^2)$.
 
 ?? memory-tradeoff [tf] The set-based `hasDuplicate` is faster than the nested loops but needs more memory.
 * true
-> It stores up to $n$ items in `seen`, which the nested loops do not, and in return it drops from $O(n^2)$ to $O(n)$ time.
+> The set stores up to $n$ items that the nested loops do not need to store. In exchange for that memory, expected running time falls from $O(n^2)$ to $O(n)$.

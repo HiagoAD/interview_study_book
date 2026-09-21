@@ -5,23 +5,23 @@ chapter: 10: Algorithms used in gameplay systems
 
 ## Filter candidates before expensive tests {#algorithms-spatial}
 
-A magnet needs nearby coins. The baseline is a linear scan: compare each active coin's squared distance to the squared radius. Squared distance avoids a square root when only a threshold comparison is needed. This saves a small amount of work per candidate; reducing the candidate count can save much more.
+Start a nearby-coin query with a linear scan. For each active coin, compare its squared distance with the squared magnet radius. If you only need a threshold check, squaring both sides avoids calculating a square root. That saves some work per candidate; checking fewer candidates can save much more.
 
 In two dimensions, the squared distance is:
 
 $$ d^2 = (x_2-x_1)^2 + (y_2-y_1)^2 $$
 
-Compare it with $r^2$, using the correct coordinate space. A screen-space distance, world-space distance, and navigation-path distance answer different questions. For a three-dimensional game, include the third axis unless the design deliberately projects onto a plane.
+Compare the squared distance with $r^2$, and ensure both use the intended coordinate space. Distance on the screen, distance in the world, and distance along a navigation path measure different things. In a three-dimensional game, include the third axis unless the design intentionally measures on a plane.
 
 A uniform spatial grid maps positions to cells:
 
 $$ c_x = \left\lfloor x / s \right\rfloor, \qquad c_y = \left\lfloor y / s \right\rfloor $$
 
-Here $s$ is cell size. Floor matters for negative coordinates; truncation toward zero maps negative positions incorrectly near the origin. Query the cells overlapped by the search bounds, then perform exact distance tests on their candidates.
+Here, $s$ is the cell size. Use floor for negative coordinates: truncating toward zero places negative positions near the origin in the wrong cell. Query the cells touched by the search bounds, then check the exact distance of the candidates they contain.
 
-Cell size trades query work against update and occupancy costs. Tiny cells mean more cells per radius query. Huge cells put too many objects in each bucket. Moving entities must update cell membership, and empty buckets need a retention policy.
+Cell size affects both query cost and maintenance. Small cells mean a radius query must visit more cells. Large cells contain more objects, so each query may check many irrelevant candidates. Update membership when an entity moves between cells, and decide when empty buckets should be removed.
 
-Unity physics queries can supply a spatial broad phase when colliders already represent the relevant objects. Use layer filtering and appropriate query APIs. A fixed-size nonallocating result buffer needs overflow handling: when the returned count fills the buffer, treat possible truncation as unresolved unless the API guarantees otherwise. Grow and retry, use a fallback, or establish a proven population bound.
+If the relevant objects already have colliders, Unity physics queries can find an initial set of nearby candidates. Filter by layer and choose an appropriate query API. For a nonallocating query with a fixed-size result buffer, handle the case where the buffer fills: more results may have been omitted unless the API guarantees otherwise. Grow and retry, use a fallback, or prove that the buffer covers the maximum possible population.
 
 ?? algorithms-grid-negative With cell size 10, which cell contains position -1 using floor-based indexing?
 * -1.
@@ -35,21 +35,21 @@ Unity physics queries can supply a spatial broad phase when colliders already re
 - The query has proved there are exactly that many candidates.
 - Every omitted candidate is necessarily too far away.
 - Nonallocating APIs automatically resize the supplied array.
-> Avoid silently treating a potentially truncated candidate set as complete. Correctness needs a capacity or fallback contract.
+> A full buffer may contain only part of the result. Use a defined capacity limit or fallback before treating the query as complete.
 
 ## Select nearest or best candidates without unnecessary sorting {#algorithms-selection}
 
 To find the nearest target, scan once while retaining the best candidate and score. That takes linear time and constant extra space. Sorting all candidates takes more work when only one result is needed.
 
-Define eligibility before scoring: same run, alive, targetable, within range, and visible if required. Cheap filters should usually precede expensive line-of-sight or path queries, while preserving the intended rule.
+Check whether a target is eligible before scoring it: it may need to be in the same run, alive, targetable, in range, and visible. Usually, apply cheap checks before expensive line-of-sight or path queries. Keep their order consistent with the intended gameplay rules.
 
-Specify tie-breaking. If two targets have equal score, choose by stable spawn ID, existing lock, or a deliberate random rule. Otherwise tiny ordering differences can cause target flicker or replay divergence.
+Decide how equal scores are resolved. You might use a stable spawn ID, keep the existing target, or make a deliberate random choice. Without that rule, small differences in iteration order can make targeting flicker or cause replays to diverge.
 
-For the best $k$ candidates, a heap of size $k$ can process $n$ items in $O(n \log k)$ time, followed by sorting the selected set if needed. When $k$ is tiny or $n$ is small, a simpler bounded list may be easier and fast enough. For large selection problems, partition-based algorithms are another option with different guarantees.
+If you need the best $k$ candidates, a heap of size $k$ can process $n$ items in $O(n \log k)$ time. Sort the selected items afterward if their final order matters. When $k$ is tiny or $n$ is small, a bounded list may be simpler and fast enough. Partition-based algorithms provide another option for larger problems, with different guarantees.
 
-Hysteresis can stabilize target changes. Keep the current target until a challenger is sufficiently better, or until the current target becomes invalid. This deliberately changes gameplay semantics, so agree on it with design rather than introducing it invisibly as an optimization.
+Hysteresis can make target selection steadier: keep the current target until another is sufficiently better, or until the current one becomes invalid. This changes when the player switches targets. Agree on that behavior with design before adding it as an optimization.
 
-Updating targeting every few frames reduces CPU work, but the chosen target can be stale. Define an acceptable latency and revalidate before applying an irreversible action such as damage.
+Checking targets every few frames reduces CPU work, but the chosen target may become stale between checks. Decide how much delay is acceptable, and check eligibility again before an irreversible action such as applying damage.
 
 Exercise: Design a nearest-coin attraction query that respects a maximum count, avoids rewarding duplicates, and remains correct when coins despawn during processing. State whether you iterate a snapshot or defer mutations.
 
@@ -65,23 +65,23 @@ Exercise: Design a nearest-coin attraction query that respects a maximum count, 
 - It guarantees every distance is an integer.
 - It removes all invalid targets from memory forever.
 - It makes every target equally preferred.
-> Hysteresis prevents small score fluctuations from repeatedly changing the selected target. It is a gameplay policy with responsiveness tradeoffs.
+> Requiring a meaningful improvement prevents small score changes from switching targets repeatedly. The tradeoff is that switching may respond more slowly.
 
 ## Choose BFS, Dijkstra, or A-star from the graph contract {#algorithms-pathfinding}
 
 A graph consists of nodes and edges. In a game, nodes might represent grid cells, waypoints, rooms, or navigation regions. Edges represent permitted movement and may carry costs.
 
-Breadth-first search uses a queue and finds shortest paths by edge count when every edge has equal cost. Mark a node discovered when enqueuing it to avoid repeated queue entries. With adjacency lists, its time is $O(V+E)$.
+Breadth-first search uses a queue. When all edges have the same cost, it finds a shortest path by minimizing the number of edges. Mark a node as discovered when adding it to the queue, so it is not added repeatedly. With adjacency lists, the running time is $O(V+E)$.
 
-Dijkstra's algorithm expands the smallest known accumulated cost and supports nonnegative edge weights. A binary-heap implementation commonly takes $O((V+E)\log V)$ with appropriate priority updates; implementation details such as duplicate entries affect the exact bound. Negative edges violate its greedy guarantee.
+Dijkstra's algorithm next explores the node with the lowest known accumulated cost. It supports nonnegative edge weights. With a binary heap and appropriate priority updates, a common time bound is $O((V+E)\log V)$; details such as duplicate heap entries affect the exact bound. Negative edges break the assumption behind its greedy choice.
 
-A-star orders by $f(n)=g(n)+h(n)$: accumulated cost plus a heuristic estimate to the goal. An admissible heuristic never overestimates the true remaining cost. A consistent heuristic also obeys the edge triangle inequality, making closed-set graph search easier to implement correctly. With an admissible but inconsistent heuristic, a correct optimal implementation may need to reopen nodes.
+A-star orders candidates by $f(n)=g(n)+h(n)$: the cost accumulated so far, plus an estimate of the remaining cost. That estimate is admissible if it never exceeds the true remaining cost. A consistent heuristic also follows the triangle inequality along each edge, which simplifies correct graph search with a closed set. With an admissible but inconsistent heuristic, finding an optimal path may require reopening a node that was already closed.
 
-On a four-neighbor grid with unit moves and no cheaper shortcuts, Manhattan distance is an appropriate heuristic. If diagonal moves or teleports are introduced, revisit that assumption. Multiplying the heuristic by a factor greater than one can prioritize speed, but generally sacrifices the ordinary optimality guarantee.
+Manhattan distance is an appropriate heuristic for a four-neighbor grid with unit-cost movement and no cheaper shortcuts. Reconsider it if the game adds diagonal movement or teleports. Multiplying a heuristic by more than one can favor faster search, but generally gives up the usual guarantee of an optimal path.
 
-Retain predecessor information to reconstruct a path. Handle unreachable goals, invalid start nodes, and changing obstacles explicitly. A path valid when computed can become invalid before it is followed.
+Remember each node's predecessor so you can reconstruct the path. Define the result for an unreachable goal or an invalid start. Also account for obstacles changing: a path can be valid when calculated and blocked before the character follows it.
 
-In Unity, a navigation package may already handle mesh construction and path queries. A custom graph can be justified for a discrete puzzle or specialized lane network. Explain which requirements the engine's navigation system handles and which need a different representation.
+Unity's navigation packages may already provide mesh construction and path queries. A discrete puzzle or a specialized lane network may justify a custom graph. Explain which requirements the existing navigation system meets and which require a different representation.
 
 ?? algorithms-bfs-condition When does breadth-first search find a minimum-cost path by treating each edge as one step?
 * When all traversable edges have the same cost.
@@ -102,11 +102,11 @@ In Unity, a navigation package may already handle mesh construction and path que
 - It always equals the exact remaining cost.
 - It may overestimate without affecting any optimality conditions.
 - It removes the need to track accumulated cost.
-> Admissibility is an upper restriction on the estimate relative to the true cost. Graph-search details, including reopening with inconsistent heuristics, still matter.
+> An admissible estimate is never greater than the true remaining cost. Correct graph search still needs to handle other details, such as reopening nodes when the heuristic is inconsistent.
 
 ## Randomness should be testable and statistically appropriate {#algorithms-randomness}
 
-Randomness is an input to a rule. Pass a random source to selection code so a test can supply known draws and a replay can control the sequence. Separate streams for unrelated systems can prevent a new particle effect from changing gameplay loot merely by consuming another random number.
+Treat randomness as an input to the rule. Pass a random source to selection code, so tests can supply known draws and replays can control their sequence. Separate random streams for unrelated systems can prevent a new particle effect from changing loot results simply by consuming an extra random number.
 
 For a uniform shuffle, use Fisher–Yates:
 
@@ -134,13 +134,13 @@ public static class Shuffling
 }
 ```
 
-The correctness argument is incremental: choose the final element uniformly from all remaining elements, then repeat for the remaining positions. Choosing a swap partner from the full list at every step is a different algorithm and generally biases permutations.
+Fisher–Yates fills one position at a time. Choose the final element uniformly from those remaining, then repeat for the remaining positions. Choosing from the full list at every step is a different algorithm and generally produces biased permutations.
 
-For weighted selection with nonnegative weights, draw a value in the half-open interval from zero to the total weight, then select the first cumulative total strictly greater than the draw. Validate finite weights and a positive finite total. A zero-weight entry should never win. For frequent draws from a static table, cumulative sums with binary search or an alias table can trade preprocessing for cheaper selection.
+For weighted selection, use nonnegative, finite weights with a positive, finite total. Draw a value from zero up to, but excluding, that total. Select the first cumulative total strictly greater than the draw; a zero-weight entry then has no interval in which it can win. If a fixed table is sampled frequently, cumulative sums with binary search or an alias table can spend work during setup to make later draws cheaper.
 
-Test exact boundary draws and membership properties. Statistical tests can detect large bias, but a small sample cannot prove perfect uniformity and an overly tight statistical assertion becomes flaky.
+Test draws exactly at the selection boundaries, as well as properties such as preserving every item in a shuffle. Statistical tests can reveal large bias. A small sample cannot prove perfect uniformity, though, and an overly strict statistical assertion can fail by chance.
 
-A fixed seed is useful within a controlled implementation. Do not assume `System.Random` sequences are a permanent cross-runtime persistence contract. For long-lived replay compatibility, specify and version the generator and its consumption order.
+A fixed seed helps reproduce results within a controlled implementation. Do not assume `System.Random` will produce the same sequence across every runtime forever. If replays must survive runtime or game updates, specify and version both the generator and the order in which its numbers are consumed.
 
 ?? algorithms-shuffle-range In Fisher–Yates at index `i`, which swap-partner range is correct?
 * Every index from 0 through i, inclusive.
@@ -154,7 +154,7 @@ A fixed seed is useful within a controlled implementation. Do not assume `System
 - It is selected whenever the draw equals zero if boundaries are implemented correctly.
 - It receives one third of the probability.
 - Its zero weight invalidates every otherwise valid table.
-> A zero-width interval has no probability mass. Using the first cumulative total strictly greater than the draw avoids selecting a leading zero-weight entry.
+> A zero weight occupies no part of the draw interval. Choosing the first cumulative total strictly greater than the draw prevents a leading zero-weight entry from winning even when the draw is zero.
 
 ?+ Weights are 2 and 3, and a draw is exactly 2 in the interval [0, 5). Which entry wins with the stated cumulative-boundary rule?
 * The second entry.
@@ -165,24 +165,24 @@ A fixed seed is useful within a controlled implementation. Do not assume `System
 
 ## Scheduling and simulation order are algorithmic choices {#algorithms-scheduling}
 
-Thousands of independent timers can be represented as one list scanned each tick, a heap of deadlines, or a timing wheel. The right structure depends on timer count, update frequency, required precision, and cancellation patterns.
+Many timers can be managed by a list scanned each tick, a heap of deadlines, or a timing wheel. Choose according to how many timers exist, how often they change, the precision required, and how cancellation works.
 
-A scan is simple and predictable for a small active set. A heap lets you inspect only deadlines that are due, paying logarithmic insertion and removal. A timing wheel groups deadlines into buckets and can offer efficient scheduling when time resolution is bounded, but introduces bucket precision and wraparound complexity.
+For a small active set, scanning every timer is simple and predictable. A heap gives direct access to the next deadline, with logarithmic insertion and removal. A timing wheel groups deadlines into time buckets; it can schedule efficiently when limited time resolution is acceptable, but needs rules for bucket precision and wraparound.
 
-Use one time domain per queue. Comparing a gameplay deadline with wall-clock UTC is meaningless without conversion and an explicit policy. Define how the scheduler handles a large time jump: execute all overdue work, cap work per frame, coalesce repeated events, or discard obsolete actions.
+Use the same kind of clock for every deadline in a queue. A gameplay timestamp cannot be directly compared with wall-clock UTC without a defined conversion. Also decide what a large time jump should do: run all overdue work, limit work per frame, combine repeated events, or discard actions that no longer matter.
 
-Budgeted processing spreads work but changes latency. If only 100 of 1,000 due AI tasks run this frame, some agents observe older state. That can be acceptable for ambient behavior and unacceptable for authoritative reward expiry. Specify how late each kind of task may run.
+Spreading work across frames also delays some results. If only 100 of 1,000 due AI tasks run this frame, some agents act on older state. That may be acceptable for background behavior, but unsuitable for an authoritative reward-expiration rule. Set an allowed delay for each kind of task.
 
-Deterministic simulation also needs a stable phase order. For example, a local simulation can collect inputs, update simulation, resolve interactions, commit state changes, and publish presentation results in that order. Deferring collection mutations until a phase boundary can prevent iteration invalidation, but commands must still be deduplicated and validated against current state.
+A repeatable simulation needs a defined order of phases. For example, collect inputs, advance simulation, resolve interactions, commit state changes, and then publish results for presentation. Applying collection changes between phases can prevent a loop from being invalidated during iteration. Commands still need duplicate checks and validation against the current state.
 
-A fixed timestep alone does not guarantee deterministic cross-platform simulation. Input order, floating-point behavior, physics implementation, random consumption, and multithreaded reductions can still differ.
+A fixed timestep controls how much time each simulation step advances. It does not guarantee identical results across platforms: input order, floating-point calculations, physics, random draws, and parallel sums may still differ.
 
 ?? algorithms-overdue-policy A suspended app resumes with many overdue timers. What must the scheduler define?
-* Whether to replay, coalesce, cap, or discard overdue work according to each timer's semantics.
+* Whether each kind of timer should replay missed actions, combine them, limit catch-up work, or discard obsolete actions.
 - That every overdue timer is automatically harmless.
 - That all clocks refer to the same time domain.
 - That the rendering frame rate decides reward eligibility.
-> Catch-up behavior is part of the product contract. Blindly replaying every missed action can create long stalls or incorrect outcomes.
+> Decide what missed time means for each timer. Replaying every missed action without a limit can cause a long stall or apply actions that are no longer valid.
 
 ?? algorithms-fixed-determinism [tf] Using a fixed timestep alone guarantees bit-identical simulation on every platform.
 * false

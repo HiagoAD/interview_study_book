@@ -5,7 +5,7 @@ chapter: 15: Project deep dives and interview practice
 
 ## Select two or three projects with complementary evidence {#interview-project-selection}
 
-Choose systems you understand deeply enough to discuss implementation, failures, alternatives, and results. A large project name is less useful than clear ownership of a substantial subsystem.
+Choose systems you know well enough to explain their implementation, failures, alternatives, and results. Clear responsibility for a substantial subsystem gives you more to discuss than a famous project name on its own.
 
 Aim for complementary stories:
 
@@ -17,13 +17,13 @@ Aim for complementary stories:
 
 One project can supply several stories, but avoid describing the same decision three times. Select examples that show different kinds of judgment.
 
-Create a one-page note for each system: context, your responsibility, constraints, architecture sketch, one critical operation, one difficult failure, two alternatives, validation, outcome, and what you would change now.
+Prepare a one-page note for each system. Include the context, your responsibility, constraints, and an architecture sketch. Trace one critical operation, describe a difficult failure, and compare two alternatives. Record the validation, outcome, and what you would change now.
 
 Separate “I” and “we” accurately. “I designed the run-state model; another engineer implemented the storage adapter; we agreed on the migration contract” gives a clearer ownership picture than either taking all credit or describing everything impersonally.
 
-Use only metrics you can support. If no reliable before/after measurement exists, say what you observed and how you verified it. Do not turn a vague impression into a precise percentage. If confidentiality limits detail, discuss generalized constraints and decisions without exposing protected material.
+Use metrics you can support. If you have no reliable before-and-after measurement, explain what you observed and how you checked it. Do not convert an impression into a precise percentage. If details are confidential, discuss the constraints and decisions in general terms without exposing protected material.
 
-Prepare a one-minute introduction that establishes the problem and your contribution. Then practice a ten-minute walkthrough that connects implementation details to the requirements and decisions behind them.
+Practise a one-minute introduction that establishes the problem and your contribution. Then prepare a ten-minute walkthrough, connecting implementation details to the requirements and decisions that led to them.
 
 ?? interview-story-selection Which project is strongest for a technical deep dive?
 * One where you can explain your ownership, difficult decisions, implementation details, and evidence.
@@ -43,24 +43,24 @@ Prepare a one-minute introduction that establishes the problem and your contribu
 
 Begin with a concrete trigger: “The game needed missions that could be authored weekly without code changes, while preserving existing progress.” Then name the constraints: a mature save format, low-end devices, several active event types, and a short release window.
 
-Draw the owners and dependencies. Explain which data is shared configuration, which belongs to a player session, and which exists only during a run. Mark the state-changing authority and the presentation observers.
+Draw the objects that own state and show their dependencies. Identify shared configuration, data that lasts for a player session, and data that exists only during a run. Make clear which objects can change the state and which only observe it for presentation.
 
-Walk one operation in order. For a mission reward: button intent, eligibility check, stable claim identity, transaction, persisted result, and UI notification. Include the failure path: timeout after commitment, retry with the same identity, return the original outcome.
+Follow one operation in order. For a mission reward, begin with the button press, then explain eligibility, the stable claim ID, the transaction, the saved result, and the UI notification. Include a failure case: the server commits the reward, the response times out, and a retry with the same ID returns the original result.
 
-Explain the choices behind that sequence. For example, a team might reject a generic objective framework because only three types exist and designer iteration matters more than runtime extensibility. It might still keep a strategy boundary for reward selection, which already varies independently.
+Explain why those steps have those owners. A team might reject a generic objective framework when it has only three objective types and needs faster designer iteration more than runtime extensibility. It might still separate reward selection behind a strategy interface, because that behavior already varies independently.
 
-Discuss the hardest defect and how it changed the design. A stale callback may have led to explicit generation identity. A migration failure may have led to historical save fixtures and a backup strategy. Describe which failure the change prevents and how you verified it.
+Describe the hardest defect and the design change it prompted. A stale callback might lead to checking a generation ID. A failed migration might lead to historical save fixtures and a backup policy. Explain the failure that change prevents and how you verified the fix.
 
-End with results and limitations. What shipped? What became easier? What remained expensive? Which tests or measurements support that answer? What would you change under today's constraints?
+Finish with what shipped, what became easier, and what remained expensive. Support those results with tests or measurements. Then explain what you would change under today's constraints.
 
-Practice drawing and narrating without code first, then show one representative operation. If the explanation requires reading every class, identify which responsibilities and dependencies the listener needs to understand the operation.
+Practise drawing and explaining the system before showing code. Then use one representative operation to add detail. If the explanation needs every class, decide which responsibilities and dependencies the listener actually needs to follow that operation.
 
 ?? interview-operation-trace Why walk one reward claim end to end?
 * It exposes ownership, ordering, commitment, and failure behavior in a concrete scenario.
 - It eliminates the need to discuss tradeoffs.
 - It proves the entire system has no bugs.
 - It lets you avoid explaining persistence.
-> A complete operation connects architecture boxes to actual behavior and reveals missing boundaries.
+> Following one claim shows what the architecture actually does, including who changes state and what happens if a step fails.
 
 ?? interview-constraints-first Why state constraints before presenting the chosen architecture?
 * The listener needs the decision criteria to judge the tradeoffs.
@@ -71,7 +71,7 @@ Practice drawing and narrating without code first, then show one representative 
 
 ## Defend alternatives and adapt when requirements change {#interview-followups}
 
-An interviewer may challenge your design to see whether it is reasoned or memorized. Treat the change as new information. Restate the altered requirement, identify which assumption it breaks, and revise the relevant boundary.
+An interviewer may change a requirement to test how you reason about the design. Restate the new requirement, identify the assumption it breaks, and adjust the relevant part of the system.
 
 Practice these follow-ups:
 
@@ -84,27 +84,27 @@ Practice these follow-ups:
 | Change rewards mid-event | Definition revisions, active-instance policy, claim consistency |
 | Roll back tomorrow | Save compatibility, content exposure, irreversible side effects |
 
-Avoid defending every original choice after its constraints change. A single controller can be right for a small feature and wrong after substantial independent variation appears. Explain which new requirement makes the original controller hard to maintain.
+Reconsider a choice when its constraints change. A single controller may work well for a small feature, then become difficult to maintain as independent behaviors grow. Explain which new requirement creates that pressure.
 
-Also avoid overreacting. Adding a second player does not necessarily require replacing the entire engine architecture. If state already has an explicit owner, instantiate another owner and wire its adapters. Check which consumers also need to change and why.
+Keep the size of the change proportional to the requirement. A second local player may only need another owner for player state, plus separate input and presentation bindings. Check the consumers of that state before deciding that the wider architecture needs replacement.
 
 When uncertain, say how you would resolve it. “I would check the installed Addressables contract and reproduce the handle lifetime in a small target build” is a useful answer. Guessing an API guarantee confidently is not.
 
-Include one cost of your revised design. Supporting offline operations adds storage, expiry, and reconciliation; an interface alone does not eliminate that work.
+Name a cost of the revised design. Offline operations, for example, need storage, expiration rules, and reconciliation. Adding an interface may organize those responsibilities, but does not implement them.
 
 ?? interview-changing-requirements A new requirement invalidates an assumption behind your original design. What is the strongest response?
 * Identify the broken assumption and revise the relevant ownership or contract.
 - Insist the original design is always best.
 - Replace every subsystem before examining the impact.
 - Pretend the new requirement was already fully supported.
-> Architecture is conditional on requirements. Adaptation should be explicit and proportional.
+> A design depends on its requirements. Explain which assumption changed, then adjust the parts affected by it.
 
 ?+ Your run model already owns all per-player effects, while definitions are immutable and shared. A second local player is added. What is the most direct starting change?
-* Create another run-owned state graph and bind the second player's input and presentation.
+* Create a separate set of runtime state for the second player's run, and connect that player's input and presentation.
 - Make all effect deadlines static so both players use one value.
 - Duplicate every configuration asset even when its values are identical.
 - Replace the entire game architecture before evaluating existing boundaries.
-> Explicit per-player ownership localizes the new requirement. Shared immutable configuration can remain shared while runtime state is independent.
+> Separate player-state owners allow the new player to have independent effects. Both players can continue using the same immutable definitions.
 
 ?? interview-uncertain-api You are unsure whether a package operation can actually be cancelled. What should you do?
 * State the uncertainty and explain how you would verify the installed version's contract and cleanup behavior.
@@ -117,7 +117,7 @@ Include one cost of your revised design. Supporting offline operations adds stor
 
 Prompt: Add a seven-day challenge to a mobile runner. Players collect event tokens, complete three objectives, and claim milestone rewards. The team wants weekly content iteration. Some players use older binaries, and the app can be interrupted at any time.
 
-Begin by clarifying event start and end authority, whether offline progress is allowed, whether a run crossing the deadline counts, and whether claiming remains available after earning closes. Ask about minimum devices, existing wallet and save systems, supported client versions, and authoring expectations.
+First clarify who decides event start and end times, whether offline progress is allowed, whether a run crossing the deadline counts, and whether rewards can be claimed after earning closes. Then ask about minimum devices, existing wallet and save systems, supported client versions, and the team's content-authoring workflow.
 
 A plausible design uses these owners:
 
@@ -131,56 +131,56 @@ A plausible design uses these owners:
 | Presentation | Display availability, progress, pending status, and celebrations |
 | Adapters | Persistence, time authority, platform or service communication |
 
-At run start, capture the applicable event instance and policy. Token collection commits once per spawn. Run facts update the appropriate progression owner. A claim uses one stable identity; commitment updates inventory and claim state together. Presentation reconstructs from committed state after interruption.
+At run start, capture the applicable event instance and rules. Each token spawn can be collected once, and the resulting run facts update the object that owns progress. Give a reward claim one stable identity, then commit its inventory update and claim record together. After an interruption, rebuild presentation from the committed state.
 
-Keep the grant outside the UI, whose view can close before the outcome is resolved. Store player progress separately from shared event assets so one player's changes cannot affect another player's state. Avoid a universal event-scripting language until content variation justifies its tooling and compatibility cost.
+Put the grant operation outside the UI, because the view can close before the result is known. Keep player progress separate from shared event assets, so one player's updates cannot change another's state. Add a general event-scripting language only if the variety of content justifies its authoring tools and compatibility work.
 
-For performance, estimate active tokens and event frequency. Start with a simple evaluator, reuse buffers in measured hot paths, and budget the celebration's simultaneous effects. Profile transitions on target devices.
+Estimate the active token count and event frequency before choosing optimizations. Begin with a simple evaluator. Reuse buffers where measurements show repeated allocation costs, and budget how many celebration effects can run together. Profile transitions on target devices.
 
-For release safety, validate catalog compatibility, keep exposure controlled, test old saves and pending claims, and define a kill-switch policy for in-flight work. A rollback must preserve any newer state the previous binary may encounter.
+Before release, validate the catalog against supported clients. Control exposure, test old saves and pending claims, and define how a kill switch handles work already in progress. Plan for a rollback in which the previous binary encounters state saved by the newer version.
 
-This design still has open decisions. A trusted online economy needs service-side validation and durable transactions. An offline-only game can use a local save transaction with clearly weaker trust. Say which product you are designing.
+Choose the trust model explicitly. An online economy that requires trusted decisions needs service-side validation and durable transactions. An offline game can commit through a local save, but cannot provide the same protection against client tampering. State which product the design serves.
 
 ?? interview-capstone-owner In the capstone, which unit should decide whether a milestone reward is valid and commit it?
 * The designated reward authority operating on event and player state.
 - The celebration particle system.
 - The visible button's animation controller.
 - Every observer independently.
-> A single authority protects eligibility and one-time commitment. Presentation reports and displays its outcome.
+> The reward authority checks eligibility and commits the claim once. Presentation displays the result without deciding whether the grant is valid.
 
 ?? interview-capstone-revision Why capture an event revision for a run when the product policy requires consistent run rules?
 * So mid-run content updates do not silently change how that run is evaluated.
 - So every future event uses the same rewards forever.
 - So old clients automatically understand new scripts.
 - So offline clients can bypass all validation.
-> Version capture makes the operation's rules explicit. Compatibility and trust need their own mechanisms.
+> The captured revision identifies the rules for this run. Client compatibility and trusted validation still need separate checks.
 
 ## Practice technical answers with an assessment rubric {#interview-mock-round}
 
-Use these prompts aloud. Allow clarifying questions, then spend several minutes developing the answer. Use the suggested topics to check for gaps in your answer.
+Answer these prompts aloud. Start with clarifying questions, then spend several minutes developing the design. Use the suggested topics afterward to find gaps in your explanation.
 
-“Design a power-up system.” Establish effect types, stacking, pause, restart, and persistence. Separate configuration from runtime state. Trace activation and expiry. Explain the presentation boundary, tests, and one rejected alternative.
+“Design a power-up system.” Define the effect types and rules for stacking, pause, restart, and persistence. Separate shared configuration from runtime state, then trace activation and expiration. Explain how presentation observes the effect, how you would test it, and one alternative you rejected.
 
-“Why use an interface here?” Identify the stable capability and its consumers. Explain substitution, test control, or infrastructure isolation. If the abstraction provides none of those benefits, a concrete type may be clearer.
+“Why use an interface here?” Name the capability the interface represents and the callers that need it. Explain whether it supports replacing an implementation, controlling inputs in tests, or isolating infrastructure. If none of those benefits apply, a concrete type may be clearer.
 
-“The game freezes every few seconds on a phone.” Gather a repeatable target-device capture, inspect CPU and GPU timing, allocation and collection, loading, and thermal context. Do not assume GC before seeing evidence. Choose one hypothesis and a discriminating experiment.
+“The game freezes every few seconds on a phone.” Reproduce the problem and capture data on the target device. Inspect CPU and GPU timing, allocations, garbage collection, loading, and thermal conditions. Choose a hypothesis and an experiment that could rule it in or out; do not assume garbage collection is responsible before measuring.
 
-“Which collection stores active enemies?” Ask about lookup, iteration, removal, order, and population. A list plus ID-to-index dictionary may suit lookup and dense iteration, with swap-back removal if order is irrelevant. Explain map repair and generation identity.
+“Which collection stores active enemies?” Clarify lookup, iteration, removal, ordering, and population requirements. A list plus an ID-to-index dictionary may provide fast lookup and compact iteration. If order does not matter, consider swap-back removal. Explain how removal repairs the index map and how generation IDs distinguish reused objects.
 
-“A player received the same reward twice.” Trace operation identity, duplicate callbacks, retry behavior, claim transaction, and persistence. Distinguish two separate operations from duplicate attempts at one operation.
+“A player received the same reward twice.” Follow the operation ID through callbacks, retries, the claim transaction, and persistence. Determine whether there were two separate logical claims or repeated attempts to complete one claim.
 
-“What is difficult about working with artists or designers?” Discuss differing goals or missing shared contracts, give a real example, describe your actions, and show how tooling, prototypes, or measured budgets improved the outcome.
+“What is difficult about working with artists or designers?” Use a real example of differing goals or missing shared expectations. Explain your actions and how tools, prototypes, or measured budgets helped the team reach a decision.
 
-Score each answer from 0 to 2 on five dimensions: clear requirements, explicit ownership, failure handling, tradeoffs, and evidence. A score of 0 means absent, 1 means named, and 2 means explained with a concrete example. Use the score to choose what to practice next, not to predict an interview result.
+Score each answer from 0 to 2 for clear requirements, explicit ownership, failure handling, tradeoffs, and evidence. Give 0 when a dimension is absent, 1 when it is named, and 2 when it is explained with a concrete example. Use the result to choose your next practice topic. It is not a prediction of an interview outcome.
 
-Add small coding exercises: implement deduplicated collection, remove an entity while repairing an index map, test exact expiration, or shuffle a collection. Explain complexity and edge cases before optimizing.
+Also practise small coding tasks: prevent duplicate collection, remove an entity and repair its index map, test an exact expiration boundary, or shuffle a collection. Explain the complexity and edge cases before optimizing.
 
 ?? interview-performance-prompt A phone freezes periodically. Which answer shows the strongest diagnostic reasoning?
 * Reproduce on the device, capture timing and allocations, and test hypotheses before choosing a fix.
 - Declare GC responsible without a capture.
 - Replace every list with a linked list.
 - Lower texture resolution regardless of the limiting stage.
-> Similar symptoms can come from different systems. Evidence should select the intervention.
+> Several systems can cause periodic freezes. Use measurements to identify the cause before choosing a fix.
 
 ?? interview-rubric [multi n=5] Which elements belong in the five-dimension practice rubric?
 * Explicit ownership.
@@ -192,7 +192,7 @@ Add small coding exercises: implement deduplicated collection, remove an entity 
 
 ## Build a study loop around weak explanations {#interview-study-loop}
 
-Follow the priority order, but use retrieval to decide where extra time goes.
+Follow the chapter priorities, and spend extra time on ideas you cannot yet explain from memory.
 
 | Pass | Focus | Deliverable |
 | --- | --- | --- |
@@ -204,24 +204,24 @@ Follow the priority order, but use retrieval to decide where extra time goes.
 | Shipping and teamwork | Chapters 13–14 | Explain a safe release and a collaboration decision |
 | Personal evidence | This chapter | Prepare two or three truthful deep dives |
 
-For each session, read a small number of sections, answer the questions, and explain one scenario without looking. Record the point where your explanation becomes vague. “I would use a manager” is a cue to name its state, operations, dependencies, and lifetime.
+In each session, read a few sections, answer their questions, and explain one scenario without looking at the text. Record where your explanation becomes vague. If you say “I would use a manager,” continue by naming the state it owns, its operations, its dependencies, and how long it lives.
 
-Alternate recognition with production. Multiple-choice questions help expose misconceptions, but drawing a dependency graph or tracing an interrupted claim requires generating the model yourself. Practice both.
+Practise both recognizing an answer and producing one yourself. Multiple-choice questions can reveal misconceptions. Drawing a dependency graph or tracing an interrupted claim requires you to build the explanation from memory.
 
-Revisit wrong concepts through the site's review queue. Also revisit answers that were technically correct but guessed. Change the scenario: a second player, a delayed callback, an old save, a weaker device. This tests whether the principle transfers.
+Use the site's review queue for concepts you answered incorrectly. Revisit correct answers you guessed as well. Then vary the scenario: add a second player, delay a callback, load an old save, or target a weaker device. Check whether you can still apply the same principle.
 
-Before the interview, rehearse a short introduction for each project and one detailed technical walkthrough. Keep facts, measurements, and personal ownership accurate. Prepare a few questions about the team's existing architecture, content workflow, target devices, and release process so you can reason within their constraints.
+Before the interview, rehearse a short introduction for each project and one detailed technical walkthrough. Keep facts, measurements, and your personal contribution accurate. Prepare questions about the team's architecture, content workflow, target devices, and release process, so you can reason within their constraints.
 
 ?? interview-retrieval-practice Which practice best complements multiple-choice questions?
 * Explain a new scenario aloud and draw its ownership and failure boundaries without looking.
 - Memorize only the positions of correct options.
 - Read pattern names repeatedly without applying them.
 - Avoid scenarios that change the original assumptions.
-> Generating an explanation tests whether you can apply the model, while multiple choice mainly tests recognition.
+> Explaining an unfamiliar scenario checks whether you can apply the idea yourself. Multiple choice mainly checks whether you recognize a valid answer.
 
 ?? interview-vague-manager You say “I would add a manager” and cannot explain further. What should you define next?
 * Its owned state, operations, dependencies, and lifetime.
 - Only a longer class name.
 - Its icon color.
 - A guarantee that it will never change.
-> A manager name does not establish a design. Concrete responsibilities and contracts do.
+> A class name does not explain what the system does. Define its responsibilities, how callers use it, and when it is created and cleaned up.

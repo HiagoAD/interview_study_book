@@ -5,7 +5,7 @@ chapter: Caching
 
 ## Cache eviction {#cache-eviction}
 
-A cache is small, so it has to decide what to throw away when it is full. An **LRU** (least recently used) cache evicts the entry that has gone longest without being read. A hash map plus a doubly linked list makes both lookup and eviction $O(1)$.
+A cache has limited capacity, so it needs a rule for removing entries when it fills up. An **LRU** (least recently used) cache removes the entry that has gone longest without being read. Combining a hash map with a doubly linked list supports lookup and eviction in $O(1)$.
 
 ![Four keys in recency order, with B about to be evicted](images/lru.svg)
 
@@ -22,7 +22,7 @@ class LRUCache:
         return self.entries[key]
 ```
 
-Reading an entry moves it to the front of the list. When the cache is full, the entry at the back goes.
+Reading an entry moves it to the most recently used end of the list. When space is needed, the cache removes an entry from the least recently used end.
 
 ?? lru-evict Which entry does an LRU cache evict first?
 * The least recently used entry
@@ -33,7 +33,7 @@ Reading an entry moves it to the front of the list. When the cache is full, the 
 - A random entry
 > LRU tracks access order and removes the entry that has gone longest without being read.
 
-?+ Keys A, B and C are inserted in that order, then A is read. Which key does LRU evict next?
+?+ Keys A, B, and C are inserted in that order. Then A is read. Which key does LRU evict next?
 * B
 - A
 - C
@@ -49,11 +49,11 @@ Reading an entry moves it to the front of the list. When the cache is full, the 
 
 ## Hit rate {#hit-rate}
 
-The hit rate is the share of lookups that find what they want:
+A cache hit occurs when a lookup finds the requested data in the cache. The hit rate is the fraction of lookups that are hits:
 
 $$ hit\ rate = \frac{hits}{hits + misses} $$
 
-A cache that answers 80 of 100 lookups has a hit rate of $0.8$. If each miss costs \$0.002 of database time, then 1000 lookups at a hit rate of $0.9$ cost $100 \times 0.002 = 0.2$ dollars.
+If a cache answers 80 out of 100 lookups, its hit rate is $0.8$. At a hit rate of $0.9$, 1000 lookups produce 100 misses. If each miss costs \$0.002 of database time, those misses cost $100 \times 0.002 = 0.2$ dollars.
 
 | Hit rate | Misses per 100 lookups |
 | -------- | ---------------------- |
@@ -75,7 +75,7 @@ function hitRate(hits: number, misses: number): number {
 - $hits - misses$
 - $\frac{misses}{lookups}$
 - $hits + misses$
-> Every lookup is a hit or a miss, so $hits + misses$ is the number of lookups, and the hit rate is the share of them that were hits.
+> Every lookup is either a hit or a miss, so $hits + misses$ gives the total number of lookups. Divide hits by that total to find the hit rate.
 
 ?? hit-rate-calc [short] A cache answers 90 of 100 lookups. What is its hit rate as a decimal?
 = 0.9 | .9 | 0.90
@@ -87,7 +87,7 @@ function hitRate(hits: number, misses: number): number {
 
 ## Write policies {#write-policies}
 
-When data changes, the cache and the store behind it have to agree. There are three common policies:
+When data changes, choose how updates reach the cache and the store behind it. Three common policies are:
 
 - **Write-through** writes to the cache and the store together. Reads stay fresh, but every write pays for the slower store.
 - **Write-back** writes to the cache and marks the entry dirty. The store is updated later, when the entry is evicted.

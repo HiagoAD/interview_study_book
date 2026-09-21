@@ -5,17 +5,17 @@ chapter: 09: Data structures and complexity for game systems
 
 ## Analyze the work that grows with the game {#structures-complexity}
 
-Complexity describes how resource use grows with input size. Define the input before naming the complexity: number of active enemies, collected IDs, missions, path nodes, or visible UI entries.
+Complexity describes how resource use grows as the input grows. Name that input first: active enemies, collected IDs, missions, path nodes, or visible UI entries. The complexity claim only makes sense relative to the size you are measuring.
 
 $O(1)$ describes work bounded independently of that input size; $O(n)$ describes linear growth; $O(n \log n)$ commonly appears in comparison sorting; $O(n^2)$ appears when every entity checks every other entity. These are growth classes, not execution-time measurements.
 
-Distinguish worst-case, expected, and amortized costs. A hash lookup is commonly expected constant time under suitable hashing and load, but can degrade. Appending to a dynamic array is amortized constant time: occasional growth copies existing elements, so a particular append can be linear. That distinction matters when one slow frame is unacceptable.
+Distinguish worst-case, expected, and amortized costs. A hash lookup is commonly expected to take constant time with suitable hashing and load, but a bad case can take longer. Appending to a dynamic array is amortized constant time: most appends are cheap, while an occasional resize copies existing elements. One append can therefore take linear time. That difference matters if a single slow frame would be visible.
 
-If 1,000 enemies each scan 1,000 potential targets every frame, the algorithm performs about one million candidate checks per frame. At 60 FPS that is about 60 million per second, before expensive visibility or path queries. Reducing the candidate set can matter much more than removing one multiplication.
+If 1,000 enemies each scan 1,000 potential targets every frame, there are about one million candidate checks per frame. At 60 FPS, that is about 60 million checks per second, before any expensive visibility or path queries. Reducing how many candidates need checking may help much more than removing one multiplication from each check.
 
-Big-O also omits constants, allocation, cache behavior, branch predictability, and engine-call costs. A contiguous linear scan over 20 elements can beat a hash lookup with setup overhead. Measure the workload after using complexity analysis to identify likely scaling problems.
+Big-O leaves out constant costs, allocations, cache behavior, branch predictability, and engine calls. A linear scan of 20 contiguous elements can be faster than setting up and using a hash lookup. Use complexity to identify likely problems as the game grows, then measure the actual workload.
 
-State space complexity too. Caching all pairwise distances trades recomputation for quadratic storage and invalidation. Maintaining an index trades faster queries for update work and memory. Ask how often the data changes relative to how often it is queried.
+Account for memory as well as execution time. Caching every pairwise distance uses quadratic storage and needs updates when positions change. An index makes queries faster by spending memory and time on maintenance. Compare how often the data changes with how often it is queried.
 
 For an interview, narrate the baseline first: “I would start with a linear scan of the active set; if population or profiling makes it expensive, I would introduce a spatial index.” Explain why the scan is correct before discussing its replacement.
 
@@ -24,7 +24,7 @@ For an interview, narrate the baseline first: “I would start with a linear sca
 - Every append is guaranteed to take exactly the same time.
 - List appends never allocate.
 - The worst-case cost of every append is logarithmic.
-> Amortized analysis distributes occasional expensive growth across many cheap operations. It does not remove individual spikes.
+> Most appends are cheap, but occasional growth copies existing elements. Averaging that work across many appends gives constant cost; an individual resize can still cause a spike.
 
 ?+ A latency-sensitive frame appends to a list whose capacity is exhausted. Which statement is correct?
 * That append can allocate a larger backing array and copy existing elements despite amortized constant-time append.
@@ -42,7 +42,7 @@ For an interview, narrate the baseline first: “I would start with a linear sca
 
 ## Arrays, lists, and removal policies {#structures-arrays-lists}
 
-Arrays provide fixed-length indexed storage. `List<T>` provides a resizable array with a logical count and capacity. Both give constant-time indexed access; list insertion or removal near the front shifts later elements.
+An array provides a fixed number of indexed slots. `List<T>` uses a resizable array, with a count for the elements in use and a capacity for the storage reserved. Both support constant-time indexed access. Inserting or removing an item near the front of a list moves later elements.
 
 Choose based on the access pattern:
 
@@ -76,11 +76,11 @@ public static class UnorderedList
 }
 ```
 
-This preserves membership except for the removed item, but changes order. It is appropriate for an unordered active-particle list, not a leaderboard or chronological event queue. If a dictionary maps entity IDs to list indices, update the moved entity's mapping and remove the deleted entity's mapping.
+The helper keeps every element except the removed one, but changes their order. That fits an unordered list of active particles; it does not fit a leaderboard or chronological event queue. If a dictionary maps entity IDs to list indices, update the moved entity's index and delete the removed entity's entry.
 
-Pre-size a collection when expected occupancy gives you a capacity estimate, especially before latency-sensitive gameplay. Do not reserve huge capacity for every object “just in case.” Capacity consumes memory even when count is low, and clearing a list generally retains that capacity.
+If you can estimate the likely number of elements, reserve that capacity before gameplay that cannot tolerate a resize. Avoid reserving a huge capacity for every object “just in case.” Reserved storage uses memory even when the count is low, and clearing a list generally keeps that storage.
 
-When removing while iterating, account for movement. With swap-back removal, inspect the replacement at the same index before incrementing, or iterate using a carefully defined loop. Otherwise an element can skip processing.
+Account for moved elements when removing during iteration. After swap-back removal, an unprocessed element may now occupy the current index. Check that replacement before advancing, or use a loop whose rules account for the move. Otherwise an element can be skipped.
 
 ?? structures-swap-back Which property does swap-back removal sacrifice?
 * Element order.
@@ -94,7 +94,7 @@ When removing while iterating, account for movement. With swap-back removal, ins
 - Only the list's display name.
 - Every entity's persistent ID.
 - Nothing, because dictionaries track list movement automatically.
-> The list and index map form one data structure with shared invariants. Every mutation must keep them consistent.
+> The dictionary must describe the list's current positions. Each removal must update both structures, including the element moved into the empty slot.
 
 ?+ List [A, B, C, D] uses swap-back removal at index 1. What index should the dictionary record for D afterward?
 * 1.
@@ -105,17 +105,17 @@ When removing while iterating, account for movement. With swap-back removal, ins
 
 ## Dictionaries, sets, and lookup contracts {#structures-hash-collections}
 
-A dictionary maps keys to values. A set represents unique membership. Use a dictionary for mission ID to progress; use a set for collected spawn IDs when membership alone is needed.
+Use a dictionary to map keys to values, such as a mission ID to its progress. Use a set when you only need to know whether an ID is present, such as whether a spawn has already been collected.
 
-Expected constant-time operations depend on hashing and resizing behavior. Hash collisions are normal and resolved using equality. A poor comparer, mutable keys, or unusual input distributions can degrade performance and correctness.
+Hash collection performance depends on hashing and resizing. Collisions are normal; equality checks distinguish keys that share a hash. Poor hashing or unusual input distributions can slow the collection down, while mutable keys or an incorrect comparer can also break lookups.
 
-Use `TryGetValue` when absence is expected, rather than indexing and catching a missing-key exception. Avoid `ContainsKey` followed by indexing when one lookup can supply the result. Validate duplicate authored IDs while constructing the catalog instead of silently overwriting one definition.
+Use `TryGetValue` when a key may be absent. It expresses that possibility directly and avoids a missing-key exception. It can also replace `ContainsKey` followed by indexing with one lookup. When building an authored catalog, report duplicate IDs instead of silently overwriting a definition.
 
-Iteration order should not become an accidental gameplay contract. If deterministic presentation or replay needs ordering, sort by an explicit stable key or use a structure whose ordering contract you deliberately depend on. Stable sorting also needs a tie rule if distinct items have equal primary keys.
+Specify iteration order if gameplay, presentation, or replay depends on it. Sort by a stable key, or choose a collection with an ordering guarantee you deliberately rely on. Also define how ties are ordered when different items have the same primary key. The order a hash collection happens to return should not become a hidden gameplay rule.
 
-Hash collections consume more memory than a compact array and have less predictable locality. For a tiny static catalog, a linear scan may be sufficient. For a large immutable catalog, build the index once and keep it stable. For hot dynamic state, account for resize points.
+Hash collections use more memory than a compact array and may access memory less predictably. A linear scan may be enough for a tiny, fixed catalog. For a large immutable catalog, build the index once and keep it. For frequently changing state, plan for the frames when the collection grows.
 
-Choose technical string comparison deliberately. A stable item ID should not change lookup behavior because the device language changes. Display-name search can use a separate user-facing matching policy.
+Choose the string comparer for technical IDs explicitly. Changing the device language should not change whether an item ID is found. Searching display names can follow a separate rule suited to the user's language.
 
 Exercise: Design a registry that supports constant expected-time lookup by spawn ID and efficient iteration over active entities. Explain removal, pool reuse, index repair, and how tests check the combined invariants.
 
@@ -131,21 +131,21 @@ Exercise: Design a registry that supports constant expected-time lookup by spawn
 - Whatever order a hash collection happens to return.
 - A random order without recording the random inputs.
 - The order in which asynchronous loads happen to finish.
-> Determinism requires ordering to be part of the contract, not an incidental collection implementation detail.
+> Repeatable execution needs a defined visit order. An incidental collection order can change without violating the collection's own contract.
 
 ## Queues, stacks, heaps, and linked lists {#structures-specialized}
 
-A queue models first-in, first-out work: pending commands or breadth-first search. A stack models last-in, first-out work: depth-first traversal or nested undo history. Both can be implemented with contiguous storage and amortized constant-time operations.
+A queue processes the oldest waiting item first, which fits pending commands or breadth-first search. A stack processes the most recently added item first, which fits depth-first traversal or nested undo history. Both can use contiguous storage and support amortized constant-time operations.
 
-A priority queue selects the item with the smallest or largest priority. A binary heap typically offers constant-time peek and logarithmic insertion and removal. It is useful for scheduled deadlines, pathfinding frontiers, or “next task” selection. Do not assume a particular modern .NET collection API exists in the Unity project's selected compatibility profile; verify before adopting it.
+A priority queue returns the item with the lowest or highest priority. A binary heap typically provides constant-time access to the next item, with logarithmic insertion and removal. This suits deadlines, pathfinding frontiers, and selecting the next task. Before choosing a .NET API, check that it exists in the Unity project's compatibility profile.
 
-Cancellation is a design choice. Removing arbitrary heap entries needs an index map or a different structure. A simpler scheduler can mark entries cancelled and discard them when popped, but cancelled entries retain memory until removed. Compact when the retained work justifies it.
+Decide how a heap-based scheduler handles cancellation. Removing an arbitrary entry needs an index map or a different structure. A simpler option is to mark the entry as cancelled and discard it when it reaches the front. Those cancelled entries still occupy memory until removed, so compact them if that retained memory becomes significant.
 
-For equal priorities, add a monotonically increasing sequence if stable order matters. Otherwise two tasks scheduled for the same deadline can run in an unspecified order.
+If equal-priority tasks must run in insertion order, include an increasing sequence number as a tie-breaker. Without a tie rule, two tasks with the same deadline may run in an unspecified order.
 
-A linked list can remove a known node in constant time, but finding that node is linear without another index. Each node can add allocation and pointer chasing. “Frequent removal” alone does not make it faster than a list; location knowledge and locality matter.
+A linked list can unlink a known node in constant time. Finding that node by value can still take a linear search unless another index supplies it. Nodes can also add allocations and pointer chasing. Frequent removal is therefore not enough to choose a linked list; consider how the node is found and how memory is accessed.
 
-An LRU cache often combines a dictionary for lookup with a doubly linked list for recency. It provides efficient operations at the cost of two structures whose invariants must agree. A cache also needs capacity, eviction cleanup, and a policy for resources still borrowed by users.
+A least-recently-used (LRU) cache often combines a dictionary for lookup with a doubly linked list for access order. Operations can be efficient, but every change must keep the two structures consistent. Define the cache capacity, what cleanup eviction performs, and what happens if a caller is still borrowing an evicted resource.
 
 ?? structures-heap-deadlines Which structure fits repeatedly selecting the earliest scheduled deadline among many pending tasks?
 * A min-priority queue, commonly implemented with a heap.
@@ -163,9 +163,9 @@ An LRU cache often combines a dictionary for lookup with a doubly linked list fo
 
 ## Caches, indices, and memory layout {#structures-caches-layout}
 
-An optimization that stores derived information creates another invariant. A cached effective speed must be invalidated when the base speed or active modifiers change. A spatial index must update when an entity changes cells. An ID-to-index map must follow list movement.
+Storing derived information adds a rule you must maintain. A cached effective speed becomes stale when base speed or active modifiers change. A spatial index needs updating when an entity moves between cells. An ID-to-index map must change when list elements move.
 
-Choose between eager recomputation, lazy invalidation, and periodic rebuilding:
+Choose when to update derived data: immediately after a change, when it is next read, or during a scheduled rebuild:
 
 | Strategy | Good fit | Cost |
 | --- | --- | --- |
@@ -173,13 +173,13 @@ Choose between eager recomputation, lazy invalidation, and periodic rebuilding:
 | Mark dirty and compute on read | Many writes before next read | A read can become unexpectedly expensive |
 | Rebuild in a batch | Coherent update phases | Results can be stale between rebuilds |
 
-Define whether stale results are acceptable. A cosmetic preview may tolerate a frame of delay; a collision or reward eligibility check may not.
+Decide how current each result must be. A cosmetic preview may tolerate a frame of delay. A collision test or reward eligibility check may need the latest state.
 
-Memory layout matters in hot loops. An array of structs keeps related per-entity fields together. Separate arrays can let an operation read only positions without pulling in unrelated state. An array of class references is contiguous in references, but the objects they point to can be scattered.
+For frequently executed loops, consider which fields each iteration reads. An array of structs keeps an entity's fields together. Separate arrays can let a position-only calculation read positions without unrelated state. An array of class references keeps the references together, but the objects themselves may be scattered in memory.
 
-Do not convert the whole game to a data-oriented layout because one loop is slow. Identify the data the loop actually uses, make a narrow representation change, and compare CPU time, memory, and maintenance cost.
+Start with the data used by the slow loop. Change that representation where needed, then compare CPU time, memory use, and maintenance cost. One slow loop does not by itself justify reorganizing the whole game.
 
-A cache key must account for every input that affects the answer, including relevant content revision or settings. Omitting difficulty from a cached reward calculation can reuse an answer from the wrong mode. An overbroad key increases misses, while an incomplete key produces incorrect hits.
+Include every input that affects the result in a cache key, including relevant settings and content revisions. A reward cache that omits difficulty could return a value calculated for another mode. Unnecessary key fields reduce reuse; missing required fields can return incorrect answers.
 
 ?? structures-cache-key A reward depends on mission ID, difficulty, and definition revision. Which cache key is correct?
 * One that accounts for all three inputs.
@@ -193,4 +193,4 @@ A cache key must account for every input that affects the answer, including rele
 - The value never needs invalidation.
 - All writes become persistent automatically.
 - The cached result can no longer be stale.
-> Lazy recomputation coalesces writes but moves work into a read. That timing matters in frame-sensitive code.
+> Several writes can be combined into one recalculation, but the first reader pays that cost. Decide whether that timing fits the frame budget.
