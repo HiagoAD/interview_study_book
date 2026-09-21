@@ -26,18 +26,28 @@ Choose test doubles by purpose:
 
 Choose test doubles for a specific purpose. Large numbers of tests that depend on private call sequences can make refactoring difficult without catching player-visible failures. Prioritize rules that must always hold, previous bugs, and operations where failure could lose state or apply a reward twice.
 
+One filter decides most of what to write: would this test fail for a reason I would want to be told about? A test that breaks when a private helper is renamed answers no, and it will be deleted or weakened the first time it gets in the way. A test that breaks when a duplicate collection grants a second reward answers yes, and it will be trusted.
+
+Name the test after the rule rather than the method. `ExpiresAtTheExactDeadline` states a behavior a reader can check against the design; `TestIsActive2` states only that someone wrote a second test. When such a test fails in a run you did not start, the name is usually all the information you get, so it should carry the rule.
+
+The cost side is real and worth stating, because a test suite is code the team maintains. Tests that reach into private state, assert on log text, or depend on the order of a collection with no ordering contract will fail during changes that broke nothing. Each of those failures spends someone's attention and teaches the team to distrust the suite. A smaller suite that fails only for real reasons protects the code better than a larger one that cries often.
+
+Exercise: Pick three tests from a project you know and answer the filter question for each. Any test that would fail for a reason you do not care about is a candidate for rewriting or deletion.
+
 ?? testing-observable-contract Which assertion best protects the collection requirement?
 * Repeating collection for the same spawn leaves the balance unchanged after the first grant.
-- The implementation calls a private helper exactly three times.
-- The model contains exactly four fields.
-- Every test double was constructed in alphabetical order.
+- The reward service receives exactly one call for that spawn.
+- The collection method returns without throwing when it is called twice.
+- The coin's collected flag is set after the first call.
+- The balance is greater than zero after the first collection.
 > A test of the resulting balance catches duplicate grants and still works when private implementation details change.
 
 ?? testing-engine-boundary Which behavior most clearly needs Unity runtime integration evidence?
 * A pooled component unsubscribes and resets when it is disabled and reused.
-- Integer addition in a pure reward calculator.
-- Comparing two immutable mission IDs.
-- Computing a deterministic threshold from ordinary values.
+- A reward calculation that rounds a float to the nearest integer.
+- A mission predicate that compares a counter with its target.
+- A save migration that converts one schema version to the next.
+- A weighted selection that draws from a fixed table.
 > The test needs actual component disable and reuse behavior. Plain rule tests help, but do not verify that Unity callbacks are connected correctly.
 
 ## Derive a test matrix from state and failure boundaries {#testing-matrix}
@@ -63,18 +73,38 @@ When an exact expected answer is difficult to calculate, a metamorphic test comp
 
 Control asynchronous completion with a fake loader, so the test can decide which request finishes first. Advance a fake clock to test time rules. Depending on real network delays or sleeping for an arbitrary duration makes the result depend on the test machine's timing.
 
+Choosing combinations has a method, and it is cheaper than it sounds. Take the dimensions in the table and pair only those whose mechanisms actually touch. Timing and delivery interact, because a duplicate that arrives after a deadline is a different case from one that arrives before. Lifetime and timing interact, because a result arriving after the owner is gone is this book's recurring defect. Numeric boundary and content do not interact for the magnet, because an invalid ID is rejected before any arithmetic runs.
+
+For the magnet, that yields a short and high-value list:
+
+| Combination | Case worth a test |
+| --- | --- |
+| Timing and delivery | A second pickup arriving exactly at the old deadline |
+| Lifetime and timing | The run restarts with an attraction in flight |
+| Delivery and persistence | A duplicate event arriving after the save that recorded the first |
+| Numeric boundary alone | Activation with the maximum allowed duration |
+| Content alone | An unknown effect ID from an older save |
+
+Five tests, each of which can fail for a distinct reason. Compare that with the full cross product of the six dimensions, which is in the thousands and mostly combinations no mechanism connects.
+
+Add a row whenever a bug is found, and write what the bug proved rather than only the case that triggered it. “A late callback after pool reuse rewarded the wrong coin” identifies an interaction the matrix was missing, so it belongs in the matrix and not only in a regression test.
+
+Exercise: Build this table for a feature you own. Cross out every pair whose mechanisms do not touch, and write a test only for what remains.
+
 ?? testing-controlled-order How should a test reproduce two artwork loads completing in reverse order?
 * Use a controllable fake loader and explicitly complete the second request first.
-- Depend on live network latency to produce the order.
-- Sleep for an arbitrary time and assume the first request is slower.
-- Disable the assertion whenever the test machine is busy.
+- Start both requests and assert on whichever result arrives first.
+- Issue the second request from a coroutine, so it yields before the first.
+- Reduce the first request's asset size, so it finishes sooner.
+- Run the test repeatedly until the desired order occurs.
 > Completing requests in a chosen order makes the race repeatable. Guessing how long each request will take can make the test pass or fail unpredictably.
 
 ?? testing-property Which property is appropriate for a shuffle of a list with unique IDs?
 * Every input ID appears exactly once in the output.
-- The output must always differ from the input order.
-- The first element must always move to the last position.
-- Every individual shuffle must produce all possible permutations.
+- The output order differs from the input order.
+- Each element ends at a position different from where it started.
+- Repeated shuffles of the same list produce a different order each time.
+- The first and last elements swap at least once across many shuffles.
 > A correct shuffle preserves membership. The original order is itself a valid random outcome.
 
 ## Debug by narrowing a hypothesis {#debugging-method}
@@ -93,18 +123,28 @@ Write a regression test before or alongside the fix. Where practical, show that 
 
 State the cause as a sequence the reader can follow: a callback from the previous run kept a pool slot, the slot was reused, and the callback applied its result without checking the generation. That explanation makes the reason for the fix clear.
 
+When you cannot form a hypothesis, bisect instead. The question changes from “what is wrong” to “on which side of this line is the problem”, and each answer halves the remaining space. A known-good commit and a known-bad one give you a version bisection, and twenty commits are resolved by about five builds. The same technique works on content, by halving the set of loaded definitions, and on a scene, by disabling half the objects. Bisection is slower to start and far more reliable than inspection, and it does not require understanding the system first.
+
+Some defects stop reproducing when you observe them. Adding a log can change timing enough to hide a race, and a debugger breakpoint changes it much more. When that happens, the fact itself is evidence: a defect sensitive to timing is a race, a defect sensitive to a build configuration is about stripping or optimization, and a defect that disappears in the Editor is about something the Editor supplies that the player does not. Record the observation instead of removing it, and switch to a technique that does not perturb the system, such as writing to a preallocated ring buffer and dumping it after the failure.
+
+For a defect you cannot reproduce at all, spend the effort on making the next occurrence legible rather than on guessing. Add the identifiers the chapter lists, record the build and content revision, and ensure the failure path writes something durable. A bug that happens twice a week is solvable once the second occurrence arrives with its state attached.
+
+Exercise: Take the last difficult bug you fixed and write which technique actually found it: inspection, bisection, or a log you had added earlier. The answer usually suggests what to add before the next one.
+
 ?? debugging-hypothesis Which diagnostic record best investigates a reward arriving after restart?
 * Run identity, spawn generation, operation identity, and acceptance or rejection reason.
-- Only the current average FPS.
-- Only the visible coin color.
-- A log line saying “something happened” in every update.
+- The stack trace captured at the moment the reward was applied.
+- The number of coins collected during the previous run.
+- The time in seconds since the application started.
+- The name of the scene that was active when the reward arrived.
 > These IDs let you follow one collection across a restart. They help distinguish a stale callback from a duplicate request or an incorrect state owner.
 
 ?? debugging-regression A fix stops stale artwork by discarding every completed load. Why is that insufficient?
 * It removes the symptom while also breaking valid current requests.
-- It proves all cancellation paths are correct.
-- It is always the best performance optimization.
-- It guarantees the asset handles are released.
+- It moves the failure from the view layer into the loader.
+- It makes the defect depend on timing, so it reproduces less often.
+- It requires the loader to know which view requested each asset.
+- It adds a branch that the existing tests already cover.
 > A regression check must preserve the intended happy path as well as reject the invalid one.
 
 ## Diagnose common Unity production failures {#debugging-unity-scenarios}
@@ -125,18 +165,36 @@ A mobile crash may leave no managed exception. Check native crash reports, memor
 
 Choose the next check by what it can rule out. A missing callback, an invalid binding, and a failed native operation need different observations.
 
+Order the checks by what they cost, not by what feels most likely. Reading a value you already record is free, reproducing is minutes, and a device capture or a bisection is an hour. Each symptom also has one question that splits the space fastest:
+
+| Symptom | The question that splits fastest |
+| --- | --- |
+| The event fires twice | Are there two publishers, or one publisher with two subscriptions? |
+| The reference is null after a transition | Was it ever assigned, or was it assigned and then destroyed? |
+| The trigger does not fire | Is either object moving through physics, or is a transform being set directly? |
+| It hitches on first use only | Does a second use also hitch? |
+| It works in the Editor only | Does a development build also fail? |
+
+The last two rows are worth noticing, because both replace a hypothesis with a single observation. If the second use also hitches, the problem is not first-use initialization and everything you were about to prewarm is irrelevant. If a development build fails too, stripping and optimization are ruled out and the difference is elsewhere, such as in the content or the filesystem.
+
+Write the answer down before running the next check. A debugging session that produces no record tends to revisit the same possibilities, particularly when it spans more than one day or more than one person.
+
+Exercise: For a bug you are currently carrying, write the one question that would split its possible causes most evenly. Then answer only that question.
+
 ?? debugging-duplicate-event Why is a global “already handled” boolean a risky first fix for duplicate events?
 * It can hide duplicate ownership while suppressing valid future operations.
-- Booleans cannot be used in Unity.
-- Duplicate subscriptions are impossible.
-- Every duplicate event must originate in the physics engine.
+- A boolean cannot be reset safely from more than one thread.
+- The flag would need to be serialized so it survives a scene reload.
+- Reading a static boolean each frame costs more than an identity check.
+- The flag would have to be cleared in `OnDestroy`, which may not run.
 > Recognize duplicate work using its logical identity and the period in which that identity is valid. A single global flag may also block unrelated future events.
 
 ?? debugging-first-use Which first step best investigates a one-time effect hitch?
 * Measure loading, creation, shader preparation, and allocation phases separately.
-- Pool every object in the project without measuring.
-- Lower all texture resolutions immediately.
-- Assume the largest script file is responsible.
+- Warm the effect during the loading screen and check whether the hitch moves.
+- Trigger the effect twice at startup and measure the second occurrence.
+- Force a garbage collection before the effect is first used.
+- Compare the hitch against a capture taken from a previous build.
 > Separate candidate costs before choosing a mitigation. First-use stalls can come from several unrelated systems.
 
 ## Report validation as evidence with limits {#testing-evidence}
@@ -153,23 +211,44 @@ Communicate unresolved limits plainly: “The rule tests and Android smoke run p
 
 In an interview, distinguish validation you completed on a real project from tests you would propose for a hypothetical design. Describe proposed checks as future work.
 
+A written example makes the shape of an evidence statement concrete:
+
+```text
+Change:   Claim retry uses a durable pending record.
+Build:    9f3c21a, content revision 184, Unity 6000.0.28f1.
+Ran:      412 Edit Mode tests, 28 Play Mode tests. All passed.
+          Android smoke on Pixel 6a: startup, full run, claim, background, resume.
+Covers:   Retry after process kill, duplicate response, rejected claim.
+Does not: iOS purchase integration, low-memory termination, real server latency.
+Open:     The reconciliation path is exercised with a fake authority only.
+```
+
+The two most valuable lines are the last two, and they are the ones usually omitted. A reviewer reading “all tests passed” learns almost nothing, because they cannot tell which risks were addressed. A reviewer reading that iOS purchases were not exercised knows exactly what to decide.
+
+The same structure is useful in an interview. Describing what your validation covered and what it did not is a stronger signal than describing a suite as comprehensive, and it matches the distinction this chapter opened with, between checking that tests ran and knowing what they establish.
+
+Exercise: Write this block for the last change you shipped. If the “does not” line is empty, you have not yet found the limits of your validation.
+
 ?? testing-zero-tests A test command exits successfully but reports zero discovered tests. What can you conclude?
 * The intended behavior has not been validated by that run.
-- Every test passed implicitly.
-- The code is guaranteed to be production-ready.
-- Performance has been measured on every device.
+- The test assembly compiled, since the runner started and exited cleanly.
+- The tests ran, but the report was written to a different location.
+- The suite is unchanged, since no failures were reported.
+- The run can be treated as a pass for the purposes of the release gate.
 > A successful process without the intended tests is not evidence of behavioral correctness.
 
 ?+ A suite passes in the Editor, but the defect depends on native iOS callbacks after resume. What evidence is still needed?
 * A relevant target-platform integration check covering resume and callback lifetime.
-- Only another identical run of the pure arithmetic tests.
-- A higher code-coverage percentage without exercising the callback path.
-- A screenshot proving the Editor opened.
+- A Play Mode run in the Editor that simulates the resume callback.
+- A longer Editor run that exercises the same code path many times.
+- An Android device run covering the same resume sequence.
+- A unit test that calls the callback handler directly with a fake payload.
 > Exercise the native callback after resume on the relevant platform. Editor rule tests cannot verify that callback's timing and lifetime.
 
 ?? testing-evidence-scope What does a passing plain C# timer test establish?
 * The tested timer rules for the supplied inputs.
-- Correct native SDK integration on every platform.
-- Absence of GPU bottlenecks.
-- Correct lifecycle wiring for every prefab.
+- That the timer behaves correctly for inputs outside the tested range.
+- That the component using the timer unsubscribes when it is disabled.
+- That the timer's clock source advances correctly in a build.
+- That expiry notifications reach the HUD in the intended order.
 > The timer test checks the supplied inputs and expected results. Integration and platform checks provide separate evidence about the parts it does not exercise.

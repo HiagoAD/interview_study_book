@@ -36,12 +36,26 @@ Build a technical answer around these questions:
 
 For example, “I used interfaces and events” names mechanisms. “The run owns power-up state; presentation observes committed changes; a clock parameter lets us test expiration exactly at the boundary” explains a design.
 
+The seven questions also give you a way to grade your own practice. Take one prompt and answer it three times, at increasing depth:
+
+| Level | Answer to “How do you expire a power-up?” |
+| --- | --- |
+| Naming | “A timer on the power-up component.” |
+| Mechanism | “The run owns a deadline. Each tick compares the current simulation time with it.” |
+| Decision | “The run owns a deadline measured on the simulation clock, so pause holds the remaining time. The caller supplies that time, so a test can assert the exact boundary. I rejected one coroutine per effect, because pause and cancellation rules would then live in several places.” |
+
+Only the third answer states a requirement, an ownership decision, a mechanism, and a rejected alternative. Move your own answers up this table rather than adding vocabulary to them.
+
+Answering “I do not know” is a legitimate move when you follow it with how you would find out. “I am not certain whether that package cancels the underlying download or only stops the wait; I would read the installed version's documentation and confirm with a small test that logs when the handle completes” tells the listener how you work. A confidently invented guarantee tells them something worse.
+
+Exercise: Pick a feature you have shipped. Write one sentence for each of the seven questions above. Where a sentence will not come, you have found a topic to study rather than a topic to rephrase.
+
 ?? architecture-answer-evidence Which answer best demonstrates an architectural decision?
 * The run owns effect state, so a restart cannot keep timers from the previous run. Restart tests check this behavior.
-- The system uses several well-known patterns, so it must be maintainable.
-- Every type has an interface, so all dependencies are automatically correct.
-- A single manager owns everything because fewer files always mean less complexity.
-- The design resembles a popular repository, so alternatives need no discussion.
+- I used an event bus so the systems stay decoupled, which makes the feature easier to extend later.
+- The effect data lives in a ScriptableObject that the HUD, the spawner, and the save system all read.
+- Restarting clears the effect list in `OnDisable`, and the HUD refreshes on the next frame.
+- The previous project solved it with a service locator, so I followed the same approach here.
 > Explain the requirement, ownership decision, and evidence. A pattern name alone does not establish that a design solves the actual problem.
 
 ?? preparation-evidence [tf] One candidate's interview report is enough to establish the exact technical syllabus for a future interview.
@@ -73,20 +87,27 @@ Also record what the first version will leave out. A local prototype may not nee
 
 Finish by writing concrete examples the team can use to accept the feature. For instance, pause a run with three seconds of an effect remaining, then wait ten seconds in real time: the effect should still have three gameplay seconds left. Examples like this become tests and give designers a precise way to check the intended behavior.
 
+In an interview you will not have a designer to ask, and you cannot spend the session clarifying. Sort the open questions by whether the answer changes the design or only a value. “Does the magnet attract through walls?” changes the design, because it decides whether a visibility test belongs in the query path. “Is the radius four meters or six?” changes a number in a definition asset. Ask the first kind, and state a default for the second kind so the conversation can continue.
+
+A useful phrasing asks and assumes in the same breath: “Does a second pickup refresh or extend? I will assume refresh, and I will keep that policy in one place so it can change.” You now have something to build on, and the interviewer can correct you cheaply if it matters.
+
+Exercise: Mark each row of the table above as design-changing or value-changing. Then write the two design-changing questions you would ask first if you had thirty seconds.
+
 ?? architecture-invariant Which statement is an invariant for coin collection?
 * A particular coin can increase the run's balance at most once.
 * Repeated delivery of the same collection must not increase the reward again.
-- The collection animation lasts approximately half a second.
-- The magnet icon should look appealing.
-- Most players should collect several coins.
-- The implementation should have five classes.
+- Collection completes within one frame of the trigger callback firing.
+- The attraction animation finishes before the balance is updated.
+- The wallet is written to storage after each collection completes.
+- A run spawns coins in proportion to the distance the player has travelled.
 > An invariant is a rule that must hold across valid execution paths, including retries, duplicated callbacks, and unusual ordering.
 
 ?+ A collision callback and a magnet callback both report the same coin. Which requirement directly determines the correct behavior?
 * Collection is idempotent for that coin's identity within the run.
-- The magnet should use a circular visual effect.
-- Coin prefabs should have descriptive names.
-- The run uses a fixed target frame rate.
+- The magnet query runs in `LateUpdate`, after the physics callbacks have been delivered.
+- Trigger colliders are filtered to a dedicated coin layer.
+- The coin despawns as soon as its attraction animation begins.
+- Both detection paths publish through the same event bus.
 > Idempotent collection means repeating the same logical operation has no additional reward effect.
 
 ## Assign responsibilities and identify sources of truth {#architecture-responsibilities}
@@ -116,25 +137,44 @@ When drawing the design, use different arrows for ownership and notifications. A
 
 ![Inputs enter a run-owned operation, which commits authoritative state and exposes outcomes to persistence and presentation through explicit contracts](images/feature-boundaries.svg)
 
+The divergence two timers cause is easier to see as a sequence than as a warning:
+
+```text
+t=0.0  Effect activates. Model deadline is 5.0. The HUD sets its own counter to 5.0.
+t=1.0  The HUD subtracts its frame time and shows 4.0. The model also says 4.0.
+t=1.2  The player pauses. The model's clock stops. The HUD animates on unscaled time.
+t=9.2  The player resumes. The HUD reached zero and hid the icon.
+t=9.2  The model reports 3.8 seconds remaining. Coins are still being attracted.
+```
+
+Nothing threw, no value was corrupted, and each object followed its own rules correctly. The defect is that two objects were allowed to answer the same question.
+
+When you join an existing project, find the source of truth by following the writes rather than the reads. Search for every place a field is assigned, not every place it is displayed. One writer with many readers is a source of truth. Several writers with no stated precedence is a defect waiting for an unusual frame.
+
+Exercise: Choose a value in a project you know that appears in both gameplay and UI. List every line that writes it. If there is more than one writer, write the rule that decides which one wins.
+
 ?? architecture-source-of-truth The HUD and gameplay each maintain a separate magnet timer. What is the main architectural risk?
 * Their copies can diverge after pause, refresh, or delayed updates.
-- Reading a timer from another object always allocates memory.
-- Unity forbids multiple timers in one scene.
-- The HUD must always own every gameplay deadline.
+- The HUD updates before gameplay, so its display lags the model by one frame.
+- Two countdowns cost more per frame than reading one stored deadline.
+- The gameplay timer uses simulation time while the HUD needs a value for its animator.
+- Keeping a second copy doubles the state the save system has to write.
 > When two objects each control a copy of the same state, those copies can disagree. Have the display read the state from the object that owns the rule.
 
 ?+ A power-up expires correctly, but its icon stays visible after reopening the HUD. Which design most directly prevents that discrepancy?
 * Rebuild the icon from the effect owner's current state whenever the view binds.
-- Persist a separate HUD timer and never compare it with gameplay.
-- Extend the gameplay effect whenever the icon is visible.
-- Rely only on the expiration event, even while the HUD is unsubscribed.
+- Raise the expiration event again when a HUD opens, so a late subscriber receives it.
+- Keep the HUD subscribed while it is hidden and queue the updates it misses.
+- Store the last known remaining time in the HUD and restore it when the screen reopens.
+- Hold the expiration until the HUD is visible, so the notification is not missed.
 > A view can miss events while it is closed. When it binds again, read the owner's current state to rebuild the display; use notifications to keep it current afterward.
 
 ?? architecture-encapsulation Why prefer `TryCollect(id)` over a publicly settable `Collected` property?
 * The operation can check eligibility, prevent repeat collection, and update the balance together.
-- Methods always execute faster than properties.
-- A method automatically makes the operation thread-safe.
-- Properties cannot be tested.
+- Callers read the intent from a verb more easily than from an assignment.
+- A method call appears in stack traces and profiler captures, which helps when debugging.
+- A method can take the coin id as an argument, while a setter receives one value.
+- Keeping the flag private holds it out of the Inspector and the serialized save data.
 > Encapsulation protects an invariant by controlling how state changes. A method name alone does not provide atomicity or thread safety; its implementation and calling contract must do that.
 
 ## Direct dependencies, composition roots, and lifetimes {#architecture-dependencies}
@@ -159,18 +199,48 @@ Use an interface when callers should depend on an operation without knowing its 
 
 Each way of connecting dependencies has costs. Inspector references work well for stable relationships in a scene, but some objects and connections only exist at runtime. Explicit factories can create those objects; the design still needs to say who owns and cleans them up. A dependency-injection (DI) container can manage a large set of objects and their lifetimes, but introduces registration errors and another layer to debug. A service locator makes objects easy to find, while hiding which dependencies each caller needs.
 
+A composition root is smaller than its name suggests. It is the place that creates the objects, connects them, and hands out the few references the scene needs:
+
+```csharp
+// Run start, called by the scene's run controller.
+var clock = new SimulationClock();
+var wallet = new Wallet(profile.Coins);
+var effects = new EffectModel(clock);
+var collection = new CollectionOperation(wallet, effects, coinRegistry);
+
+hud.Bind(effects, wallet);
+pickupAdapter.Bind(collection);
+```
+
+Every dependency is visible in a few lines, and the construction order states which object may not exist yet. Compare that with the same connections spread across eight `Awake` methods that each locate their own collaborators: the order becomes whatever the engine chooses, and nothing in the code records what the order needs to be.
+
+The lifetime problem described above also reads better as a sequence:
+
+```text
+The scene loads. The HUD subscribes to the audio service's mute event.
+The scene unloads. The HUD GameObject is destroyed.
+The service still holds the delegate, so the managed HUD stays reachable.
+Mute changes. The delegate runs against a HUD whose engine object is gone.
+```
+
+The third line is the retention and the fourth is the visible failure. Minutes of play can separate them, which is why the stack trace usually points at the wrong scene.
+
+Exercise: Write the composition root for a feature you know, as a plain list of constructor calls in order. Any object you cannot place in that order has a dependency you have not stated.
+
 ?? architecture-lifetime A persistent service subscribes a scene HUD to its event. Which responsibility must be assigned?
 * The HUD or its binding owner must unsubscribe when that binding's lifetime ends.
-- Garbage collection must infer that the scene no longer needs notifications.
-- Every subscriber should become persistent.
-- The event should invoke only during `Update`, which prevents lifetime problems.
+- The service should hold its subscribers through weak references so a closed HUD can be collected.
+- The HUD should check whether its GameObject is still alive at the start of each handler.
+- The service should drop its subscriber list whenever a scene finishes unloading.
+- The subscription should move to `Start`, so it runs after the scene has finished loading.
 > The publisher keeps delegates that refer to its subscribers. Unsubscribe when the binding ends, so the publisher does not keep the old HUD or send it notifications after the scene unloads.
 
 ?+ Which dependency is most useful to inject into a rule that expires effects?
 * The relevant clock or the current time value.
-- The entire scene hierarchy.
-- Every registered service, whether needed or not.
-- A global singleton that reads wall time internally.
+- A coroutine runner, so the rule can schedule its own expiry callback.
+- The save adapter, so the remaining time survives a restart.
+- The HUD binding, so the rule can hide the icon when the effect ends.
+- A logger, so the boundary can be traced when a test fails.
 > Supplying time explicitly makes pause behavior and exact expiration boundaries controllable in tests.
 
 ## Commands, events, and failure ordering {#architecture-communication}
@@ -197,25 +267,47 @@ An event handler can issue another command before the original call returns. Thi
 
 An event bus lets publishers notify subscribers without holding direct references to them. The tradeoff is that subscribers become harder to find. You also need rules for delivery order, how long subscriptions are retained, and whether events can be replayed. Include run IDs, stable entity IDs, or operation IDs in event data when receivers need them to recognize stale or duplicate work.
 
+Reentrancy is worth tracing once, because the resulting defect looks impossible in the source. Suppose collection notifies observers before it records the coin:
+
+```text
+TryCollect(coin 7) begins.
+Eligibility passes. The balance becomes 120.
+Notify observers.
+  The mission tracker runs, and its "first coin" mission completes.
+  The completion popup opens, and its binding calls TryCollect(coin 7) again.
+    Eligibility passes, because coin 7 has not been recorded yet.
+    The balance becomes 140.
+Control returns to the first call, which now records coin 7.
+```
+
+The reward was granted twice, and every line ran in the order the code states. Recording the coin before the notification removes the second grant, because the nested call then fails eligibility. That single ordering rule, state first and notification second, is what the commit sequence above protects.
+
+Where the state change cannot come first, reject nested commands explicitly rather than letting them run. A rejection you can see in a log is much easier to investigate than a duplicate that appears only when one particular screen happens to open.
+
+Exercise: Take an operation in your own code that publishes an event. Identify the line at which its state becomes durable, then check whether any subscriber can call back into the operation before that line.
+
 ?? architecture-command-event A purchase button needs to know whether the player has enough currency. Which interaction is clearest?
 * Call the purchase operation and receive an explicit success or failure result.
-- Broadcast a presentation event and assume a subscriber performed the purchase.
-- Update the balance label first and infer success from its text.
-- Let each listener independently deduct the price.
+- Read the wallet balance in the button and compare it with the price before calling.
+- Publish a purchase request and let the wallet publish a result the button subscribes to.
+- Disable the button while the balance is below the price, so the failure case does not arise.
+- Call the purchase operation and catch the exception it throws when funds are short.
 > An operation with one authority should expose its result directly. Notifications can follow after the authoritative decision.
 
 ?+ A mission counter must advance whenever a collection commits. What must the architecture specify if it uses events for that update?
 * Rules for event delivery and failure handling that ensure mission progress is updated.
-- That any optional observer may perform the update if it happens to be loaded.
-- That playing the coin sound establishes mission progress.
-- That an event name alone guarantees durable delivery.
+- That the mission tracker subscribes in `Awake`, so it is registered before the first collection.
+- That the collection event carries the id of the mission it should advance.
+- That the mission tracker sits first in the publisher's invocation list.
+- That the celebration animation finishes before the event is published.
 > If collection requires a mission update, event delivery must guarantee that update. Treating the mission tracker as an optional listener could leave progress incorrect.
 
 ?? architecture-notification-failure A reward is committed, then its celebration animation throws. What should a retry policy preserve?
 * The same logical reward must not be granted a second time.
-- Every animation exception should reset the player's balance.
-- A failed observer proves the original reward never happened.
-- Repeating all state changes is safe because the call threw.
+- The committed balance should be rolled back, so the operation can be retried from a clean state.
+- The exception should reach the caller, so the claim is reported as failed.
+- The remaining observers should be invoked again, so none of them is skipped.
+- The celebration should replay from its first frame when the screen is reopened.
 > The reward was already granted before the animation failed. A safe retry must recognize that completed operation and avoid granting it again.
 
 ## Evaluate architecture with change scenarios {#architecture-tradeoffs}
@@ -244,16 +336,24 @@ Choose the smallest design that meets today's requirements and the changes you r
 
 In an interview, articulate one rejected alternative and a condition under which it would become reasonable. “I rejected a global manager because runs require independent state; an application-wide catalog would still be shared” shows judgment more clearly than “singletons are bad.”
 
+Under interview conditions you will not weigh six goals against each other. The faster technique is to find the one requirement that decides, and say so. For the magnet, “designers tune duration weekly without a code build” decides that duration lives in content rather than in a constant; much of the rest follows from it or is negotiable. Naming the deciding requirement aloud also invites the interviewer to change it, which is often what they wanted to test.
+
+Record a decision when it would be expensive to rediscover. A saved identifier format, a module dependency direction, or a stacking policy that gameplay, UI, and tests must all agree on is worth a record. Writing one for every class produces a folder nobody reads, and makes the decisions that mattered harder to find inside it. A practical test: would a new engineer reasonably choose differently in six months, and would that choice be costly to undo?
+
+Exercise: For a system you have built, write the deciding requirement in one sentence, then name the design choice that would change if that requirement were removed. If nothing changes, you have not yet found the deciding requirement.
+
 ?? architecture-tradeoff A preload strategy eliminates a transition hitch but doubles peak memory. What is the next engineering decision?
 * Compare the latency improvement and peak memory against the actual device budgets.
-- Accept it because lower latency always dominates memory usage.
-- Reject it because caching is always premature optimization.
-- Hide the extra memory in a different subsystem's accounting.
+- Preload half the content, so the hitch and the memory increase are both reduced.
+- Ship the preload with a setting that lets players turn it off on older devices.
+- Move the preload to a background thread, so the allocation happens outside the frame.
+- Compare the transition time against a capture taken on a development workstation.
 > Tradeoffs require explicit budgets and measurements. A local improvement can make the whole product less reliable.
 
 ?? architecture-rejected-alternative What makes discussion of a rejected alternative useful?
 * Explain which requirement it failed and when it would become appropriate.
-- Describe it as inherently unprofessional.
-- List its pattern name without discussing behavior.
-- Claim the selected approach has no costs.
+- Listing the alternatives considered, so the listener can see the search was thorough.
+- Showing that the chosen approach appears more often in the engine's sample projects.
+- Explaining that it was ruled out early because nobody on the team had used it.
+- Describing it in enough detail that the listener could implement it.
 > Alternatives demonstrate reasoning when they are evaluated against constraints rather than personal preference.

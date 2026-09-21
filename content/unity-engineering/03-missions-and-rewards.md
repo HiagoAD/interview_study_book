@@ -30,18 +30,48 @@ If progress beyond the target has no meaning, stop the displayed and stored coun
 
 Start by checking each active mission against an event. If the number of missions or measured cost makes that too expensive, group missions by the kinds of events they use. For example, if only three of fifty missions react to coin collection, evaluate those three. This index needs maintenance whenever the active missions change, so add it when the benefit justifies that work.
 
+Written as three records, the separation becomes concrete:
+
+```text
+MissionDefinition         MissionProgress          MissionClaim
+  missionId                 missionId                missionId
+  revision                  definitionRevision       claimId
+  objectiveKind             amount                   grantedAt
+  target                    target (captured)        rewardSnapshot
+  modeId                    completedAt              result
+  reward                                             definitionRevision
+  availability
+```
+
+Notice what each record repeats. Progress captures the revision and target it was measured against, so a later definition change cannot silently reinterpret an old number. The claim captures what was actually granted, so recovering an old claim never depends on today's reward table. Copying a value like this is not redundancy; each copy answers a question at a different moment.
+
+Changing a definition mid-flight then becomes a choice you can state in a table:
+
+| Change | Existing progress | Typical policy |
+| --- | --- | --- |
+| Description or icon | Unaffected | Apply immediately |
+| Target lowered | May now exceed the new target | Clamp, and allow completion |
+| Target raised | Now further from completion | Pin active missions to their captured revision |
+| Objective kind changed | No longer comparable | Treat as a new mission ID |
+
+The last row is the one teams get wrong. Reusing an ID for a different objective makes old progress records mean something they were never measured for. A new objective is a new mission.
+
+Exercise: For a mission you have seen shipped, write which of those four changes the live game actually allowed, and what it did to players who were halfway through.
+
 ?? missions-definition-state A mission's description is translated. Which data should remain stable?
 * Its persistent mission identity.
-- Its claim operation must be recreated.
-- Its progress must reset.
-- Its content ID must become the translated sentence.
+- Its display name, so existing saved references keep resolving.
+- The index it occupies in the active mission list.
+- A hash of the description text, used as its lookup key.
+- The reward amount shown alongside the description.
 > Translating the description should not break saved references. If the mission's rules change, decide separately how to version the definition and handle existing progress.
 
 ?? missions-scope Why does “collect 100 coins in one run” require different state handling from “collect 100 coins overall”?
 * The first objective counts coins within one run and needs a defined point at which that count resets.
-- The first can only be implemented with inheritance.
-- The second needs a collider on every mission.
-- Both must reset whenever the HUD closes.
+- The second needs a larger numeric type, because totals across runs grow without bound.
+- The first can reuse the run's score value, while the second needs a separate counter.
+- The second has to be recalculated from the event history whenever the game loads.
+- The first belongs to the HUD, since it is shown during a run.
 > A counter for one run needs an owner and reset rule tied to that run. A total across runs must survive those resets, even though both objectives count coins.
 
 ## Ordering, duplicate delivery, and reproducibility {#missions-event-ordering}
@@ -60,18 +90,42 @@ For debugging, record the mission definition revision, run ID, and operation ID.
 
 For this local example, a dispatcher that delivers run events in order is enough. Add persistence or support for events arriving out of order only when the delivery rules require it.
 
+Compare the two receivers on the same input, where event 11 is delayed:
+
+```text
+Arrival order: 10, 12, 11
+
+Receiver A, "ignore below the highest seen":
+  10 applied. highest = 10
+  12 applied. highest = 12
+  11 discarded. Progress is short by the amount in event 11.
+
+Receiver B, "buffer until the gap closes":
+  10 applied. next expected = 11
+  12 buffered.
+  11 applied, then 12 released from the buffer. Progress is correct.
+```
+
+Receiver B costs a buffer and a rule for how long to wait. Decide what happens when the gap never closes: apply the buffered events after a timeout and record the gap, or request the missing event. Waiting forever is the one option that is never acceptable, because the player's progress stops silently.
+
+For unordered delivery, size the remembered set from the delivery window rather than from intuition. If the transport can redeliver within thirty seconds and the game produces at most a hundred events per second, three thousand identifiers cover it, and a sixteen-byte identifier makes that roughly 48 KB. Write the expiry rule next to the set, because a set with no expiry rule is a slow leak that only appears in long sessions.
+
+Exercise: Write down which of the two receivers your current design implements, and what it does when the gap does not close.
+
 ?? missions-sequence-gap Events 12 and 11 arrive in that order. Why can “ignore any sequence below the largest seen” be wrong?
 * Event 11 may contain valid work that has never been applied.
-- Sequence numbers can never be compared.
-- Event 12 necessarily includes every earlier event's payload.
-- The UI must be the source of truth for event order.
+- Event 12 would then be applied twice, once when it arrives and once after 11.
+- The receiver has to retain every sequence number it has seen, which grows without bound.
+- Comparing sequence numbers costs more than comparing the event identifiers.
+- Event 11 would be applied to the wrong mission, because the numbers have shifted.
 > Remembering only the largest sequence number assumes earlier work has already been handled, or is included in a later result. Without that guarantee, ignoring a late event can lose progress.
 
 ?+ What is needed in addition to the same random seed for reliable replay?
 * The same initial state, rule revisions, input order, and random algorithm.
-- Only the same device wallpaper.
-- A higher rendering frame rate.
-- A different seed for every subsystem on every replay.
+- A separate seed for each subsystem, drawn again at the start of every replay.
+- The recorded output of the original run, so the replay can be compared against it.
+- A higher-resolution timer, so the replay reproduces the original frame timing.
+- The input device used originally, so the button timings match.
 > A seed determines one input to a computation. Other inputs and the order of random consumption also affect its outcome.
 
 ## Claim rewards through one authoritative operation {#missions-reward-claim}
@@ -102,25 +156,51 @@ Reward definitions can change between attempts, so keep either the granted resul
 
 Disabling the claim button while a request is in progress helps prevent accidental double taps. It cannot guarantee that a claim runs only once: another screen, a retry, a resumed task, or a modified client can still send it. Keep the button protection for usability, and enforce duplicate protection in the claim operation.
 
+The server half of this exchange is only safe if the client half is durable too. A client that generates the claim identity in memory and then crashes has lost the one value that lets the authority recognize the retry. Write the intent before sending it:
+
+```text
+1. Create claimId from (playerId, missionInstanceId, rewardTier).
+2. Save a pending record for claimId. Commit that save.
+3. Send the request.
+4. On any definite response, save the result against claimId and clear pending.
+5. On timeout or process death, the pending record survives; retry claimId at startup.
+```
+
+Step 2 before step 3 is the whole point. Reversing them leaves a window in which the reward may exist on the server and nowhere on the client. The pending record needs its own states, because “sent” and “unknown” are not the same situation:
+
+| State | Meaning | Next action |
+| --- | --- | --- |
+| Pending | Saved locally, not yet confirmed | Send or resend the same claimId |
+| Confirmed | Authority returned a result | Apply and clear |
+| Rejected | Authority refused, with a reason | Surface the reason; do not resend unchanged |
+| Abandoned | Past the policy's recovery window | Record for reconciliation, stop retrying |
+
+Deriving the claim identity from stable values rather than generating a random one has a useful property: a client that lost its pending record entirely can still reconstruct the same identity from the player, mission instance, and tier. Randomly generated identities cannot be recovered once lost.
+
+Exercise: Write the five-step order above for a purchase instead of a reward, and name the step at which the player's money is at risk if the process dies.
+
 ?? missions-idempotency-key A reward request times out after the server might have committed it. Which retry is safest?
 * Retry with the same claim identity, so the authority can return the result it already saved.
-- Generate a new claim identity and grant again.
-- Assume a timeout proves nothing was committed.
-- Trust that disabling the button prevented every duplicate request.
+- Query the inventory first, and retry only if the reward is absent.
+- Retry with a new identity, and let the authority reject the duplicate by timestamp.
+- Report the claim as failed, and let the player claim it again manually.
+- Wait until the next launch and reconcile then, rather than retrying at all.
 > A timeout means the client did not receive a result; the server may already have saved the reward. A stable claim ID lets the server recognize the retry.
 
 ?+ Claim K was committed under reward revision 4. Before a retry, revision 5 changes its reward. What should the retry of K normally return?
 * The result saved for K when the original claim was committed.
-- A second grant calculated from revision 5.
-- A reversal of revision 4 followed by a new untracked grant.
-- A failure that deletes the original claim record.
+- The reward computed from revision 5, since that is the current definition.
+- The difference between the two revisions, granted as a top-up.
+- An error telling the client to evaluate the mission again under revision 5.
+- Whichever revision's reward is larger, so the player is not disadvantaged.
 > A retry should recover the result of the original claim. Calculating it again from new reward content could return a different result or grant another reward.
 
 ?? missions-atomic-claim Which changes should share the reward transaction boundary?
 * The one-time claim record and the authoritative inventory or balance update.
-- The reward animation and the screen's background color.
-- Every unrelated setting in the application.
-- Only the button's interactable state.
+- The claim record and the analytics event that reports the grant.
+- The inventory update and the cached progress value shown on the mission list.
+- The claim record and the player's last-seen timestamp.
+- The inventory update and the notification scheduled for the next reward.
 > If the claim marker and reward can commit independently, crashes and retries can produce a lost reward or a duplicate grant.
 
 ## Integrate a feature into a mature codebase {#missions-incremental-integration}
@@ -137,27 +217,34 @@ One way to compare the implementations is shadow evaluation. Both evaluators pro
 
 Keep each migration step small enough to review. Combining a feature change with widespread renaming, changes to dependency registration, and a new save format makes the work harder to assess and roll back. If the code needs a clearer connection point for the new feature, create that first in a separate refactor. Keep behavior unchanged during that refactor, then add the feature.
 
+Finding that code in a mature project is a skill worth naming, because reading from the top rarely works. Search backward from something the player can see. A currency label gives you a localization key; the key gives you the view; the view gives you the field it reads; the field gives you its writer. A save file gives you a JSON property name that usually appears verbatim in the serialization code. An analytics event name, a log message, or an achievement identifier each provide the same kind of thread. Two or three of these threads usually meet at the object that actually owns the state.
+
+When the existing code resists testing, resist the urge to rewrite it first. Add the smallest seam that lets you observe the behavior: extract the calculation into a static method with explicit parameters, or pass the clock in rather than reading it inside. A seam that changes no behavior can be reviewed quickly and gives you the characterization test that makes the real change safe. Rewriting first means the tests you eventually write describe the new code, and the old behavior you were supposed to preserve is already gone.
+
 Interview exercise: Three separate scene scripts update the same mission counter. Explain how you would move those updates into one place without resetting existing player progress. Describe what you would inspect, which tests you would write, and how you would migrate and roll out the change. Include a plan for keeping saved progress usable if you need to roll back.
 
 ?? missions-shadow-mode What makes shadow evaluation safe during a reward-system migration?
 * The new evaluator calculates results for comparison; only the implementation chosen to update player state grants rewards.
-- Both paths grant rewards and the UI hides duplicates.
-- The old save data is deleted before comparison.
-- Every mismatch is ignored because the new design is cleaner.
+- The new evaluator runs after the old one, so any difference is corrected before the grant.
+- Both evaluators write their results, and a later job reconciles any disagreement.
+- The new evaluator runs for a small cohort, which limits how many players are affected.
+- Results are compared in the UI, so a mismatch becomes visible to the player.
 > Shadow evaluation lets you compare results without letting the new evaluator change player progress or grant rewards. Specify which implementation may update player state at each stage of the rollout.
 
 ?+ The old and new evaluators produce different results during shadow evaluation. How should you handle the difference?
 * Keep the same implementation in charge of updating player state, and investigate why the results differ.
-- Let whichever evaluator finishes first grant the reward.
-- Grant both results temporarily to avoid missing either one.
-- Alternate writers each frame without a migration rule.
+- Switch to the new evaluator, since it was written against the current requirements.
+- Record the difference and continue, since shadow results do not reach players.
+- Take the larger of the two results, so no player is under-rewarded.
+- Turn off shadow evaluation until the new evaluator has more test coverage.
 > A difference in results gives you something to investigate. While you do that, keep only one implementation responsible for updating player state; allowing both to grant rewards could duplicate a reward.
 
 ?? missions-characterization What is the purpose of a characterization test before a refactor?
 * Record how the feature behaves today, so the test reveals unintended changes.
-- Prove that every existing behavior is desirable.
-- Require the new implementation to use identical private fields.
-- Replace the need to understand save compatibility.
+- Document the behavior the refactor is intended to produce.
+- Measure how long the existing implementation takes, as a performance baseline.
+- Check that the existing code matches the written requirements.
+- Record which private methods the existing implementation calls.
 > Characterization tests capture the behavior you can observe before the refactor. If a test fails afterward, check whether the change was intended. A deliberate bug fix can change the expected result, but that decision should be documented and reviewed.
 
 ## Explain the complete design in layers {#missions-design-presentation}
@@ -176,16 +263,26 @@ Use estimates honestly. “With 20 active missions and 100 events per second, a 
 
 Finish with the evidence you have and the decisions still open: which tests pass, what the profiler shows, which compatibility cases remain, and what the team still needs to clarify.
 
+A design round has a shape, and running out of time before reaching failure handling is the most common way to underperform. In a thirty-minute discussion, a workable allocation is roughly five minutes of clarification, ten minutes on ownership and the main path, ten minutes on failure and scale, and five minutes on tradeoffs and what you would revisit. Say the plan out loud at the start; it tells the interviewer you know the parts they are waiting for, and it gives you permission to cut a digression short.
+
+Draw in that order too. Start with the objects that own state, because every later question attaches to one of them. Add one arrow per dependency, using different arrows for ownership and notification, as chapter one suggests. Resist drawing classes you will not use; a diagram with fourteen boxes and no traced operation says less than a diagram with six and a complete claim path drawn across it.
+
+If the interviewer goes quiet, that is usually an invitation rather than a problem. Offer a fork: “I can go deeper on the claim transaction, or on how this scales to fifty active missions. Which is more useful?” That converts silence into direction, and it demonstrates the same instinct the chapter has been describing, which is to find the deciding requirement before optimizing anything.
+
+Exercise: Set a timer for ten minutes and explain this chapter's mission system aloud from an empty page. Note where you ran out of time; that is the part to rehearse, not the part you enjoyed explaining.
+
 ?? missions-scale-estimate With 20 active missions and 100 events per second, how many mission predicate evaluations does a full scan perform per second?
 * 2,000.
-- 120.
-- 20.
-- 100,000.
+- 120, adding the two figures.
+- 5, dividing the events by the missions.
+- 20, counting each mission once per second.
+- 200, treating the scan as ten events per second.
 > Each of the 100 events is checked against 20 missions: 100 times 20 equals 2,000 evaluations. Actual cost still depends on the predicate work.
 
 ?? missions-proportional-design When should a simple direct-call mission counter gain a durable event-processing layer?
 * When requirements such as retry, recovery, or cross-system processing justify its additional complexity.
-- Whenever the code contains an event keyword.
-- Before the first counter is implemented, regardless of scope.
-- Only after every class has an interface.
+- When the number of active missions passes a threshold the team agrees on.
+- When the counter's cost starts appearing in profiler captures.
+- When the project adopts an event bus elsewhere, so the counter matches it.
+- When the mission list grows large enough to need pagination in the UI.
 > Add the event-processing layer when a specific requirement needs it. Explain how that benefit justifies the extra maintenance and failure handling.

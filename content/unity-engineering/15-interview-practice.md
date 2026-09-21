@@ -25,18 +25,42 @@ Use metrics you can support. If you have no reliable before-and-after measuremen
 
 Practise a one-minute introduction that establishes the problem and your contribution. Then prepare a ten-minute walkthrough, connecting implementation details to the requirements and decisions that led to them.
 
+The one-page note works better as a fixed form, because filling the same blanks for each project makes the gaps obvious:
+
+```text
+System:        Seasonal challenge for a mobile runner
+Context:       Live game, weekly content, 1.2 M monthly players
+My role:       Owned the progress and claim model; reviewed the UI binding
+Constraints:   Existing save format, two supported client versions, 2 GB devices
+Sketch:        Catalog -> player event state -> evaluator -> claim authority -> UI
+Traced op:     Milestone claim, from button to committed inventory change
+Hard failure:  Timeout after commit granted a second reward on retry
+Alternative:   Rejected a generic objective scripting language; authoring cost
+Validation:    Rule tests, historical save fixtures, staged rollout to 5 percent
+Result:        Shipped; two events since with no claim incidents
+Would change:  Reconciliation was manual; I would build it into the client
+```
+
+Twelve lines, and most interview questions about that project land on one of them. Writing them in advance means you are recalling rather than composing, which is what makes the difference under pressure.
+
+The two lines people leave blank are the ones interviewers push on. “Alternative” blank means you have not examined your own decision, and “would change” blank reads as either inexperience or unwillingness to evaluate your work. Fill both, even if the answer is small.
+
+Exercise: Fill this form for one project without looking at the code. The lines you cannot complete are what to review before the interview, in that order.
+
 ?? interview-story-selection Which project is strongest for a technical deep dive?
 * One where you can explain your ownership, difficult decisions, implementation details, and evidence.
-- The project with the most famous title, even if you know none of its systems.
-- A hypothetical project presented as personal work.
-- The project with the largest number of files.
+- The most recent project, since the details are freshest.
+- The largest project, since it offers the most to discuss.
+- The one whose technology matches the role's stack most closely.
+- The one where the outcome was most successful.
 > Depth of understanding and truthful ownership provide useful evidence of engineering judgment.
 
 ?? interview-metric-honesty You remember an improvement but have no reliable timing capture. What should you say?
 * Describe the observed change and verification without inventing a numerical performance claim.
-- Invent a plausible percentage to make the story sound stronger.
-- Claim that every device improved equally.
-- Avoid mentioning what was actually checked.
+- Give a conservative estimate, noting that it is approximate.
+- Say the improvement was significant, without giving a figure.
+- Describe the optimization technique instead of its result.
+- Offer to send the measurements after the interview.
 > Honest evidence is more credible than unsupported precision.
 
 ## Walk from requirements to an implementation trace {#interview-deep-dive}
@@ -55,18 +79,38 @@ Finish with what shipped, what became easier, and what remained expensive. Suppo
 
 Practise drawing and explaining the system before showing code. Then use one representative operation to add detail. If the explanation needs every class, decide which responsibilities and dependencies the listener actually needs to follow that operation.
 
+When you draw, use a notation you have practised, so the drawing takes no attention away from the explanation. A minimal one is enough:
+
+```text
+[ Box ]        an object that owns state
+( Round )      an operation or an adapter
+----->        calls, and waits for a result
+- - ->        notifies, without waiting
+=====>        owns the lifetime of
+```
+
+Five symbols cover most gameplay architecture, and the distinction the diagram must carry is the one between the solid and dashed arrows. A listener who can see which arrows return a result and which merely announce something can ask about failure handling without you explaining the convention first.
+
+Draw the state owners across the middle of the space, leave the top for inputs and the bottom for persistence and presentation, and resist filling the corners. Space is what lets you add the failure path later, and running out of room mid-explanation is a surprisingly common way to lose the thread.
+
+Say the trace as you draw it rather than drawing first and narrating afterward. “The button calls claim, claim asks the evaluator whether the milestone is complete, the authority commits the inventory change and the claim record together, then this dashed arrow tells the UI” moves the pen and the explanation together, and the listener can interrupt at the point they care about.
+
+Exercise: Draw one system you know with exactly these five symbols and no labels beyond object names. Then check whether a listener could ask you a failure question from the drawing alone.
+
 ?? interview-operation-trace Why walk one reward claim end to end?
 * It exposes ownership, ordering, commitment, and failure behavior in a concrete scenario.
-- It eliminates the need to discuss tradeoffs.
-- It proves the entire system has no bugs.
-- It lets you avoid explaining persistence.
+- It shows the listener that you know the codebase in detail.
+- It keeps the explanation within the time available.
+- It avoids the need to draw the whole architecture.
+- It demonstrates how many systems the feature touches.
 > Following one claim shows what the architecture actually does, including who changes state and what happens if a step fails.
 
 ?? interview-constraints-first Why state constraints before presenting the chosen architecture?
 * The listener needs the decision criteria to judge the tradeoffs.
-- Constraints guarantee only one possible solution.
-- Class names are always more important than behavior.
-- A senior engineer should never discuss uncertainty.
+- Constraints are quicker to state than an architecture.
+- It shows that you gathered requirements before designing.
+- It lets you defend the design if the interviewer disagrees later.
+- Constraints are the part most candidates forget to mention.
 > Design quality depends on the problem and limits it addresses. The same mechanism can be appropriate in one context and excessive in another.
 
 ## Defend alternatives and adapt when requirements change {#interview-followups}
@@ -92,25 +136,49 @@ When uncertain, say how you would resolve it. “I would check the installed Add
 
 Name a cost of the revised design. Offline operations, for example, need storage, expiration rules, and reconciliation. Adding an interface may organize those responsibilities, but does not implement them.
 
+One worked follow-up shows the size of answer to aim for. Take “support offline progress” against the mission design from the earlier chapters.
+
+Start by naming the assumption it breaks: the claim authority was trusted and reachable, and eligibility was decided there. Offline, neither holds. Then separate what can still be done locally from what cannot. Progress can accumulate locally, because it is derived from gameplay facts the client already produces. Rewards cannot be granted locally in an online economy, because the client is not trusted to decide them.
+
+That split produces the design:
+
+| Concern | Offline answer |
+| --- | --- |
+| Progress | Accumulate locally against the captured event revision |
+| Claim | Record a pending claim with its stable identity; do not grant |
+| Display | Show the reward as pending rather than as received |
+| Reconnect | Send pending claims by identity; apply the authority's results |
+| Conflict | The authority wins; surface any rejection to the player |
+| Bounds | Cap the queue, expire entries, and define what an expired claim does |
+
+Then name the cost honestly: a pending state the UI must express, a durable queue, a reconciliation path, and a product decision about what happens when the authority rejects something the player was shown. That last item is a design question rather than an engineering one, and saying so is part of the answer.
+
+Note the shape of that response. One broken assumption, one split, one table, one cost. It fits in three minutes and it changes the parts of the system that the requirement actually touches, which is the judgment the follow-up was testing.
+
+Exercise: Take a different row from the table above and work it the same way, in writing, in under ten minutes. Then check whether you named a cost.
+
 ?? interview-changing-requirements A new requirement invalidates an assumption behind your original design. What is the strongest response?
 * Identify the broken assumption and revise the relevant ownership or contract.
-- Insist the original design is always best.
-- Replace every subsystem before examining the impact.
-- Pretend the new requirement was already fully supported.
+- Ask whether the new requirement is in scope before responding.
+- Describe how the existing design could be extended to cover it.
+- Start again from the requirements, since the first design no longer applies.
+- List the subsystems the change would touch, and stop there.
 > A design depends on its requirements. Explain which assumption changed, then adjust the parts affected by it.
 
 ?+ Your run model already owns all per-player effects, while definitions are immutable and shared. A second local player is added. What is the most direct starting change?
 * Create a separate set of runtime state for the second player's run, and connect that player's input and presentation.
-- Make all effect deadlines static so both players use one value.
-- Duplicate every configuration asset even when its values are identical.
-- Replace the entire game architecture before evaluating existing boundaries.
+- Move the run model into a persistent service both players can reach.
+- Add a second camera and input source, and reuse the existing run model.
+- Give each definition asset a player field the effects read at activation.
+- Run a second instance of the game loop in a separate scene.
 > Separate player-state owners allow the new player to have independent effects. Both players can continue using the same immutable definitions.
 
 ?? interview-uncertain-api You are unsure whether a package operation can actually be cancelled. What should you do?
 * State the uncertainty and explain how you would verify the installed version's contract and cleanup behavior.
-- Promise cancellation stops all work instantly.
-- Avoid discussing late completion entirely.
-- Assume every asynchronous API has identical semantics.
+- Describe the behavior you have seen in a different package with a similar API.
+- Say that the design avoids relying on cancellation, and move on.
+- Describe both possible behaviors and let the interviewer pick one.
+- Note that the documentation would answer it, and change the subject.
 > Accurate uncertainty plus a verification plan is stronger than an invented guarantee.
 
 ## Capstone: design a seasonal runner challenge {#interview-capstone}
@@ -141,18 +209,36 @@ Before release, validate the catalog against supported clients. Control exposure
 
 Choose the trust model explicitly. An online economy that requires trusted decisions needs service-side validation and durable transactions. An offline game can commit through a local save, but cannot provide the same protection against client tampering. State which product the design serves.
 
+Before reading further, it is worth checking your own capstone answer against what a complete one contains:
+
+1. The questions you asked before designing, and the assumptions you stated where you got no answer.
+2. The owners of state, with their lifetimes, and which of them may change what.
+3. One operation traced end to end, including where it commits.
+4. At least two failure cases, one of which is an interruption rather than an error.
+5. A compatibility story for older clients and for saves written by newer ones.
+6. One alternative you rejected, with the requirement that rejected it.
+7. What you would measure, and on what device.
+
+Seven items, and a complete answer to a capstone prompt in an interview usually runs twenty to thirty minutes. Most incomplete answers are missing items 4 and 5, because both concern situations the prompt does not mention and a candidate working from the prompt alone will not reach them.
+
+Items 1 and 6 are the ones that distinguish a senior answer most reliably. Anyone can produce a design; stating which question would have changed it, and which alternative was close, shows that the design was chosen rather than merely produced.
+
+Exercise: Answer the capstone prompt aloud from memory, then check off the seven items. Answer it again a week later and compare which items you reached without prompting.
+
 ?? interview-capstone-owner In the capstone, which unit should decide whether a milestone reward is valid and commit it?
 * The designated reward authority operating on event and player state.
-- The celebration particle system.
-- The visible button's animation controller.
-- Every observer independently.
+- The progress evaluator, which already knows the objective is complete.
+- The player event state, which records the claim identities.
+- The run session, which captured the event revision at its start.
+- The presentation layer, which knows whether the player saw the milestone.
 > The reward authority checks eligibility and commits the claim once. Presentation displays the result without deciding whether the grant is valid.
 
 ?? interview-capstone-revision Why capture an event revision for a run when the product policy requires consistent run rules?
 * So mid-run content updates do not silently change how that run is evaluated.
-- So every future event uses the same rewards forever.
-- So old clients automatically understand new scripts.
-- So offline clients can bypass all validation.
+- So the run can be replayed from its recorded events later.
+- So the client can detect when a newer revision becomes available.
+- So analytics can record which content the player encountered.
+- So the reward table stays in memory for the duration of the run.
 > The captured revision identifies the rules for this run. Client compatibility and trusted validation still need separate checks.
 
 ## Practice technical answers with an assessment rubric {#interview-mock-round}
@@ -175,19 +261,37 @@ Score each answer from 0 to 2 for clear requirements, explicit ownership, failur
 
 Also practise small coding tasks: prevent duplicate collection, remove an entity and repair its index map, test an exact expiration boundary, or shuffle a collection. Explain the complexity and edge cases before optimizing.
 
+Scoring is easier to apply after seeing one answer scored. Take the prompt “design a power-up system” and this answer: “I would make a base PowerUp class with virtual OnActivate and OnExpire, and each power-up would inherit from it. A manager would hold a list and update them each frame.”
+
+| Dimension | Score | Why |
+| --- | --- | --- |
+| Requirements | 0 | No question asked about stacking, pause, or persistence |
+| Ownership | 1 | A manager is named, but not what it owns or how long it lives |
+| Failure handling | 0 | Restart, interruption, and duplicate activation are absent |
+| Tradeoffs | 0 | No alternative considered; inheritance assumed |
+| Evidence | 0 | Nothing about how it would be tested |
+
+A total of 1 out of 10, and nothing in the answer is wrong. That is the point worth absorbing: a technically correct answer can score near zero, because the rubric measures engineering judgment rather than syntax. The same candidate adding “does a second pickup refresh or extend?” and “the run owns the effects, so restarting cannot leak them” moves two dimensions to 2 without writing any more code.
+
+Score your own answers immediately after giving them, while you can still remember what you said. Scoring from memory a day later produces generous results, and the value of the rubric is entirely in its ability to disagree with you.
+
+Exercise: Record yourself answering one prompt, then score the recording rather than your memory of it. The gap between the two is the thing worth working on.
+
 ?? interview-performance-prompt A phone freezes periodically. Which answer shows the strongest diagnostic reasoning?
 * Reproduce on the device, capture timing and allocations, and test hypotheses before choosing a fix.
-- Declare GC responsible without a capture.
-- Replace every list with a linked list.
-- Lower texture resolution regardless of the limiting stage.
+- Check the allocation call stacks first, since periodic freezes suggest collection.
+- Reduce the physics timestep, since periodic freezes often come from the solver.
+- Ask what changed in the most recent release, then inspect that code.
+- Collect crash and error logs from the players reporting the freeze.
 > Several systems can cause periodic freezes. Use measurements to identify the cause before choosing a fix.
 
 ?? interview-rubric [multi n=5] Which elements belong in the five-dimension practice rubric?
 * Explicit ownership.
 * Failure handling.
 * Tradeoffs and supporting evidence.
-- Number of fashionable pattern names mentioned.
-- Confidence regardless of correctness.
+- The number of design patterns the answer names.
+- How quickly the candidate arrives at a design.
+- Whether the answer matches the interviewer's own solution.
 > The rubric rewards a reasoned design: requirements, ownership, failure handling, tradeoffs, and evidence. Vocabulary alone is not a substitute.
 
 ## Build a study loop around weak explanations {#interview-study-loop}
@@ -212,16 +316,28 @@ Use the site's review queue for concepts you answered incorrectly. Revisit corre
 
 Before the interview, rehearse a short introduction for each project and one detailed technical walkthrough. Keep facts, measurements, and your personal contribution accurate. Prepare questions about the team's architecture, content workflow, target devices, and release process, so you can reason within their constraints.
 
+Spacing is what turns the passes in that table into retention, and it needs to be concrete to survive a busy week. Review a concept the day after you first meet it, then after three days, then after a week, then after two. A concept you got wrong restarts the schedule; a concept you got right but guessed moves back one step rather than forward. This site's review queue implements that pattern, so the practical instruction is to open it before starting new material rather than after, since due reviews are worth more than new sections and are easier to skip.
+
+Keep the sessions small and frequent rather than long and occasional. Twenty-five minutes of reading followed by ten minutes of explaining aloud with the book closed is a complete session, and it is one you will still do on a bad day. A three-hour session once a week covers the same pages and retains much less, because almost all of it is reading and almost none of it is retrieval.
+
+Track one number: the count of concepts you can explain without looking. Not the sections you have read, since that measures time spent, and not the questions you have answered correctly, since recognition runs ahead of production. The gap between those numbers is the honest measure of how ready you are, and closing it is what the exercises in this book have been for.
+
+A final point about the material itself. The chapters have described what a system must decide, not what it must be, because the decisions transfer between engines, companies, and problems while the specific answers do not. When you meet a problem this book did not cover, the questions still apply: what must remain true, who owns the state, what happens when it fails, and how would you know. An answer built from those will hold up under follow-up questions, which is more than can be said for an answer built from remembered vocabulary.
+
+Exercise: Write the list of concepts you can currently explain without looking, and date it. Repeat in a week and compare the lists rather than the feeling.
+
 ?? interview-retrieval-practice Which practice best complements multiple-choice questions?
 * Explain a new scenario aloud and draw its ownership and failure boundaries without looking.
-- Memorize only the positions of correct options.
-- Read pattern names repeatedly without applying them.
-- Avoid scenarios that change the original assumptions.
+- Re-read the sections whose questions you answered incorrectly.
+- Answer the same questions again until each one is correct.
+- Write a summary of each chapter in your own words.
+- Work through the questions a second time with the book closed.
 > Explaining an unfamiliar scenario checks whether you can apply the idea yourself. Multiple choice mainly checks whether you recognize a valid answer.
 
 ?? interview-vague-manager You say “I would add a manager” and cannot explain further. What should you define next?
 * Its owned state, operations, dependencies, and lifetime.
-- Only a longer class name.
-- Its icon color.
-- A guarantee that it will never change.
+- Which design pattern the manager corresponds to.
+- The folder and assembly the manager should live in.
+- How the manager is registered with the dependency container.
+- Which existing classes the manager would replace.
 > A class name does not explain what the system does. Define its responsibilities, how callers use it, and when it is created and cleaned up.

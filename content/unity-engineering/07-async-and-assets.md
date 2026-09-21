@@ -24,22 +24,44 @@ Give callers a way to observe failure. They cannot await an `async void` method 
 
 Avoid using `.Result` or `.Wait()` on the main thread to wait synchronously for an async API. This can freeze rendering. If completion needs the same synchronization context that is now blocked, it can also deadlock. Let startup and screens show a loading state while the work finishes.
 
+The question that follows all of this in an interview is where an `await` resumes, and it has a definite answer. Unity installs a synchronization context on the main thread. When you `await` inside a method that started there, the continuation is posted back to that context and runs on the main thread during the player loop. That is why calling a Unity API after an `await` normally works, and it is the property most task-based Unity code depends on without stating it.
+
+`ConfigureAwait(false)` removes that property. It tells the runtime not to return to the captured context, so the continuation runs on whatever thread completed the operation:
+
+```csharp
+// The continuation resumes on Unity's main thread.
+var bytes = await ReadFileAsync(path);
+transform.position = Parse(bytes);         // Legal.
+
+// The continuation resumes on a thread-pool thread.
+var other = await ReadFileAsync(path).ConfigureAwait(false);
+transform.position = Parse(other);         // Not legal from another thread.
+```
+
+Library advice to use `ConfigureAwait(false)` everywhere comes from server code, where there is no thread affinity to preserve and avoiding the post is a real saving. In gameplay code it removes the guarantee you rely on. Use it only for a section that touches no engine API, and return to the main thread before you do.
+
+The same reasoning explains why `Task.Run` is narrower than it looks in Unity. It moves work to a thread-pool thread, where most `UnityEngine` APIs are unavailable. It fits pure computation over data you have already copied out; it does not fit anything that reads a transform or instantiates an object.
+
+Exercise: Take an `async` method in your code and mark, for each line after the first `await`, which thread you believe it runs on. Any line you cannot answer is a line worth checking.
+
 ?? async-coroutine-thread [tf] Moving a long CPU calculation into a coroutine automatically moves it off Unity's main thread.
 * false
 > A coroutine can pause at a yield point. The synchronous work between those points still runs on the executing thread, normally Unity's main thread.
 
 ?+ A coroutine runs on a MonoBehaviour. Only that component's enabled property is set to false while its GameObject stays active. Under the documented coroutine behavior, what happens?
 * The coroutine is not automatically stopped by disabling the component alone.
-- Every coroutine in the scene stops.
-- The coroutine moves to a worker thread.
-- The coroutine restarts from its first statement.
+- The coroutine pauses and resumes when the component is enabled again.
+- The coroutine continues, but its `WaitForSeconds` yields stop advancing.
+- The coroutine is stopped at the end of the current frame.
+- The coroutine keeps running and is re-registered on the GameObject.
 > Disabling a component differs from deactivating its GameObject. End the coroutine explicitly if that is the component's binding policy.
 
 ?? async-awaitable-reuse Why should one Unity `Awaitable` instance not be awaited by several consumers?
 * Awaitable instances are pooled and their contract does not support repeated awaits.
-- Unity forbids all asynchronous operations.
-- Awaiting always creates a new scene.
-- Tasks and Awaitables have identical reuse guarantees.
+- An `Awaitable` completes on a worker thread, so two consumers would race.
+- Each `await` advances the operation by one frame, so the second sees a later state.
+- The `Awaitable` carries a cancellation token that the first consumer consumes.
+- Awaiting twice schedules the operation twice, which doubles its cost.
 > Unity Awaitable and .NET Task have different contracts. Share an appropriate result or abstraction rather than assuming a pooled Awaitable supports multiple awaits.
 
 ## Cancellation is cooperation; validity is a separate check {#async-cancellation}
@@ -76,25 +98,54 @@ A stale result still needs cleanup if the operation acquired a resource for you.
 
 Distinguish a timeout from cancellation. A timeout means the caller stopped waiting after a deadline; the operation may still be running. For a reward request, use the same stable operation ID to recover its result. For an asset request, ensure that a late completion still leads to release if nobody needs the asset.
 
+The cancellation source itself needs an owner, and that owner is almost always the same object that owns the binding:
+
+```csharp
+public void Bind(ItemId item)
+{
+    Unbind();                                        // Cancel and dispose the previous one.
+    cts = new CancellationTokenSource();
+    generation++;
+    _ = LoadArtworkAsync(item, generation, cts.Token);
+}
+
+public void Unbind()
+{
+    generation++;
+    cts?.Cancel();
+    cts?.Dispose();
+    cts = null;
+}
+```
+
+Three rules make this reliable. Create the source where the work begins, so its lifetime matches the work. Dispose it after cancelling, because a source holds registrations that the callbacks are attached to. And never reuse a source after it has been cancelled: a cancelled source stays cancelled, so the next request would start already cancelled.
+
+Where a request should stop for more than one reason, such as the view unbinding or the whole scene shutting down, a linked source combines them, and the same ownership rule applies to the linked source it creates. Register the token with a long-lived source only if you also remove the registration. A token from an application-lifetime source that accumulates one registration per view binding is a leak whose symptom is slow growth rather than a visible failure.
+
+Exercise: Find a `CancellationTokenSource` in your code and answer three questions about it: who creates it, who disposes it, and what happens on the second request after the first was cancelled.
+
 ?? async-stale-result A view now displays item B when item A's earlier load finishes. What should happen to A's successfully acquired owned asset?
 * Discard the stale result and release the acquired asset according to the loader's contract.
-- Assign it because successful completion proves it is current.
-- Ignore it without releasing any acquired handle.
-- Reset the player's inventory to item A.
+- Assign it, then request item B again so the display corrects itself.
+- Drop the reference and let garbage collection release the handle.
+- Hold the handle until the view is destroyed, then release everything at once.
+- Release it when the load reports a failure, and keep it otherwise.
 > The generation check prevents the wrong image from being shown. Releasing the rejected asset prevents a leak; the code needs both steps.
 
 ?+ Request A completes after request B has rebound a pooled view. Cancellation of A was requested but ignored by the loader. Which check still protects the view?
 * Compare A's captured binding generation with the view's current generation before applying the result.
-- Check only that the pooled GameObject reference is non-null.
-- Check only that A completed successfully.
-- Allow every successful result to overwrite the current image.
+- Confirm that A's cancellation token reports cancellation before applying the result.
+- Check that the view's GameObject is still active in the hierarchy.
+- Verify that A's result is not null before assigning it.
+- Apply the result in `LateUpdate`, after the rebind has settled.
 > The view can still exist, and the load can succeed, even though the view now represents a different item. Check the binding generation before applying the result.
 
 ?+ Why is cancellation alone insufficient to prevent stale callbacks?
 * Cancellation is cooperative and may race with completion or may not stop the underlying operation.
-- Cancellation always rewinds all side effects.
-- Tokens automatically compare item IDs.
-- Cancellation only applies to value types.
+- Cancellation is delivered on the next frame, so one more callback arrives.
+- A cancelled operation runs its continuation with a default result.
+- Cancellation applies to the token source rather than to the awaiting call.
+- Cancelling a token disposes the result before the caller can read it.
 > Requesting cancellation does not establish that a result is still valid for the current owner.
 
 ## Load assets with explicit leases and release rules {#assets-ownership}
@@ -113,11 +164,28 @@ An asynchronous load can still perform work on the main thread. Deserialization,
 
 Addressables can load local content without a remote service. Choose it when the feature needs its loading and lifetime controls. Direct serialized references may be simpler for small always-resident assets.
 
+A lease is a small type whose value is that it cannot be ignored:
+
+```csharp
+public interface IAssetLease<out T> : System.IDisposable
+{
+    T Value { get; }
+    bool IsReleased { get; }
+}
+```
+
+Returning one of these instead of the raw asset changes what a caller can accidentally do. A raw reference gives no hint that anything must be released, and a stale result is easy to discard silently. A lease is a disposable the caller must place somewhere, which makes forgetting it a visible omission rather than an invisible one.
+
+State when the lease is not worth it, because this is exactly the kind of rule that gets over-applied. An asset referenced directly in a prefab or scene, loaded with the object that uses it and unloaded with it, already has its lifetime managed by the engine; wrapping it adds a layer with nothing to decide. A small always-resident asset such as a UI font or a default material is in the same position. The lease earns its place when the asset is acquired at runtime, when more than one owner might hold it, or when a request can complete after its requester is gone. Those are the same conditions that make the stale-result problem possible, which is not a coincidence.
+
+Exercise: List the runtime-loaded assets in a feature you know, and mark each one as owned or borrowed. For every owned entry, name the line that releases it, including on the failure and cancellation paths.
+
 ?? assets-clone-lifetime A prefab is loaded through Addressables, then cloned with ordinary `Instantiate`. What should the owner ensure?
 * The required assets stay acquired for as long as the clones need them.
-- Every clone automatically increments Addressables' reference count.
-- Releasing the load handle always preserves every dependency indefinitely.
-- The clone becomes a serialized project asset.
+- Each clone should be released through the Addressables instantiation API.
+- The load handle should be released as soon as `Instantiate` returns.
+- The clone should be registered with Addressables after instantiation.
+- The prefab should be marked as a dependency of the clone's scene.
 > An ordinary clone does not automatically create another Addressables reference. Its owner must keep the required load alive.
 
 ?? assets-release-memory [tf] Releasing one Addressables handle guarantees an immediate equal-sized decrease in process memory.
@@ -147,18 +215,37 @@ Create a bounded set of pooled objects and expensive visual variants before the 
 
 A live game also needs compatibility between its content catalog and installed binary. A downloaded asset may require scripts or shaders that an older binary does not contain. Check that the client can use the content, as well as whether it downloaded successfully.
 
+Putting numbers on the transition makes the shape of the problem clear. Using the two scenes above, and rough figures for the rest:
+
+| Contributor | Estimate |
+| --- | --- |
+| Scene A, still resident | 300 MB |
+| Scene B, becoming resident | 250 MB |
+| Decompression and loading buffers | 40 MB |
+| Shared services, pools, managed heap | 60 MB |
+| Render targets and transient graphics memory | 50 MB |
+| Peak during the overlap | 700 MB |
+
+Neither scene is close to the peak on its own, and a budget derived from measuring each scene after it finished loading would have missed the number that actually matters. This is why the measurement instruction above specifies the transition rather than the steady state.
+
+The table also tells you where to look first. Releasing scene A before scene B loads removes the largest single contributor, at the cost of a visible gap the player must be given something to look at. A transition scene is small precisely so that the overlap it creates is cheap: A unloads, a 20 MB transition holds the screen, then B loads. Staging B's load reduces the second row instead, and reducing buffer sizes reduces the third; each buys less than the first option and costs less.
+
+Exercise: For a transition in a project you know, write the five rows above with real numbers. If you cannot fill a row, that is the measurement to take next.
+
 ?? assets-peak-memory Why can a scene transition exceed both scenes' individual memory footprints?
 * Old and new content can overlap with temporary loading buffers and shared resources.
-- A scene can never unload resources.
-- Memory usage is always exactly the size of the largest texture.
-- Asynchronous loading removes all temporary allocations.
+- Loading a scene duplicates its shared dependencies for each referencing scene.
+- Scene memory is reported after compression, so the figures understate the real size.
+- The profiler counts the loading thread's stack against the scene's budget.
+- Unloading is deferred to the next frame, which doubles the reported total.
 > During a transition, old content, new content, and temporary buffers can all be in memory together. Measuring each scene only after loading can miss that peak.
 
 ?? assets-bundle-grouping Which consideration should influence asset bundle grouping?
 * Which assets are used together and have similar lifetimes.
-- Alphabetical order alone.
-- The assumption that more bundles always means less memory.
-- The assumption that one bundle always minimizes loading cost.
+- The folder structure the artists already use in the project.
+- Keeping each bundle close to a fixed target size.
+- Grouping by asset type, so textures and meshes stay separate.
+- The order in which the assets were added to the project.
 > Grouping determines dependency and residency behavior. Co-usage and measured overhead matter more than a universal bundle-count rule.
 
 ## Account for job ownership and scheduling overhead {#async-jobs-burst}
@@ -175,16 +262,26 @@ Data-oriented design organizes data around how it is accessed: keep relevant val
 
 Parallel execution can affect reproducibility. A floating-point sum may change when values are added in a different order. If the authoritative simulation must produce identical results, define the numeric and scheduling rules that will preserve that requirement.
 
+“Enough work” deserves an order of magnitude, with the caveat that it varies by platform and must be measured. Scheduling a job and waiting for it has a fixed cost typically measured in microseconds, so a job over a few dozen elements of trivial arithmetic can easily cost more than the loop it replaced. Hundreds of elements with real work per element, or thousands of elements with trivial work, is the region where the answer stops being obvious and measurement starts being worthwhile.
+
+Measure the ordinary loop first, and keep it. It is the correctness reference for the parallel version, and it answers the question that decides everything: a loop taking 0.05 ms cannot repay any scheduling overhead, no matter how parallel it is. The upper bound on what parallelism can win is the time the loop currently takes, and features are often optimized without anyone checking that number.
+
+When the job version does win, expect the gain to be smaller than the core count suggests. The sequential remainder, the copy into and out of native containers, and the wait at the point where the results are needed all limit it. Scheduling early and completing late is what makes the difference between a job that overlaps with other work and a job that simply moved the same wait to a different line.
+
+Exercise: Time the ordinary loop you are considering replacing, then write down the best possible outcome of parallelizing it. Decide whether that number would change any decision.
+
 ?? async-job-worthwhile When is moving a loop to jobs most promising?
 * It has enough independent work to outweigh scheduling and synchronization costs.
-- It reads arbitrary scene objects from worker threads.
-- It consists of one trivial operation followed by an immediate wait.
-- It has unknown ownership of the input buffer.
+- The loop writes into a managed list that several systems read.
+- The loop calls into the physics API for each element.
+- The loop is short, so its results are available in the same frame.
+- The loop already runs from a coroutine, so the job adds little overhead.
 > Parallel work helps when there is enough computation to cover scheduling costs, and other useful work can run before the results are needed.
 
 ?? async-native-lifetime A job still reads a native buffer. When can its owner safely dispose or reuse that buffer?
 * After the relevant dependencies complete, following the container's ownership contract.
-- Immediately after scheduling, because the job copied every byte automatically.
-- Whenever the view is hidden, regardless of job state.
-- Only after garbage collection decides the buffer is unreachable.
+- As soon as `Complete` is called on any job in the same frame.
+- After the next `FixedUpdate`, by which point scheduled jobs have run.
+- Once the allocator's lifetime expires, which releases the buffer for reuse.
+- When the job's `Execute` method returns for the final element.
 > Keep native data alive until every scheduled job using it has finished. Managed garbage collection does not wait for those jobs or release the buffer for you.

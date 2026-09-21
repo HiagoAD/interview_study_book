@@ -17,18 +17,37 @@ Explain decisions in language the whole team can use: “The reward is saved bef
 
 Document unresolved questions with an owner and a decision date. Otherwise, several people may build on conflicting assumptions before anyone notices.
 
+The acceptance table is worth seeing filled in, because its value is in the rows nobody thinks to write:
+
+| Situation | Agreed behavior | Who confirmed it |
+| --- | --- | --- |
+| Magnet collected while one is active | Remaining time resets to the full duration | Design |
+| Run ends during an attraction | Coins in flight are not awarded | Design and QA |
+| Two magnets collected in the same frame | One activation; the second is absorbed | Engineering |
+| Player pauses with 3 s remaining | Still 3 s remaining on resume | Design |
+| Effect icon while the HUD is hidden | Rebuilt from state when the HUD returns | Engineering and UI |
+| Magnet definition missing from content | Pickup does nothing; the content build fails | Engineering |
+
+The third column is the one that makes the table work. A behavior with no name against it has not been agreed; it has been assumed by whoever wrote the row. Reviewing that column before implementation is faster than discovering the disagreement in a bug report two weeks later.
+
+Note how many rows describe something other than the feature working. Four of the six describe an interruption, a conflict, or missing content, which is the usual proportion. A specification that covers only the intended path has described the smallest part of the work.
+
+Exercise: Build this table for a feature currently in development, and take it to design with the third column empty. The rows they cannot fill immediately are the real requirements conversation.
+
 ?? collaboration-shared-examples A designer asks for a “more generous” magnet. What is the most useful next step?
 * Agree on concrete pickup, timing, and feedback examples that express the intended feel.
-- Choose a larger constant privately and declare the requirement complete.
-- Ask the designer to design the entire class hierarchy first.
-- Reject the request because it is not already a technical specification.
+- Ask the designer to specify the exact radius and duration values.
+- Add a tuning slider for every magnet parameter and hand it over.
+- Ask which competing game's magnet the designer has in mind.
+- Schedule the change for after the current milestone, when there is time.
 > Engineering can translate qualitative intent into testable examples while preserving the designer's goal.
 
 ?? collaboration-vertical-slice Why demonstrate a small complete feature path early?
 * It reveals how feel, assets, authoring, and code work together before the team commits to full production.
-- It proves every edge case is already solved.
-- It eliminates the need for acceptance criteria.
-- It makes temporary prototype code automatically production-ready.
+- It gives the team a demo that can be shown to stakeholders.
+- It lets the engineer validate the architecture before writing tests.
+- It produces code the final implementation can build on directly.
+- It establishes the frame budget the finished feature will need.
 > One complete interaction gives the team something concrete to evaluate. Identify which parts remain temporary and which problems still need work.
 
 ## Make content authoring safe and fast {#collaboration-tools}
@@ -47,18 +66,28 @@ Editor tools need undo support and predictable saving. Decide who owns generated
 
 Evaluate a tool through iteration time and error rate. Fewer repeated requests for programmer help, clearer validation messages, and safer common edits are concrete production improvements.
 
+Tool work competes with feature work, so make the case in the same units. If adding one mission currently takes a designer 20 minutes and they add 12 per week, that is 4 hours weekly. A tool that reduces it to 5 minutes saves 3 hours weekly, so 2 days of engineering pays for itself in about three weeks and continues afterward.
+
+The error rate usually matters more than the minutes, and it is easier to forget. Count how often a content mistake reaches a build, and what each one costs: the designer's time, the engineer's time investigating, the build that had to be remade, and occasionally a hotfix. A validation message that catches the mistake at authoring time removes the whole chain, and the chain is where the real cost was.
+
+Two cautions keep this honest. Estimate from observation rather than from what the workflow is supposed to be, since the actual process usually contains steps nobody documented. And include the tool's own maintenance, because a tool that breaks whenever the content schema changes has ongoing cost that the original calculation ignored.
+
+Exercise: Time yourself performing the most repetitive content task in your project, then multiply by how often the team does it in a month. Compare that with your estimate of automating it.
+
 ?? collaboration-validation-message Which validation message is most useful to a content author?
 * “Mission winter-07: target must be positive; current value is 0.”
-- “Something went wrong.”
-- “Null.”
-- “The engineer should inspect the whole project.”
+- “Validation failed for 1 of 48 missions.”
+- “Invalid target value. See the content authoring guide.”
+- “Mission validation error at index 6, field 3.”
+- “Target must be positive.”
 > A useful message identifies the location, failed rule, and relevant value so the author can act.
 
 ?? collaboration-exposed-controls Should an Inspector expose every internal implementation variable?
 * No; expose the choices authors need, with valid ranges and clear explanations.
-- Yes; more fields always improve iteration speed.
-- Only if every field has an obscure abbreviation.
-- No fields should ever be configurable.
+- Yes, provided each field has a tooltip explaining its purpose.
+- Yes, but grouped into a foldout so the Inspector stays readable.
+- Yes; hiding fields forces authors to request programmer changes.
+- No; authors should edit a text file rather than the Inspector.
 > Give authors controls for intentional content decisions, and help them avoid invalid values. They do not need access to every implementation detail.
 
 ## Negotiate visual and performance budgets together {#collaboration-art-budgets}
@@ -75,25 +104,45 @@ Repeated content errors may reveal missing tools. If artists often create uninte
 
 Requirements change as the team learns more about the game. Make the cost of those changes visible early, offer practical options, and keep expected variations easy to implement. Treat design and art concerns as part of the engineering problem.
 
+How the budget is delivered decides whether it reads as a constraint to solve or a veto to resent. Three habits help. Bring the measurement and the target rather than a verdict. Bring more than one option, so the conversation is about choosing rather than about accepting. And be explicit that the visual goal is not in question, only the way it is achieved.
+
+A menu is the practical form of that:
+
+| Option | Saving | Visual cost |
+| --- | --- | --- |
+| Halve the particle count in the background layer | about 1.6 ms | Slightly thinner smoke at distance |
+| Reduce the smoke texture to a cheaper shader variant | about 1.2 ms | Softer edges, no lighting response |
+| Cut two of the six overlapping layers | about 2.4 ms | Noticeably less depth in the hazard |
+| Keep as authored | 0 ms | The hazard sequence drops to about 40 FPS |
+
+The last row belongs in the table. Leaving it out turns the conversation into a demand; including it makes the tradeoff visible and lets the artist weigh it. Sometimes the answer is that the sequence matters enough to spend the frame time, and that is a legitimate outcome of a discussion you framed correctly.
+
+It also helps to say what you are not measuring. A GPU figure says nothing about whether the effect communicates danger, and the artist is the one who can judge that. Being explicit about the limits of your evidence makes the evidence you do have easier to accept.
+
+Exercise: Take a performance problem you are carrying and write three options with their savings and their visual cost. Notice how the conversation changes once the options exist.
+
 ?? collaboration-performance-conversation Which feedback best supports an artist-engineer decision?
 * A target-device measurement, the available budget, and visual alternatives that preserve the effect's purpose.
-- “Artists always make expensive assets.”
-- “The frame rate is bad, so remove every effect.”
-- “It ran on my workstation, so no budget is needed.”
+- A profiler capture from the effect running alone in an empty scene.
+- A statement of the frame budget, without a measurement of the effect.
+- A measurement taken on the highest-end device the team owns.
+- A request to reduce the effect by half, with the reason left out.
 > Shared evidence and alternatives turn a conflict into a concrete design decision.
 
 ?+ An artist cannot keep an effect within budget using your first suggestion. What is the strongest next step?
 * Revisit the visual goal together and compare alternative implementations with measurements.
-- Treat the rejected suggestion as proof that collaboration is impossible.
-- Ship the over-budget effect without recording the impact.
-- Remove the effect privately and let the team discover the change later.
+- Implement your suggestion anyway and show the artist the result.
+- Ask for a version at half the cost, without discussing the goal.
+- Escalate to the producer for a decision on the schedule.
+- Defer the effect to a later milestone and move on.
 > Keep the visual goal in the discussion while testing other ways to achieve it. Measurements let both disciplines assess the tradeoffs.
 
 ?? collaboration-context-measurement Why test an effect alongside its expected simultaneous scene content?
 * Overlap and shared workload can make the combined cost much higher than an isolated preview suggests.
-- Isolated tests are never useful for any purpose.
-- Every effect has identical GPU cost.
-- Scene context changes only the asset's filename.
+- An isolated preview uses a different shader variant from the full scene.
+- The effect's cost varies with the camera angle used in the preview.
+- Isolated previews run at a higher frame rate, which changes the timing.
+- The preview scene lacks the lighting setup the effect was authored for.
 > Isolated tests identify individual costs; representative combinations establish whether the product meets its budget.
 
 ## Review code and handle disagreement with evidence {#collaboration-review}
@@ -110,18 +159,37 @@ Ask for help early with a bounded description: what you tried, what you observed
 
 A senior engineer helps teammates understand and maintain the system, reviews risky interactions, and improves the process that allowed defects through. Making the code depend on one person's knowledge creates a maintenance problem.
 
+Label the severity, because the author cannot read your mind about what blocks. Four labels cover almost everything:
+
+| Label | Meaning | Author's obligation |
+| --- | --- | --- |
+| Blocking | Correctness, data loss, or compatibility | Must be resolved before merge |
+| Should | A real cost, but the change can ship | Address or reply with a reason |
+| Consider | A suggestion worth a moment's thought | May decline without justifying it |
+| Note | Information, no action implied | None |
+
+Most review friction comes from unlabeled comments being read at the wrong severity. A reviewer's passing thought read as a requirement wastes a day; a genuine correctness problem read as a preference ships a bug. One word at the front of the comment removes both failures.
+
+Keep the ratio honest. A review where everything is blocking teaches the author to argue with all of it, and a review where nothing is teaches them to skim. If a change genuinely has six blocking problems, that is usually a signal to talk rather than to keep typing, because the disagreement is probably about the approach rather than about the lines.
+
+Receiving review has a discipline too. Answer the finding rather than defending the code: “you are right, the handler leaks on the reopen path, fixed in the next commit” closes a thread that a justification would extend. Where you disagree, say what you would need to see to change your mind, which keeps the exchange about evidence instead of about who is more senior.
+
+Exercise: Look back at the last review you gave and assign one of the four labels to each comment. Count how many you would have labeled differently than the author probably read them.
+
 ?? collaboration-review-finding Which review comment is most actionable?
 * “This handler is never removed when the view unbinds, so reopening can register it twice; add lifecycle cleanup and a reopen test.”
-- “This feels wrong.”
-- “Use my favorite pattern everywhere.”
-- “The implementation has too many characters.”
+- “This subscription is not removed when the view unbinds.”
+- “Consider extracting this into a separate presenter class.”
+- “There is a bug in the binding lifecycle here.”
+- “This does not match how the other views handle subscriptions.”
 > The comment identifies the missing cleanup, explains the duplicate subscription it can cause, and suggests a check for the fix.
 
 ?? collaboration-disagreement What should a team clarify before debating two architectures?
 * The requirements, time horizon, constraints, and evidence each proposal is optimizing for.
-- Which engineer has the longest job title.
-- Whether both proposals have the same number of interfaces.
-- Which diagram uses more technical vocabulary.
+- Which proposal requires fewer changes to the existing code.
+- Which proposal the team's most experienced engineer prefers.
+- Whether either proposal has already been prototyped.
+- Which proposal fits the current milestone's schedule.
 > Two designs may look incompatible because their authors assumed different requirements or schedules. Agree on the decision criteria before comparing them.
 
 ## Prepare a credible cross-disciplinary interview story {#collaboration-story}
@@ -140,16 +208,26 @@ If a difficult interaction involved changing requirements, explain why those req
 
 Prepare to explain what the other discipline needed, what you initially misunderstood, which compromise was hardest, and what you would change now. Those details show how collaboration affected your engineering decisions.
 
+The structure in that example has a common name, situation, task, action, result, and it is worth knowing because interviewers are often listening for its parts. Situation sets the constraints, task states what was yours to solve, action describes what you did, and result gives the outcome and the evidence. The order matters less than the completeness; most weak answers are missing the task, so the listener cannot tell what the speaker actually owned.
+
+Budget the length. Two to three minutes is right for a behavioral answer, which is roughly four or five sentences per part. Longer answers tend to lose the task and the result, which are the parts being assessed, in favor of the situation, which is the part that is easiest to describe. Practise with a timer once; almost everyone's first attempt runs long.
+
+Prepare at least one story whose result was not good, because you will be asked. A project cancelled, a design you argued for that turned out worse than the alternative, or a bug you shipped are all usable material when the action and the learning are specific. “We missed it because nobody had tested a save from the previous version, so I added historical save fixtures to the suite and they have caught two regressions since” is a stronger answer than any success story told vaguely. Avoid the failure that is a disguised strength, since interviewers recognize it and it costs you the credibility that a real answer would have earned.
+
+Exercise: Write your least successful project as a four-part story, and make sure the action section describes what you did rather than what the situation did to you.
+
 ?? collaboration-story-accountability Which statement best demonstrates your contribution without inventing credit?
 * Describe the decision or tool you owned, the collaborators involved, and the observed outcome.
-- Present a hypothetical example as a project you shipped.
-- Attribute every success to yourself and every problem to design.
-- Avoid explaining any personal action.
+- Describe the team's achievement, so no individual claim is overstated.
+- Describe the technical design in detail, leaving ownership implicit.
+- Describe your role by job title and the systems it covered.
+- Describe what you would have done if the decision had been yours.
 > State what you owned, what teammates contributed, and what evidence supports the result.
 
 ?? collaboration-story-learning Why include what you initially misunderstood?
 * It shows how feedback changed your model and improved the final decision.
-- It proves that preparation is unnecessary.
-- It replaces the need to explain the result.
-- It makes every disagreement the other person's responsibility.
+- It shows humility, which interviewers assess separately from skill.
+- It fills time when the technical details are confidential.
+- It shifts attention away from a result that was not strong.
+- It shows you can recall details from a long time ago.
 > Explain the assumption you corrected and how that correction changed the work. This shows how you use feedback when making decisions.

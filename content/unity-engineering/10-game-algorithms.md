@@ -23,18 +23,28 @@ Cell size affects both query cost and maintenance. Small cells mean a radius que
 
 If the relevant objects already have colliders, Unity physics queries can find an initial set of nearby candidates. Filter by layer and choose an appropriate query API. For a nonallocating query with a fixed-size result buffer, handle the case where the buffer fills: more results may have been omitted unless the API guarantees otherwise. Grow and retry, use a fallback, or prove that the buffer covers the maximum possible population.
 
+Cell size is the one parameter of a uniform grid, and it can be reasoned about rather than guessed. Start at roughly the radius of the most common query. A radius query then touches a small, bounded block of cells, typically four in two dimensions when the radius and the cell size are similar, and the candidates it collects are mostly relevant.
+
+The two failure directions are easy to recognize once you know the shape. Cells much smaller than the query radius mean each query visits many cells and spends its time on bookkeeping; the symptom is cost that grows when you shrink cells further. Cells much larger than the radius mean each cell holds many objects the query will reject; the symptom is a high ratio of candidates examined to candidates accepted. Instrument that ratio, because it tells you which direction to move.
+
+A grid also assumes roughly even distribution. A runner where every coin sits within a narrow lane puts most entities in a handful of cells no matter what size you choose, and the structure stops helping. Where the distribution is uneven, sort along the axis that actually varies, or use a structure that adapts, such as a tree that subdivides only where objects are dense. Measuring the occupancy of the busiest cell is the cheapest way to find out which situation you are in.
+
+Exercise: For a query in your game, write the typical radius, the chosen cell size, and the average number of candidates a query examines and accepts. The ratio between the last two numbers is your tuning signal.
+
 ?? algorithms-grid-negative With cell size 10, which cell contains position -1 using floor-based indexing?
 * -1.
-- 0.
-- 1.
-- -10.
+- 0, truncating toward zero.
+- 1, taking the absolute value first.
+- 9, wrapping into the positive range.
+- -10, multiplying by the cell size.
 > Floor of -0.1 is -1. Truncation toward zero would incorrectly place the point in cell 0.
 
 ?? algorithms-query-capacity A fixed query buffer is completely filled. What should the implementation consider?
 * Additional candidates may have been omitted, so the overflow policy must apply.
-- The query has proved there are exactly that many candidates.
-- Every omitted candidate is necessarily too far away.
-- Nonallocating APIs automatically resize the supplied array.
+- The buffer size matched the candidate count, so the result is complete.
+- The omitted candidates are the ones furthest from the query point.
+- The extra candidates were written past the end of the buffer.
+- The API returns a negative count to signal that results were dropped.
 > A full buffer may contain only part of the result. Use a defined capacity limit or fallback before treating the query as complete.
 
 ## Select nearest or best candidates without unnecessary sorting {#algorithms-selection}
@@ -51,20 +61,33 @@ Hysteresis can make target selection steadier: keep the current target until ano
 
 Checking targets every few frames reduces CPU work, but the chosen target may become stale between checks. Decide how much delay is acceptable, and check eligibility again before an irreversible action such as applying damage.
 
+The tie rule and the hysteresis rule combine into a single comparison, and writing it as one expression keeps them from drifting apart:
+
+```text
+keep current target unless:
+    current is no longer eligible, or
+    score(challenger) < score(current) - switchMargin, or
+    (score(challenger) == score(current) - switchMargin and challenger.spawnId < current.spawnId)
+```
+
+The margin makes switching require a real improvement, and the identifier comparison makes the remaining ties resolve the same way on every machine and in every replay. A margin of zero reduces the rule to plain nearest-target selection, which is a useful default to ship first and a useful baseline to compare against when design asks for steadier targeting.
+
 Exercise: Design a nearest-coin attraction query that respects a maximum count, avoids rewarding duplicates, and remains correct when coins despawn during processing. State whether you iterate a snapshot or defer mutations.
 
 ?? algorithms-nearest-complexity What is the usual simplest algorithm for finding one nearest eligible target?
 * A single scan that tracks the best candidate.
-- Sorting every candidate on every query.
-- Enumerating every possible permutation.
-- Building a complete all-pairs distance table first.
+- Sort the candidates by distance and take the first.
+- Partition the candidates around a pivot and recurse into the lower half.
+- Keep a heap of the candidates and pop the smallest.
+- Cache the distances in a dictionary and query the minimum key.
 > One best result needs only a running best score. Sorting is useful when ordered results are actually required.
 
 ?? algorithms-hysteresis Why can target-selection hysteresis reduce visible flicker?
 * It requires a challenger to be meaningfully better before replacing the current target.
-- It guarantees every distance is an integer.
-- It removes all invalid targets from memory forever.
-- It makes every target equally preferred.
+- It re-evaluates targets less often, so fewer changes are possible.
+- It rounds scores to fewer decimal places, so small differences disappear.
+- It caches the previous target, so the scan can be skipped on most frames.
+- It sorts candidates by score, so the ordering stops changing.
 > Requiring a meaningful improvement prevents small score changes from switching targets repeatedly. The tradeoff is that switching may respond more slowly.
 
 ## Choose BFS, Dijkstra, or A-star from the graph contract {#algorithms-pathfinding}
@@ -83,25 +106,41 @@ Remember each node's predecessor so you can reconstruct the path. Define the res
 
 Unity's navigation packages may already provide mesh construction and path queries. A discrete puzzle or a specialized lane network may justify a custom graph. Explain which requirements the existing navigation system meets and which require a different representation.
 
+A three-node example shows exactly what admissibility protects. Let the edges be S to A costing 1, A to G costing 1, and S to G costing 3. The optimal path is S, A, G at a total cost of 2. Now give A an overestimating heuristic of 5:
+
+```text
+f(A)          = g(A) + h(A) = 1 + 5 = 6
+f(G, direct)  = g(G) + h(G) = 3 + 0 = 3
+```
+
+A-star expands the smallest f first, so it takes G directly and returns the cost-3 path, having never looked past A. Nothing failed and no assertion fired; the search simply answered a different question. That is the whole practical content of admissibility, and it is why multiplying a heuristic to make search faster trades away the optimality guarantee rather than merely making the result approximate in some bounded way you can ignore.
+
+The other practical matter is what happens after the path is returned. A path is a plan made against a snapshot of the world, and the world moves. Recomputing every frame for every agent is the expensive answer; better ones are usually cheaper. Follow the path until the next segment is blocked and only then repath. Spread repaths across frames with a budget, so a hundred agents reacting to one closed door do not all search in the same frame. Check only the next segment or two for validity rather than the whole path, since the far end will be revised before the agent reaches it anyway.
+
+Exercise: Work the three-node example again with h(A) equal to 1. Confirm that A-star now returns the cost-2 path, and note which node it expands first.
+
 ?? algorithms-bfs-condition When does breadth-first search find a minimum-cost path by treating each edge as one step?
 * When all traversable edges have the same cost.
-- When arbitrary negative edge weights are present.
-- Whenever the graph is drawn in Unity.
-- Only when every node has exactly two neighbors.
+- When the graph contains no cycles.
+- When the goal is reachable within a bounded number of steps.
+- When the heuristic used to order the queue is admissible.
+- When the graph is stored as an adjacency matrix.
 > BFS minimizes edge count. Edge count corresponds to path cost only when all edges have equal cost.
 
 ?+ A direct edge to the goal costs 10, while a two-edge route costs 1 per edge. What can an unweighted BFS prefer?
 * The one-edge route, even though its total cost is higher.
-- The two-edge route because BFS automatically reads all numeric weights.
-- Neither route, because a graph cannot mix edge costs.
-- The route with the largest number of edges.
+- The two-edge route, since BFS accumulates the cost along each path.
+- Whichever route is discovered first, depending on neighbor order.
+- The two-edge route, since BFS prefers paths with a lower average edge cost.
+- Neither, since BFS reports failure when edge costs differ.
 > BFS minimizes edge count, so weighted movement needs an algorithm that accounts for cost.
 
 ?? algorithms-astar-heuristic What does an admissible A-star heuristic guarantee about its estimate?
 * It never overestimates the true remaining path cost.
-- It always equals the exact remaining cost.
-- It may overestimate without affecting any optimality conditions.
-- It removes the need to track accumulated cost.
+- It matches the true remaining cost at every node.
+- It decreases by at most the edge cost along each step.
+- It stays within a constant factor of the true remaining cost.
+- It is computed without reading the cost accumulated so far.
 > An admissible estimate is never greater than the true remaining cost. Correct graph search still needs to handle other details, such as reopening nodes when the heuristic is inconsistent.
 
 ## Randomness should be testable and statistically appropriate {#algorithms-randomness}
@@ -142,25 +181,43 @@ Test draws exactly at the selection boundaries, as well as properties such as pr
 
 A fixed seed helps reproduce results within a controlled implementation. Do not assume `System.Random` will produce the same sequence across every runtime forever. If replays must survive runtime or game updates, specify and version both the generator and the order in which its numbers are consumed.
 
+The claim that the naive shuffle is biased can be settled by counting rather than by testing. Take the version that swaps each position with a partner drawn from the whole list:
+
+```text
+for i in 0 .. n-1:
+    swap(items[i], items[random(0, n-1)])
+```
+
+For n equal to 3 this makes three independent draws from three options, so there are 3 times 3 times 3, or 27, equally likely execution paths. Those paths produce 6 possible permutations. Since 27 is not divisible by 6, the permutations cannot all be equally likely, whatever the random source does. No amount of sampling is needed, and no better generator can repair it.
+
+Fisher-Yates avoids this by construction. Its draws have n, then n-1, and so on down to 1 option, giving n factorial paths for n factorial permutations, one path each. That exact correspondence is the reason the upper bound shrinks with each step, and it is why `random.Next(i + 1)` rather than `random.Next(items.Count)` is the line the whole algorithm rests on.
+
+This is a useful answer to have ready, because “shuffle a list” is a common coding prompt and the follow-up is usually “how do you know it is uniform?” A counting argument settles it in two sentences; a statistical argument requires a sample size and still cannot prove the case.
+
+Exercise: Enumerate all 27 paths for a three-element list and count how many produce each of the 6 permutations. The distribution you get is the bias.
+
 ?? algorithms-shuffle-range In Fisher–Yates at index `i`, which swap-partner range is correct?
 * Every index from 0 through i, inclusive.
-- Every index from 0 through the full list length, inclusive.
-- Only index 0.
-- Only indices strictly greater than i.
+- Every index from 0 through the list length, exclusive.
+- Every index from i through the end of the list.
+- Every index except i itself.
+- Every index from 1 through i, inclusive.
 > The algorithm chooses uniformly among positions not yet finalized. `Random.Next(i + 1)` uses an exclusive upper bound.
 
 ?? algorithms-weight-zero A weighted table contains weights 0, 2, and 3. What should be true of the first entry?
 * It is never selected.
-- It is selected whenever the draw equals zero if boundaries are implemented correctly.
-- It receives one third of the probability.
-- Its zero weight invalidates every otherwise valid table.
+- It is selected when the draw lands exactly on zero.
+- It shares the probability of the entry that follows it.
+- It receives the smallest nonzero share available.
+- Its presence shifts the other entries' intervals by one.
 > A zero weight occupies no part of the draw interval. Choosing the first cumulative total strictly greater than the draw prevents a leading zero-weight entry from winning even when the draw is zero.
 
 ?+ Weights are 2 and 3, and a draw is exactly 2 in the interval [0, 5). Which entry wins with the stated cumulative-boundary rule?
 * The second entry.
-- The first entry.
-- Both entries.
-- Neither entry because integer-valued draws are forbidden.
+- The first entry, since its interval includes its own upper bound.
+- Either entry, since the draw lands on the boundary between them.
+- The first entry, since cumulative totals are compared with `<=`.
+- Neither, since a draw landing on a boundary has to be taken again.
 > The intervals are [0, 2) and [2, 5). Select the first cumulative total strictly greater than the draw.
 
 ## Scheduling and simulation order are algorithmic choices {#algorithms-scheduling}
@@ -177,11 +234,29 @@ A repeatable simulation needs a defined order of phases. For example, collect in
 
 A fixed timestep controls how much time each simulation step advances. It does not guarantee identical results across platforms: input order, floating-point calculations, physics, random draws, and parallel sums may still differ.
 
+Numbers make the catch-up decision concrete. Suppose a game schedules one energy refill every 6 minutes and the player returns after 27 hours in the background. That is 270 overdue refills. Replaying them one at a time is both slow and pointless, because the state they produce is a single number that the cap will clamp anyway.
+
+The four policies produce visibly different products:
+
+| Policy | Result after 27 hours | Fits |
+| --- | --- |  --- |
+| Replay each | 270 refill events, 270 notifications, a long stall | Almost nothing |
+| Combine | One computation from elapsed time, clamped to the cap | Resource regeneration |
+| Limit catch-up | Process 20, keep the rest queued for later frames | Work with per-item side effects |
+| Discard | Drop the missed ticks and resume from now | Cosmetic or ambient timers |
+
+Combining is usually right for anything that is really a function of elapsed time, and it is also the cheapest: the refill becomes `min(cap, stored + floor(elapsed / interval))` with no loop at all. Reserve replay for work whose individual occurrences matter, and then bound it, because an unbounded catch-up loop on resume is one of the more reliable ways to be killed by the operating system during startup.
+
+Note that all four policies need the elapsed time to come from a source the player cannot move backward, which is the monotonic and trusted-time distinction from the earlier chapters arriving in a concrete form.
+
+Exercise: For a timer in a game you know, choose one of the four rows and write what the player sees after a day away. Then check whether the implementation actually does that.
+
 ?? algorithms-overdue-policy A suspended app resumes with many overdue timers. What must the scheduler define?
 * Whether each kind of timer should replay missed actions, combine them, limit catch-up work, or discard obsolete actions.
-- That every overdue timer is automatically harmless.
-- That all clocks refer to the same time domain.
-- That the rendering frame rate decides reward eligibility.
+- Which clock source each timer reads after the process resumes.
+- Whether the timers are recreated from the save file or from memory.
+- How the overdue count is presented to the player.
+- Whether the catch-up work runs before or after the first rendered frame.
 > Decide what missed time means for each timer. Replaying every missed action without a limit can cause a long stall or apply actions that are no longer valid.
 
 ?? algorithms-fixed-determinism [tf] Using a fixed timestep alone guarantees bit-identical simulation on every platform.

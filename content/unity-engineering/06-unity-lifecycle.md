@@ -28,25 +28,59 @@ Instantiation has the same ordering risk. An active prefab can run lifecycle cal
 
 Script Execution Order can coordinate known script types, but a long ordering list can hide how the systems depend on each other. If one subsystem needs another to be ready, express that requirement in the startup sequence.
 
+The safe instantiation order is short enough to keep in your head:
+
+```csharp
+public Coin Spawn(CoinDefinition definition, ICollectionOperation collection)
+{
+    // The prefab's root is inactive, so no lifecycle callback has run yet.
+    var instance = Object.Instantiate(inactivePrefab, spawnPoint, Quaternion.identity);
+
+    var coin = instance.GetComponent<Coin>();
+    coin.Initialize(definition, collection, generation: nextGeneration++);
+
+    instance.SetActive(true);   // Awake, then OnEnable, then Start run from here.
+    return coin;
+}
+```
+
+`Initialize` runs before `Awake`, which is exactly why this order is safe and also what makes it easy to get wrong. The method cannot read anything `Awake` was going to cache. Write it so it only stores what it was given, and let `Awake` do its own work afterward.
+
+The callbacks themselves are easier to reason about as a table of guarantees rather than as a sequence, because the sequence depends on what else is in the scene:
+
+| Callback | Runs | Does not guarantee |
+| --- | --- | --- |
+| Constructor | On managed construction | Any serialized value or engine API is usable |
+| `Awake` | Once, when the instance becomes active | That any other object's `Awake` has run |
+| `OnEnable` | Every time the component is enabled | That dependencies assigned after `Instantiate` are set |
+| `Start` | Once, before the first update while enabled | That objects created later, or loaded asynchronously, exist |
+
+Read the right-hand column when a bug appears. Almost every initialization defect in a Unity project is an assumption from that column being treated as a guarantee.
+
+Exercise: For one prefab you spawn at runtime, write which of the four rows its dependencies actually need. If the answer is `Awake` and the caller assigns after `Instantiate`, you have found a latent ordering bug.
+
 ?? unity-awake-order Why is reading another component's initialized runtime state in `Awake` fragile?
 * The other object's `Awake` may not have run yet.
-- `Awake` always runs on a background thread.
-- Serialized references are forbidden in MonoBehaviours.
-- `Start` is guaranteed to run before every `Awake`.
+- `Awake` runs before serialized values are applied to the component.
+- Script Execution Order settings are ignored during `Awake`.
+- `Awake` runs on the loading thread rather than the main thread.
+- Reading another component in `Awake` forces a scene-wide search.
 > Another object's `Awake` may not have run yet. Initialize dependencies in an explicit order, and give callers a way to know when they are ready.
 
 ?+ A component's active prefab uses a dependency in OnEnable, but the factory assigns that dependency after Instantiate returns. What is the hazard?
 * OnEnable can execute before the factory's assignment.
-- Instantiate guarantees that all later factory assignments run first.
-- OnEnable cannot execute on an instantiated object.
-- A serialized reference automatically substitutes for any unassigned interface.
+- `Instantiate` defers activation to the end of the frame, so the assignment lands first.
+- The dependency is copied from the prefab asset, so the factory's value is ignored.
+- `OnEnable` runs twice on an instantiated object, so the second call sees the value.
+- The component stays disabled until `Start`, which runs after the factory returns.
 > An active prefab can run `OnEnable` before `Instantiate` returns. Supply the dependency beforehand, or keep the component from using it until initialization is complete.
 
 ?? unity-inactive-factory A factory instantiates an inactive prefab and calls `Initialize` before activation. What must `Initialize` account for?
 * `Awake` may not yet have run, so its cached fields may not exist.
-- `Start` has necessarily finished already.
-- Inactive objects cannot hold serialized references.
-- Activation automatically injects every interface dependency.
+- `OnEnable` has already run, so its subscriptions are in place.
+- Serialized references are cleared while the object is inactive.
+- The object's transform cannot be set until it is activated.
+- `Initialize` runs against a copy, so its assignments are lost on activation.
 > Keeping the prefab inactive delays callbacks. Its explicit initialization method must therefore work even if `Awake` has not run.
 
 ## Update, fixed simulation, and time domains {#unity-update-time}
@@ -70,11 +104,29 @@ Separate time domains:
 
 Setting `timeScale` to zero stops only the work that follows scaled time. Tasks, network callbacks, and unscaled animation may continue. Define what pause means for input, simulation, UI, and audio, then test each part.
 
+The mechanism behind that scheduling is an accumulator, and knowing it turns several confusing symptoms into one explanation:
+
+```text
+accumulator += min(deltaTime, maximumDeltaTime)
+while accumulator >= fixedDeltaTime:
+    accumulator -= fixedDeltaTime
+    run one FixedUpdate
+```
+
+The clamp in the first line is the part most worth knowing. Without it, a frame that took 2 seconds would queue enough fixed steps to make the next frame even slower, which would queue more steps again. Unity bounds the time fed into the accumulator with `Time.maximumDeltaTime`, whose default is one third of a second, so the catch-up work per frame has a ceiling.
+
+That ceiling has a consequence you should be able to state: under sustained load, simulation time falls behind real time rather than the game freezing. A physics object does not teleport to where it “should” be; it simply advanced fewer steps. For gameplay this is usually the behavior you want. For anything measured against a wall clock, such as a seasonal deadline, it is a reason not to derive that deadline from accumulated simulation time.
+
+The same reasoning explains why raising the target frame rate does not make physics more accurate, and why lowering `fixedDeltaTime` to 0.005 to “improve” collisions can make a heavily loaded scene worse: each rendered frame now has up to sixty-six fixed steps available to run before the clamp stops it.
+
+Exercise: With a fixed timestep of 0.02 and a frame that took 0.5 seconds, work out how many `FixedUpdate` calls run and how far simulation time now lags real time.
+
 ?? unity-fixed-frequency At a high rendering frame rate, how many `FixedUpdate` calls can occur in one rendered frame?
 * Zero, one, or more, according to accumulated simulation time.
-- Exactly one in every case.
-- Exactly the number of visible GameObjects.
-- None whenever the GPU is idle.
+- One, matched to each rendered frame.
+- One for each Rigidbody currently in the scene.
+- As many as the accumulated time requires, with no upper bound.
+- The rendering rate divided by the physics rate, rounded up.
 > Fixed updates follow the simulation interval, not a one-to-one correspondence with rendered frames.
 
 ?? unity-pause-policy [tf] Setting `Time.timeScale` to zero guarantees that all asynchronous operations and callbacks stop.
@@ -97,18 +149,36 @@ Serialize and validate required component references, or discover them locally o
 
 Keep an asset's `.meta` file with it when moving it under source control. That metadata contains its identity; losing it can create a new GUID and break references. When reviewing scene and prefab changes, check for missing scripts, unintended overrides, and unrelated asset edits.
 
+One controlled owner is easier to build than the guard people usually reach for. The common attempt is for each manager to check whether another already exists and destroy itself, which puts the creation rule inside every copy and still runs `Awake` on the duplicate before it dies. Prefer a bootstrap scene, or a single initialization entry point, that creates each persistent service exactly once and is the only place those objects appear:
+
+```text
+Boot scene loads.
+  Composition root creates the audio service, settings, and platform adapter.
+  Each is marked to survive scene changes, by that root and nowhere else.
+  The root loads the first gameplay scene.
+Gameplay scenes contain no persistent services, so no duplicate can be created.
+```
+
+The invariant is now structural: a duplicate cannot appear, because no other scene contains one to instantiate. That is a stronger position than detecting duplicates at runtime.
+
+Additive loading needs its shutdown order stated as deliberately as its load order. When two scenes are unloaded, decide which one owned the active camera, the audio listener, and the input bindings, and what happens to them in the gap before the next scene provides replacements. A frame with no audio listener or two of them is a common and confusing symptom whose cause is entirely in the teardown order.
+
+Exercise: List every persistent object in a project you know and name the single place each is created. Any object with two creation sites is a duplicate waiting for an unusual transition.
+
 ?? unity-persistent-manager Repeated scene transitions create multiple persistent audio managers. What is the architectural correction?
 * Give persistent service creation one controlled owner and handle duplicate creation explicitly.
-- Make every scene object persistent as well.
-- Rename the manager on every transition.
-- Delay creation by a random number of frames.
+- Have each manager destroy itself in `Awake` when it finds an existing instance.
+- Look the manager up by tag before creating one, and reuse whatever is found.
+- Keep a manager in every scene, so a transition always has one available.
+- Create the manager lazily, the first time audio is requested.
 > Keeping an object across scenes does not prevent another scene from creating a duplicate. Assign one owner to create and manage the persistent service.
 
 ?? unity-prefab-guid Why preserve an asset's `.meta` file when moving it?
 * It carries identity information used by Unity references.
-- It stores the current device frame rate.
-- It replaces the need for the actual asset.
-- It guarantees that every prefab override is intentional.
+- It records the asset's position in the Project window.
+- It holds a copy of the asset, used to restore it after a failed import.
+- It lists the scenes and prefabs that reference the asset.
+- It stores the modification time that source control compares against.
 > Keeping metadata preserves the asset GUID. Regenerating identity can disconnect scene and prefab references.
 
 ## Serialization is a data contract {#unity-serialization}
@@ -125,18 +195,44 @@ Validate content when it is authored and again when the build consumes it. Check
 
 Separate authored Unity data from player saves. Scenes and prefabs describe content shipped with the game. Player progress also needs versioning, migration, failure recovery, and a clear owner. Choosing a serializer does not supply those policies.
 
+The conversion from authored list to runtime lookup is worth writing once, because the validation is the point of it:
+
+```csharp
+public Dictionary<string, PowerUpDefinition> BuildCatalog(IReadOnlyList<Entry> entries)
+{
+    var catalog = new Dictionary<string, PowerUpDefinition>(entries.Count, StringComparer.Ordinal);
+    foreach (var entry in entries)
+    {
+        if (string.IsNullOrWhiteSpace(entry.Id))
+            throw new ContentException($"Entry {entry.name} has no id.");
+        if (catalog.ContainsKey(entry.Id))
+            throw new ContentException($"Duplicate id '{entry.Id}'.");
+        catalog.Add(entry.Id, entry.ToDefinition());
+    }
+    return catalog;
+}
+```
+
+Using `catalog[entry.Id] = ...` instead of the check and `Add` would make a duplicate ID silently keep the last entry. The author would see one of their two power-ups quietly stop existing, with nothing in the log to explain it. The explicit comparer matters for the same reason as in the equality section: an ID lookup must not depend on the device's language settings.
+
+Run this conversion where a failure is cheap. An import step or a build-time validation reports the problem to the author with the asset name attached. The same exception thrown during a player's run reports it to nobody useful.
+
+Exercise: Find one place in your project where authored data becomes a runtime lookup. Check what it does with a duplicate key, and whether anyone would notice.
+
 ?? unity-serialization-version A Unity 6.0 project needs an Inspector-authored dictionary-like catalog. What is a reliable starting approach?
 * Serialize supported entry data and build a validated runtime dictionary.
-- Assume every .NET collection is automatically supported by Unity 6.0 serialization.
-- Store progress in static fields and expect scene saves to preserve it.
-- Use display names as unvalidated unique keys.
+- Mark the dictionary field `SerializeField`, which enables dictionary support.
+- Keep the catalog in a static dictionary populated from a scene object.
+- Serialize the catalog as a list of lists, one per key group.
+- Apply `SerializeReference` to the dictionary so its entries keep their types.
 > Use the project's actual serialization rules. A supported entry list plus validation separates authoring representation from runtime lookup.
 
 ?? unity-field-migration Does `FormerlySerializedAs` automatically migrate an independently designed JSON player-save schema?
 * No; that schema needs its own migration contract.
-- Yes, including every remote service's records.
-- Yes, but only if the HUD is open.
-- No, because Unity cannot rename fields at all.
+- Yes, because the attribute rewrites any serialized field name it finds.
+- Yes, provided the JSON uses the same field names as the component.
+- Yes, once the save file is regenerated by the current build.
+- No, because the attribute applies to scene files rather than to fields.
 > The attribute concerns Unity-serialized field names. Other persistence formats have separate behavior and compatibility requirements.
 
 ## Destruction, Unity null, and cleanup {#unity-destruction}
@@ -153,25 +249,38 @@ Returning an object to a pool usually disables it for reuse, without destroying 
 
 Cleanup should be safe to repeat. If an explicit unbind is followed by `OnDisable`, the second call must not release an asset again or remove another owner's registration. Track which resources and registrations this owner still holds; a non-null reference alone is not enough.
 
+Two details about destruction timing complete the picture.
+
+`Destroy` is deferred, and Unity documents the delay as occurring after the current frame's update phase and before rendering. So within the rest of the method that called it, and within every callback that runs before that boundary, the object is still fully alive: components respond, `Update` may still run, and a comparison against null still reports the object as present. Code that calls `Destroy` and then assumes the object is gone is reading the next frame's state one frame early.
+
+`DestroyImmediate` removes the object at that line, and Unity's guidance is to treat it as editor tooling rather than a runtime shortcut. In play mode it can destroy an object while the engine or another script is still iterating the structure that contains it. If a runtime path seems to need it, the real requirement is usually that some other object should stop referring to the target now, which is a question about ownership and unsubscription rather than about destruction timing.
+
+Note that destroying a GameObject destroys its components and children, while destroying a component leaves the GameObject and its other components in place. Both appear in the same profiler entries and both produce a wrapper that compares equal to null, so state which one you intended when describing a cleanup path.
+
+Exercise: In a system you have written, find a `Destroy` call and name every object that still holds a reference to the target at the moment the call returns.
+
 ?? unity-null-semantics A destroyed Unity object still has a managed wrapper. Which check can report it as null using Unity's overloaded equality operator?
 * `obj == null` when resolved against a Unity object type.
-- Every `ReferenceEquals` call automatically.
-- Every interface comparison automatically.
-- Every null-conditional operator automatically.
+- `ReferenceEquals(obj, null)`, which the engine overrides for its object types.
+- `obj is null`, because pattern matching consults the declared type's operators.
+- `obj?.name`, which yields null once the engine object has been destroyed.
+- `object.Equals(obj, null)`, which dispatches to Unity's comparison.
 > Unity overloads equality for its object types. Ordinary reference identity and null-conditional behavior do not use the same engine-object validity test.
 
 ?+ An interface variable refers to a component whose native Unity object was destroyed. Why can an ordinary interface null check be misleading?
 * It can see a non-null managed reference without testing native-object validity.
-- Interface assignment always destroys the underlying object.
-- Destroyed components automatically become new objects.
-- Every interface comparison calls Unity's Object equality overload.
+- The interface reference is set to null when the engine object is destroyed.
+- Casting back to the component type clears the managed wrapper.
+- The check runs against a copy of the reference taken at assignment.
+- The interface call throws before the null check can run.
 > The variable's declared type determines which equality operator is used. An interface can still hold the managed wrapper after Unity has destroyed the engine object.
 
 ?? unity-pool-cleanup Why is `OnDestroy` alone insufficient for cleaning up a pooled projectile?
 * Returning it to the pool may disable and reuse it without destroying it.
-- Pooled objects can never subscribe to events.
-- Destruction always runs once per rendered frame.
-- Pooling removes every field automatically.
+- Disabling a GameObject raises `OnDestroy` on each of its components.
+- `OnDestroy` runs before the component's fields can be read.
+- A pooled object is destroyed and recreated on each checkout.
+- `OnDestroy` runs on the pool rather than on the object it manages.
 > Each use of a pooled object has its own lifetime. Clean it up when it returns to the pool, even though the GameObject remains allocated.
 
 ## Editor conveniences can hide production bugs {#unity-editor-vs-player}
@@ -186,16 +295,35 @@ Treat “works in Editor” as one part of validation. Also test on the target p
 
 For an interview story, explain the difference that made the bug difficult. “It only failed on the second Play Mode entry because a static event retained a previous subscriber” is more informative than “Unity was behaving strangely.” Show the reproduction, root cause, fix, and regression check.
 
+The reset hook mentioned above has a name worth carrying:
+
+```csharp
+[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+private static void ResetStatics()
+{
+    activeRun = null;
+    Changed = null;    // Clearing a static event drops subscribers from the last session.
+}
+```
+
+`SubsystemRegistration` runs early enough to be useful, before the first scene loads. Put the method on the type that owns the state, next to the fields it clears, so the reset is maintained by whoever adds the next static field. A single global reset routine that reaches into other types drifts out of date the first time someone adds a field and does not know the routine exists.
+
+The deeper point is that this hook is a repair, not a design. Each static field it has to clear is a piece of state with no owner and no lifetime. Where the state can instead live on an object the composition root creates at startup, the problem disappears: a new session constructs a new object, and there is nothing to reset. Reach for the attribute for the statics you cannot remove, and treat a growing reset method as a signal about ownership.
+
+Exercise: Turn off domain reload in a project you know, enter and exit play mode three times, and note the first thing that behaves differently on the second run. That behavior names your unowned state.
+
 ?? unity-domain-reload With domain reload disabled, which state needs deliberate reset?
 * Static fields and static event subscriptions that must start fresh.
-- Only the editor window size.
-- Every imported texture file on disk.
-- Nothing; entering Play Mode always reconstructs all managed state.
+- Serialized fields on scene components, which keep the values from the last session.
+- Instance fields on MonoBehaviours, which are reused between play sessions.
+- The scene hierarchy, which is not reloaded when the domain is skipped.
+- Compiled assemblies, which have to be reloaded before each session.
 > Disabling domain reload changes the usual reset behavior. Static state and registrations can survive between play sessions.
 
 ?? unity-player-validation Why test a reflection-heavy feature in the intended player build?
 * Backend and stripping behavior can differ from the Editor.
-- The Editor guarantees all possible player configurations.
-- Reflection only affects visual quality.
-- A successful C# compile proves all runtime types are retained.
+- Reflection is disabled in the Editor and enabled in player builds.
+- The Editor resolves types lazily, so a missing type surfaces later.
+- Player builds keep a separate reflection cache that has to be warmed.
+- Player builds resolve types on a worker thread, which changes the result.
 > Compilation success and Editor execution do not establish that a stripped target build contains every dynamically accessed type.
