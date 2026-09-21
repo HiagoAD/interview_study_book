@@ -5,6 +5,7 @@ The complete rules for writing study content. `npm run check` enforces them and 
 ## Files and books
 
 - Every `.md` file under `content/` (any subfolder) is a content file. Images sit next to the Markdown.
+- A file holds either chapters and sections or glossary entries, never both. `kind: glossary` in the front matter makes it a glossary file.
 - Files are read in path order (plain string sort of the relative path, so `B` sorts before `a`). Name them `01-caching.md`, `02-queues.md`.
 - A book is every file with the same `book:` title: one file or many. Books are listed by title. Its id is the title lowercased, accents removed, each run of other characters turned into `-`, dashes trimmed (`System Design` becomes `system-design`). Two different titles with the same id are an error.
 - Progress is stored under book id, section id and concept id. **Renaming a book title, a section id or a concept id loses that progress.** Titles of chapters and sections can change freely.
@@ -20,6 +21,7 @@ chapter: Caching
 
 - Line 1 is `---`, then `key: value` lines (blank lines ignored), then `---`. Values are literal text: no quotes, no YAML features.
 - `book` is required. `chapter` is optional; with it, the file starts inside that chapter. An unknown or repeated key, an empty value, or a value with no letter or digit (a-z, 0-9) is an error.
+- `kind` is optional and its only value is `glossary`. It cannot be set beside `chapter`, because a glossary file has no chapters.
 
 ## Structure
 
@@ -67,6 +69,54 @@ How they play, so write accordingly:
 - `multi` shows every `*` plus wrong ones up to `n`; it is right only for exactly the correct set.
 - Short answers ignore case and whitespace when compared; the reader can overrule a wrong verdict.
 - Use multiple choice mostly. A concept is one idea; progress and review are tracked per concept, and variants are different questions on it. The explanation shows on a wrong answer and on request after a right one, so it must stand alone.
+
+## Glossary files
+
+A file whose front matter says `kind: glossary` holds terms the book uses without stopping to define them. It has no chapters, no sections and no questions, and nothing in it is tested, unlocked or counted as progress. A book may have several glossary files, and their entries merge.
+
+````markdown
+---
+book: System Design
+kind: glossary
+---
+
+## Write-through cache {#write-through}
+= write through | write-through
+-> cache-eviction
+
+Every write goes to the cache and to the store together, so a read straight after a write never misses.
+
+The body continues here, with as many paragraphs, fences, tables and images as the entry needs.
+````
+
+- `## Term {#term-id}` starts an entry. Ids match `[a-z0-9]+(-[a-z0-9]+)*`, as section ids do, and the heading text is the term.
+- `= a | b` gives the term other names, split on `|` and trimmed. Several `=` lines are allowed.
+- `-> id | id` lists related entries, shown as "See also". Each is the id of another entry in the same book, and never the entry's own id. Several `->` lines are allowed.
+- Both markers sit directly under the heading, before any content. Blank lines between them are fine. Below the content they are ordinary text.
+- The **summary** is the first paragraph: from the first content line to the first blank line. It has to be one paragraph and at most 400 characters, because a preview card shows it whole. Everything after it is the **body**, which may be empty.
+- A code fence ends the summary even with no blank line before it, so a fence can never be part of one.
+- Every entry id and every `=` name, compared by their letters, is unique within a book. Glossary ids and section ids are separate, so a section and an entry may share an id.
+- Entries are listed by term, so file order decides nothing. Renaming an entry id only breaks the `[[...]]` links that point at it; no progress is stored against it.
+
+## Cross-references
+
+`[[...]]` links to a glossary entry or to another section of the same book. It works in section content, prompts, options, explanations, and glossary summaries and bodies. Hovering one shows a preview; clicking it opens the page.
+
+| Written | Links to | Shows |
+|---|---|---|
+| `[[write-through]]` | the entry with that id | write-through |
+| `[[write through]]` | the same entry, by one of its `=` names | write through |
+| `[[write-through \| writing through]]` | the same entry | writing through |
+| `[[#cache-eviction]]` | that section | the section's title |
+| `[[#cache-eviction \| evicting]]` | that section | evicting |
+
+- A target is found by its letters, so `[[Object Pool]]`, `[[object pool]]` and `[[object-pool]]` all reach the same entry.
+- What is shown is the text written before the `|`, or the whole target when there is no `|`. A section target with no `|` shows the section's title instead, since an id is not a phrase.
+- The words shown are plain text: no code spans, emphasis or math inside `[[...]]`.
+- A link opens and closes on one line and cannot contain `]`.
+- Errors: an unknown term or section id, a link to the entry or section it is written in, an empty target, a `|` with nothing after it, a `[[` that never closes, and a `[[...]]` inside a Markdown link.
+- Inside a code span or a code fence, `[[...]]` is ordinary text. That is how to show the brackets.
+- An entry's page lists the sections that link to it, counted once per section however often it appears there. A link written inside a glossary entry is not one of those places; `->` is what relates entries.
 
 ## Text
 
@@ -155,3 +205,7 @@ print(r + w > n)
 - A `# Title` line in content meant as a heading: it starts a chapter; use `###`.
 - `<br>`, `<details>`, `<img src="https://...">` or any other raw HTML: an error; use Markdown and local images.
 - The same chapter title in two files, or a section or concept id reused in another chapter: both must be unique in the book.
+- `[[strategies]]` when the entry id is `strategy`: add `= strategies` to the entry, or write `[[strategy | strategies]]`.
+- A summary of two paragraphs: the first blank line ends it, and everything after it is the body.
+- `=` or `->` written below the summary: they are markers only directly under the heading.
+- A `# Chapter` line, a `##` heading with no `{#id}`, or a `??` question inside a `kind: glossary` file.

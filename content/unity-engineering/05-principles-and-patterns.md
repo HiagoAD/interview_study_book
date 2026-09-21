@@ -70,7 +70,7 @@ Those separate policies need to be connected correctly. Assign an owner to each 
 
 Check whether a caller can use a subtype without special handling. Suppose an inventory contract promises to accept an item whenever capacity is available. A subtype that throws for ordinary items breaks that promise, unless rejection was already allowed by the contract.
 
-Choose inheritance for the relationship it expresses, rather than just to reuse a few lines. A helper function, contained object, or immutable value may share that code without tying two lifecycles together. Keep related logic together too: splitting one small algorithm into many strategies can make it harder to follow than a short conditional.
+Choose inheritance for the relationship it expresses, rather than just to reuse a few lines. A helper function, contained object, or immutable value may share that code without tying two lifecycles together. Keep related logic together too: splitting one small algorithm into many [[strategy|strategies]] can make it harder to follow than a short conditional.
 
 Unity already supports composition through the components attached to a GameObject. Those components still need clear boundaries. If each one reaches into the others' mutable fields, changing any component may affect the whole group.
 
@@ -174,9 +174,9 @@ A design pattern describes an arrangement of responsibilities and its tradeoffs.
 
 | Pattern | Gameplay use | Cost or misuse |
 | --- | --- | --- |
-| Strategy | Swap an aim or reward-selection policy | Indirection for a trivial fixed rule |
-| State | Encapsulate behavior for run phases | Many classes for three simple transitions |
-| Observer | Notify UI and audio of committed facts | Hidden order, retention, and reentrancy |
+| [[Strategy]] | Swap an aim or reward-selection policy | Indirection for a trivial fixed rule |
+| [[State]] | Encapsulate behavior for run phases | Many classes for three simple transitions |
+| [[Observer]] | Notify UI and audio of committed facts | Hidden order, retention, and reentrancy |
 | Command | Represent a player intent for queuing or replay | Assuming every command can be undone |
 | Factory | Create a valid object graph or pool lease | A global factory that knows every subsystem |
 | Adapter | Translate a platform SDK to a game-owned contract | Leaking SDK types through the boundary |

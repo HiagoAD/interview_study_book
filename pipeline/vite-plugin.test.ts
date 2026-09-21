@@ -77,6 +77,7 @@ test('serialize leaves nothing that could end or confuse an inline script, and t
     {
       id: 'b',
       title: 'A <b> book </script>',
+      glossary: [],
       chapters: [
         {
           id: 'c',

@@ -13,4 +13,10 @@ if (errors.length > 0) {
   const totals = summarize(books)
   console.log('content OK')
   for (const [name, count] of Object.entries(totals)) console.log(`  ${name.padEnd(9)} ${count}`)
+
+  // Not an error: an entry can be worth having and only ever reached from the glossary page.
+  const unlinked = books.flatMap((book) => book.glossary.filter((entry) => entry.uses.length === 0).map((entry) => `${book.id}/${entry.id}`))
+  if (unlinked.length > 0) {
+    console.log(`\nnothing links to ${unlinked.length} ${unlinked.length === 1 ? 'entry' : 'entries'}: ${unlinked.join(', ')}`)
+  }
 }

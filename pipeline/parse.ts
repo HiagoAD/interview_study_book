@@ -42,10 +42,26 @@ export interface RawChapter {
   sections: RawSection[]
 }
 
+/** One glossary entry: a term, the other names it goes by, its one-paragraph summary and the rest of it. */
+export interface RawEntry {
+  id: string
+  term: string
+  line: number
+  /** The file it was written in, so renderers resolve its images from there. */
+  file: string
+  names: { text: string; line: number }[]
+  see: { id: string; line: number }[]
+  summary: Text
+  /** Empty when the entry is only a summary. */
+  body: Text
+}
+
 export interface RawFile {
   path: string
   book: { title: string; line: number } | null
+  /** A file holds chapters or glossary entries, never both: `kind: glossary` decides which. */
   chapters: RawChapter[]
+  entries: RawEntry[]
 }
 
 export interface ContentError {
@@ -83,6 +99,10 @@ const VARIANT_LINE = /^\?\+(?:[ \t]+(.*))?$/
 const OPTION_LINE = /^([*-])(?:[ \t]+(.*))?$/
 const ACCEPT_LINE = /^=(?:[ \t]+(.*))?$/
 const EXPLAIN_LINE = /^>(?:[ \t](.*))?$/
+const SEE_LINE = /^->(?:[ \t](.*))?$/
+
+/** The longest a summary may be, in Markdown characters, because a preview card shows it whole. */
+export const SUMMARY_LIMIT = 400
 
 function clip(text: string, max = 60): string {
   const trimmed = text.trim()
@@ -109,6 +129,18 @@ function findFenceEnd(lines: string[], from: number, fence: Fence): number {
   return -1
 }
 
+/** Consumes the fence opened at line index `from`, copying its lines to `sink`. `closed` is false when it never ends. */
+function takeFence(lines: string[], from: number, fence: Fence, sink: string[] | null, err: Report): { next: number; closed: boolean } {
+  const end = findFenceEnd(lines, from, fence)
+  if (end < 0) {
+    err(from + 1, `the code fence opened here is never closed: end it with a line containing only ${fence.char.repeat(fence.len)} (a longer run also works)`)
+    sink?.push(...lines.slice(from))
+    return { next: lines.length, closed: false }
+  }
+  sink?.push(...lines.slice(from, end + 1))
+  return { next: end + 1, closed: true }
+}
+
 /** Joins lines into one Markdown chunk without blank lines at either end; `line` follows the first kept line. */
 function block(lines: string[], firstLine: number): Text {
   let start = 0
@@ -121,11 +153,15 @@ function block(lines: string[], firstLine: number): Text {
 interface FrontMatter {
   book: { title: string; line: number } | null
   chapter: { title: string; line: number } | null
+  /** `kind: glossary`: the file holds glossary entries instead of chapters. */
+  glossary: boolean
+  /** A `kind` that is not understood: what the body holds is anyone's guess, so it is not read. */
+  unknownKind: boolean
   bodyStart: number
 }
 
 function parseFrontMatter(lines: string[], err: Report): FrontMatter {
-  const result: FrontMatter = { book: null, chapter: null, bodyStart: 0 }
+  const result: FrontMatter = { book: null, chapter: null, glossary: false, unknownKind: false, bodyStart: 0 }
   if (lines[0].trim() !== '---') {
     err(1, 'front matter is required: the first line must be "---", then "book: <title>", then a closing "---"')
     return result
@@ -148,8 +184,8 @@ function parseFrontMatter(lines: string[], err: Report): FrontMatter {
       err(i + 1, `expected "key: value" in the front matter, got "${clip(text)}"`)
       continue
     }
-    if (key !== 'book' && key !== 'chapter') {
-      err(i + 1, `unknown front matter key "${key}": the only keys are "book" (required) and "chapter" (optional)`)
+    if (key !== 'book' && key !== 'chapter' && key !== 'kind') {
+      err(i + 1, `unknown front matter key "${key}": the only keys are "book" (required), "chapter" and "kind" (optional)`)
       continue
     }
     if (seen.has(key)) {
@@ -160,6 +196,13 @@ function parseFrontMatter(lines: string[], err: Report): FrontMatter {
     const value = text.slice(colon + 1).trim()
     if (!value) {
       err(i + 1, `front matter key "${key}" has no value: write "${key}: <title>"`)
+    } else if (key === 'kind') {
+      if (value === 'glossary') {
+        result.glossary = true
+      } else {
+        result.unknownKind = true
+        err(i + 1, `unknown kind "${value}": the only kind is "glossary", which makes the file a glossary; leave "kind" out for a file of chapters and sections`)
+      }
     } else if (!slug(value)) {
       err(i + 1, `"${key}" needs at least one letter or digit (a-z, 0-9), because its id is made from it`)
     } else {
@@ -167,6 +210,9 @@ function parseFrontMatter(lines: string[], err: Report): FrontMatter {
     }
   }
   if (!seen.has('book')) err(1, 'front matter is missing "book": add "book: <book title>"')
+  if (result.glossary && result.chapter) {
+    err(result.chapter.line, 'a glossary file has no chapters, so "chapter" cannot be set beside "kind: glossary": remove whichever of the two is wrong')
+  }
   return result
 }
 
@@ -238,21 +284,31 @@ function parseMarker(kind: '??' | '?+', rest: string, line: number, err: Report)
   return { id, type, n: n ?? 4, prompt: text }
 }
 
-function parseSectionHeading(rest: string, line: number, err: Report): { id: string; title: string } | null {
+/** What a `##` heading starts, so one parser can serve sections and glossary entries and name each in its messages. */
+interface HeadingKind {
+  noun: string
+  form: string
+  idName: string
+}
+
+const SECTION_HEADING: HeadingKind = { noun: 'section', form: '## Section title {#section-id}', idName: 'section-id' }
+const ENTRY_HEADING: HeadingKind = { noun: 'glossary entry', form: '## Term {#term-id}', idName: 'term-id' }
+
+function parseHeading(rest: string, line: number, err: Report, kind: HeadingKind): { id: string; title: string } | null {
   const match = /^(.*?)[ \t]*\{#([^{}]*)\}$/.exec(rest)
   const title = (match ? match[1] : rest).trim()
   if (!title) {
-    err(line, match ? 'the section heading has no title: write "## Section title {#section-id}"' : 'the section heading is empty: write "## Section title {#section-id}"')
+    err(line, `the ${kind.noun} heading ${match ? 'has no title' : 'is empty'}: write "${kind.form}"`)
     return null
   }
-  const suggestion = (id: string) => `## ${title} {#${id || 'section-id'}}`
+  const suggestion = (id: string) => `## ${title} {#${id || kind.idName}}`
   if (!match) {
-    err(line, `the section heading has no id: write "${suggestion(slug(title))}"`)
+    err(line, `the ${kind.noun} heading has no id: write "${suggestion(slug(title))}"`)
     return null
   }
   const id = match[2]
   if (!ID_PATTERN.test(id)) {
-    err(line, `invalid section id "${id}": use lowercase letters, digits and single hyphens; write "${suggestion(slug(id) || slug(title))}"`)
+    err(line, `invalid ${kind.noun} id "${id}": use lowercase letters, digits and single hyphens; write "${suggestion(slug(id) || slug(title))}"`)
     return null
   }
   return { id, title }
@@ -297,6 +353,160 @@ interface ChapterState {
   sawSection: boolean
 }
 
+interface EntryDraft {
+  node: RawEntry
+  phase: 'header' | 'summary' | 'body'
+  summaryLines: string[]
+  summaryFirst: number
+  bodyLines: string[]
+  bodyFirst: number
+}
+
+/**
+ * Parses the body of a `kind: glossary` file: `## Term {#term-id}` headings, each with optional `=` and
+ * `->` lines, then a summary paragraph and an optional body. The summary is the run of lines up to the
+ * first blank line, so where the writer put that line decides what a preview card shows.
+ */
+function parseGlossaryBody(path: string, lines: string[], bodyStart: number, err: Report): RawEntry[] {
+  const entries: RawEntry[] = []
+  // `as` keeps TypeScript from narrowing this to `null`: the nested functions below reassign it.
+  let draft = null as EntryDraft | null
+  let gapReported = false
+  // An unclosed fence swallows the rest of the file, so later checks would only echo that error.
+  let truncated = false
+
+  function eat(i: number, fence: Fence, sink: string[] | null): number {
+    const taken = takeFence(lines, i, fence, sink, err)
+    if (!taken.closed) truncated = true
+    return taken.next
+  }
+
+  function finishEntry(): void {
+    const d = draft
+    draft = null
+    if (!d) return
+    d.node.summary = block(d.summaryLines, d.summaryFirst)
+    d.node.body = block(d.bodyLines, d.bodyFirst)
+    if (truncated) return
+    if (!d.node.summary.md) {
+      err(d.node.line, 'this entry has no summary: write one paragraph directly under the heading, because that paragraph is what a preview card shows')
+    } else if (d.node.summary.md.length > SUMMARY_LIMIT) {
+      err(
+        d.node.summary.line,
+        `the summary is ${d.node.summary.md.length} characters, over the limit of ${SUMMARY_LIMIT}: a preview card shows it whole, so shorten it and move the detail into the body, below a blank line`,
+      )
+    }
+  }
+
+  function startEntry(rest: string, line: number): void {
+    finishEntry()
+    const heading = parseHeading(rest, line, err, ENTRY_HEADING)
+    const node: RawEntry = {
+      id: heading?.id ?? '',
+      term: heading?.title ?? '',
+      line,
+      file: path,
+      names: [],
+      see: [],
+      summary: { md: '', line: line + 1 },
+      body: { md: '', line: line + 1 },
+    }
+    if (heading) entries.push(node)
+    draft = { node, phase: 'header', summaryLines: [], summaryFirst: line + 1, bodyLines: [], bodyFirst: line + 1 }
+  }
+
+  function addNames(d: EntryDraft, rest: string, line: number): void {
+    const names = rest.split('|').map((name) => name.trim()).filter(Boolean)
+    if (names.length === 0) err(line, 'the "=" line has no names: write "= other name | another name", or remove the line')
+    for (const text of names) {
+      if (slug(text)) d.node.names.push({ text, line })
+      else err(line, `the name "${text}" needs at least one letter or digit (a-z, 0-9), because a "[[...]]" link finds a term by its letters`)
+    }
+  }
+
+  function addSee(d: EntryDraft, rest: string, line: number): void {
+    const ids = rest.split('|').map((id) => id.trim()).filter(Boolean)
+    if (ids.length === 0) err(line, 'the "->" line has no entries: write "-> entry-id | another-id", or remove the line')
+    for (const id of ids) {
+      if (ID_PATTERN.test(id)) d.node.see.push({ id, line })
+      else err(line, `invalid entry id "${id}" after "->": use the id from the other entry's heading, such as "${slug(id) || 'object-pool'}"`)
+    }
+  }
+
+  /** Everything from here on belongs to the body, whatever ended the summary. */
+  function toBody(d: EntryDraft, line: number): void {
+    if (d.phase === 'body') return
+    d.phase = 'body'
+    d.bodyFirst = line
+  }
+
+  let i = bodyStart
+  while (i < lines.length) {
+    const text = lines[i]
+    const line = i + 1
+
+    if (CHAPTER_LINE.test(text)) {
+      err(line, 'a glossary file has no chapters: every entry is a "## Term {#term-id}" heading, so remove this "#" line, or move the text to a file without "kind: glossary"')
+      i++
+      continue
+    }
+    const heading = SECTION_LINE.exec(text)
+    if (heading) {
+      startEntry(heading[1] ?? '', line)
+      i++
+      continue
+    }
+    if (CONCEPT_LINE.test(text) || VARIANT_LINE.test(text)) {
+      err(line, 'a glossary entry has no questions: "??" and "?+" belong in a file of chapters and sections, not in one with "kind: glossary"')
+      i++
+      continue
+    }
+
+    const d = draft
+    const fence = openFence(text)
+    if (!d) {
+      if (text.trim() !== '' && !gapReported) {
+        gapReported = true
+        err(line, 'text before the first entry is not allowed: start an entry with "## Term {#term-id}" and put the text under it')
+      }
+      i = fence ? eat(i, fence, null) : i + 1
+      continue
+    }
+    if (fence) {
+      toBody(d, line)
+      i = eat(i, fence, d.bodyLines)
+      continue
+    }
+    if (text.trim() === '') {
+      if (d.phase === 'summary') toBody(d, line)
+      if (d.phase === 'body') d.bodyLines.push(text)
+      i++
+      continue
+    }
+    if (d.phase === 'header') {
+      const names = ACCEPT_LINE.exec(text)
+      if (names) {
+        addNames(d, names[1] ?? '', line)
+        i++
+        continue
+      }
+      const see = SEE_LINE.exec(text)
+      if (see) {
+        addSee(d, see[1] ?? '', line)
+        i++
+        continue
+      }
+      d.phase = 'summary'
+      d.summaryFirst = line
+    }
+    if (d.phase === 'summary') d.summaryLines.push(text)
+    else d.bodyLines.push(text)
+    i++
+  }
+  finishEntry()
+  return entries
+}
+
 /**
  * Parses one content file. Never throws on bad content: problems come back as errors, and the
  * returned model is best-effort, so callers must not use it when `errors` is not empty.
@@ -308,6 +518,18 @@ export function parseContentFile(path: string, source: string): ParseResult {
   }
   const lines = source.replace(/^﻿/, '').split(/\r?\n/)
   const front = parseFrontMatter(lines, err)
+
+  // Reading the body would only pile guesses on top of the one real error, which names the key to fix.
+  if (front.unknownKind) return { file: { path, book: front.book, chapters: [], entries: [] }, errors }
+
+  if (front.glossary) {
+    const entries = parseGlossaryBody(path, lines, front.bodyStart, err)
+    if (entries.length === 0 && errors.length === 0) {
+      err(1, 'this glossary file has no entries: add "## Term {#term-id}" headings, each with a summary paragraph under it')
+    }
+    errors.sort((a, b) => a.line - b.line)
+    return { file: { path, book: front.book, chapters: [], entries }, errors }
+  }
 
   const chapters: RawChapter[] = []
   // `as` keeps TypeScript from narrowing these to `null`: the nested functions below reassign them.
@@ -321,15 +543,9 @@ export function parseContentFile(path: string, source: string): ParseResult {
 
   /** Consumes the fence opened at line index `i`, copying its lines to `sink`; returns the next index. */
   function consumeFence(i: number, fence: Fence, sink: string[] | null): number {
-    const end = findFenceEnd(lines, i, fence)
-    if (end < 0) {
-      err(i + 1, `the code fence opened here is never closed: end it with a line containing only ${fence.char.repeat(fence.len)} (a longer run also works)`)
-      truncated = true
-      sink?.push(...lines.slice(i))
-      return lines.length
-    }
-    sink?.push(...lines.slice(i, end + 1))
-    return end + 1
+    const taken = takeFence(lines, i, fence, sink, err)
+    if (!taken.closed) truncated = true
+    return taken.next
   }
 
   function gapError(line: number): void {
@@ -369,7 +585,7 @@ export function parseContentFile(path: string, source: string): ParseResult {
 
   function startSection(rest: string, line: number): void {
     gapReported = false
-    const heading = parseSectionHeading(rest, line, err)
+    const heading = parseHeading(rest, line, err, SECTION_HEADING)
     const node: RawSection = {
       id: heading?.id ?? '',
       title: heading?.title ?? '',
@@ -573,5 +789,5 @@ export function parseContentFile(path: string, source: string): ParseResult {
     err(1, 'the file has no sections: add "# Chapter title" and "## Title {#section-id}" after the front matter')
   }
   errors.sort((a, b) => a.line - b.line)
-  return { file: { path, book: front.book, chapters }, errors }
+  return { file: { path, book: front.book, chapters, entries: [] }, errors }
 }

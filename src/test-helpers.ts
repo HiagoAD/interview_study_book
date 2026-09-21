@@ -2,7 +2,7 @@ import { vi } from 'vitest'
 import type { ConceptRecord, ProgressRecords, SectionRecord } from './engine/records'
 import { emptyConceptRecord, emptySectionRecord } from './engine/records'
 import type { ChoiceVariant } from './engine/sampling'
-import type { Book, Chapter, Concept, Section, Variant } from './types/content'
+import type { Book, Chapter, Concept, GlossaryEntry, Section, Variant } from './types/content'
 
 /** A repeatable Rng (mulberry32): the same seed gives the same sequence. */
 export function seededRng(seed: number): () => number {
@@ -61,8 +61,12 @@ export function chapter(id: string, sections: Section[]): Chapter {
   return { id, title: id, sections }
 }
 
-export function book(id: string, chapters: Chapter[]): Book {
-  return { id, title: id, chapters }
+export function book(id: string, chapters: Chapter[], glossary: GlossaryEntry[] = []): Book {
+  return { id, title: id, chapters, glossary }
+}
+
+export function entry(id: string, over: Partial<GlossaryEntry> = {}): GlossaryEntry {
+  return { id, term: id, names: [], summary: `<p>${id}</p>`, html: '', see: [], uses: [], ...over }
 }
 
 // Record builders

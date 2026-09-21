@@ -125,7 +125,7 @@ test('summarize counts books, chapters, sections, concepts and variants', () => 
     { path: 'content/a.md', text: file('A', 'One', ...section('s1'), ...section('s2'), '?+ Another?', '* r', '- w', '> b') },
     { path: 'content/b.md', text: file('B', 'One', ...section('s1', 'x')) },
   ])
-  expect(summarize(books)).toEqual({ books: 2, chapters: 2, sections: 3, concepts: 3, variants: 4 })
+  expect(summarize(books)).toEqual({ books: 2, chapters: 2, sections: 3, concepts: 3, variants: 4, terms: 0, links: 0 })
 })
 
 const tempRoots: string[] = []

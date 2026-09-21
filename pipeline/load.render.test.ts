@@ -115,6 +115,7 @@ test('the rendered books have HTML in every field but titles, ids and accepted a
     {
       id: 'shape',
       title: 'Shape',
+      glossary: [],
       chapters: [
         {
           id: 'one',

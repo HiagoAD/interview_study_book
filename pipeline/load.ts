@@ -1,16 +1,17 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import type { Dirent } from 'node:fs'
 import path from 'node:path'
-import type { Book, Chapter, Concept, Section, Variant } from '../src/types/content.ts'
+import type { Book, Chapter, Concept, GlossaryEntry, Section, SectionUse, Variant } from '../src/types/content.ts'
 import { parseContentFile, slug } from './parse.ts'
-import type { ContentError, RawChapter, RawFile, RawVariant, Text } from './parse.ts'
-import { renderMarkdown, renderOption } from './render.ts'
-import type { Rendered } from './render.ts'
+import type { ContentError, RawChapter, RawEntry, RawFile, RawVariant, Text } from './parse.ts'
+import { isOneParagraph, renderMarkdown, renderOption } from './render.ts'
+import type { LinkContext, Rendered, SectionTarget, TermTarget } from './render.ts'
 
 export interface RawBook {
   id: string
   title: string
   chapters: RawChapter[]
+  entries: RawEntry[]
 }
 
 /** The result of parsing and assembling, before anything is rendered. */
@@ -36,6 +37,9 @@ export interface Totals {
   sections: number
   concepts: number
   variants: number
+  terms: number
+  /** Section-to-term links, counted once per section, which is what an entry's "where this appears" lists. */
+  links: number
 }
 
 const byString = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
@@ -91,11 +95,31 @@ export function assembleBooks(sources: Source[]): AssembleResult {
   const books: RawBook[] = []
   for (const [id, group] of groups) {
     const chapters: RawChapter[] = []
+    const entries: RawEntry[] = []
+    // An entry id and every "=" name share one namespace, because `[[...]]` looks a term up by either.
+    const nameAt = new Map<string, { term: string; at: string }>()
     const chapterAt = new Map<string, { title: string; at: string }>()
     const sectionAt = new Map<string, string>()
     const conceptAt = new Map<string, string>()
 
     for (const file of group.files) {
+      for (const entry of file.entries) {
+        entries.push(entry)
+        for (const name of [{ text: entry.id, line: entry.line }, ...entry.names]) {
+          const key = slug(name.text)
+          const first = nameAt.get(key)
+          if (first) {
+            errors.push({
+              file: file.path,
+              line: name.line,
+              message: `"${name.text}" already names the glossary entry "${first.term}" (${first.at}): an entry id and every "=" name must be unique within a book, because a "[[...]]" link finds a term by them`,
+            })
+          } else {
+            nameAt.set(key, { term: entry.term, at: `${file.path}:${entry.line}` })
+          }
+        }
+      }
+
       for (const chapter of file.chapters) {
         const first = chapterAt.get(chapter.id)
         if (first) {
@@ -136,7 +160,22 @@ export function assembleBooks(sources: Source[]): AssembleResult {
         }
       }
     }
-    books.push({ id, title: group.title, chapters })
+    const entryIds = new Set(entries.map((entry) => entry.id))
+    for (const entry of entries) {
+      for (const see of entry.see) {
+        if (see.id === entry.id) {
+          errors.push({ file: entry.file, line: see.line, message: `"-> ${see.id}" points at this entry itself: "->" lists other entries, so remove it` })
+        } else if (!entryIds.has(see.id)) {
+          errors.push({
+            file: entry.file,
+            line: see.line,
+            message: `no glossary entry has the id "${see.id}": "->" takes the id from another entry's heading, and it has to be in this book`,
+          })
+        }
+      }
+    }
+
+    books.push({ id, title: group.title, chapters, entries })
   }
 
   books.sort((a, b) => a.title.localeCompare(b.title, 'en'))
@@ -150,10 +189,36 @@ export function assembleBooks(sources: Source[]): AssembleResult {
  * never throws on bad content: `books` is best-effort when there are errors, and a chunk that
  * failed has empty HTML.
  */
+/** Every id and "=" name of the book's entries, slugged, all pointing at their entry. */
+function termIndex(book: RawBook): Map<string, TermTarget> {
+  const terms = new Map<string, TermTarget>()
+  for (const entry of book.entries) {
+    const target = { id: entry.id, term: entry.term }
+    // Ids are already slugs. A duplicate name was reported while assembling, so the last one may win here.
+    terms.set(entry.id, target)
+    for (const name of entry.names) terms.set(slug(name.text), target)
+  }
+  return terms
+}
+
+/** The book's sections by id, with the chapter each sits in, because a section's route needs both. */
+function sectionIndex(book: RawBook): Map<string, SectionTarget> {
+  const sections = new Map<string, SectionTarget>()
+  for (const chapter of book.chapters) {
+    for (const section of chapter.sections) {
+      if (!sections.has(section.id)) sections.set(section.id, { chapter: chapter.id, title: section.title })
+    }
+  }
+  return sections
+}
+
 export async function renderBooks(rawBooks: RawBook[], root: string, dir = 'content'): Promise<LoadResult> {
   const errors: ContentError[] = []
-  const collect = ({ html, errors: found }: Rendered) => {
+  // Where the entries linked from the chunk being rendered land. Reset per section, and read once it is done.
+  let sink: string[] = []
+  const collect = ({ html, errors: found, refs }: Rendered) => {
     errors.push(...found)
+    sink.push(...refs)
     return html
   }
 
@@ -177,14 +242,25 @@ export async function renderBooks(rawBooks: RawBook[], root: string, dir = 'cont
 
   const books: Book[] = []
   for (const rawBook of rawBooks) {
+    const terms = termIndex(rawBook)
+    const sectionsById = sectionIndex(rawBook)
+    const links = (kind: 'section' | 'entry', id: string): LinkContext => ({
+      bookId: rawBook.id,
+      terms,
+      sections: sectionsById,
+      self: { kind, id },
+    })
+    const uses = new Map<string, SectionUse[]>()
+
     const chapters: Chapter[] = []
     for (const rawChapter of rawBook.chapters) {
-      const context = { root, dir, file: rawChapter.file }
-      const block = async (text: Text) => collect(await renderMarkdown(text, context))
-      const option = async (text: Text) => collect(await renderOption(text, context))
-
       const sections: Section[] = []
       for (const rawSection of rawChapter.sections) {
+        const context = { root, dir, file: rawChapter.file, links: links('section', rawSection.id) }
+        const block = async (text: Text) => collect(await renderMarkdown(text, context))
+        const option = async (text: Text) => collect(await renderOption(text, context))
+
+        sink = []
         const html = await block(rawSection.content)
         const concepts: Concept[] = []
         for (const rawConcept of rawSection.concepts) {
@@ -192,11 +268,45 @@ export async function renderBooks(rawBooks: RawBook[], root: string, dir = 'cont
           for (const rawVariant of rawConcept.variants) variants.push(await renderVariant(rawVariant, block, option))
           concepts.push({ id: rawConcept.id, variants })
         }
+        // One section that names a term three times is one place it appears, so each entry is listed once.
+        for (const entryId of new Set(sink)) {
+          const seen = uses.get(entryId) ?? []
+          seen.push({ chapter: rawChapter.id, section: rawSection.id })
+          uses.set(entryId, seen)
+        }
         sections.push({ id: rawSection.id, title: rawSection.title, html, concepts })
       }
       chapters.push({ id: rawChapter.id, title: rawChapter.title, sections })
     }
-    books.push({ id: rawBook.id, title: rawBook.title, chapters })
+
+    // After the chapters, so every entry knows the sections that reached it.
+    const glossary: GlossaryEntry[] = []
+    for (const rawEntry of rawBook.entries) {
+      const context = { root, dir, file: rawEntry.file, links: links('entry', rawEntry.id) }
+      // Links between entries are what "->" is for, so nothing an entry says counts as a place it appears.
+      sink = []
+      const summary = collect(await renderMarkdown(rawEntry.summary, context))
+      const html = rawEntry.body.md ? collect(await renderMarkdown(rawEntry.body, context)) : ''
+      if (summary && !isOneParagraph(summary)) {
+        errors.push({
+          file: rawEntry.file,
+          line: rawEntry.summary.line,
+          message: 'the summary must be one paragraph, because a preview card shows it whole: move the list, table, code block or second paragraph into the body, below a blank line',
+        })
+      }
+      glossary.push({
+        id: rawEntry.id,
+        term: rawEntry.term,
+        names: rawEntry.names.map((name) => name.text),
+        summary,
+        html,
+        see: rawEntry.see.map((see) => see.id),
+        uses: uses.get(rawEntry.id) ?? [],
+      })
+    }
+    glossary.sort((a, b) => a.term.localeCompare(b.term, 'en'))
+
+    books.push({ id: rawBook.id, title: rawBook.title, chapters, glossary })
   }
   return { books, errors: errors.sort(byLocation) }
 }
@@ -218,11 +328,16 @@ export async function loadContent(root: string, dir = 'content'): Promise<LoadRe
 /** Anything with the book shape: raw books from the parser and rendered books count alike. */
 interface Countable {
   chapters: { sections: { concepts: { variants: unknown[] }[] }[] }[]
+  /** A rendered book carries `glossary`; a raw one carries `entries`, which has no backlinks yet. */
+  glossary?: { uses: unknown[] }[]
+  entries?: unknown[]
 }
 
 export function summarize(books: Countable[]): Totals {
-  const totals: Totals = { books: books.length, chapters: 0, sections: 0, concepts: 0, variants: 0 }
+  const totals: Totals = { books: books.length, chapters: 0, sections: 0, concepts: 0, variants: 0, terms: 0, links: 0 }
   for (const book of books) {
+    totals.terms += book.glossary?.length ?? book.entries?.length ?? 0
+    for (const entry of book.glossary ?? []) totals.links += entry.uses.length
     totals.chapters += book.chapters.length
     for (const chapter of book.chapters) {
       totals.sections += chapter.sections.length

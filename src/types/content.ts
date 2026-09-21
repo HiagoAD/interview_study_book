@@ -6,6 +6,29 @@ export interface Book {
   id: string
   title: string
   chapters: Chapter[]
+  /** Terms the book uses without defining them, ordered by term. Outside the reading order: nothing tests them. */
+  glossary: GlossaryEntry[]
+}
+
+export interface GlossaryEntry {
+  id: string
+  /** Plain text, as written in the heading. */
+  term: string
+  /** Plain text: the other names the term goes by, which `[[...]]` also resolves. */
+  names: string[]
+  /** One paragraph of HTML. A preview card shows this whole, so it is short by rule. */
+  summary: string
+  /** The rest of the entry, as HTML; empty when the entry is only a summary. */
+  html: string
+  /** Ids of related entries, shown as "See also". */
+  see: string[]
+  /** The sections that link here, in content order. */
+  uses: SectionUse[]
+}
+
+export interface SectionUse {
+  chapter: string
+  section: string
 }
 
 export interface Chapter {

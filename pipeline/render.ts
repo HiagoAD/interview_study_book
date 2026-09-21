@@ -12,9 +12,10 @@ import { bundledLanguages, createHighlighter, isSpecialLang } from 'shiki'
 import type { BundledLanguage, Highlighter } from 'shiki'
 import { unified } from 'unified'
 import type { Plugin } from 'unified'
-import { visit } from 'unist-util-visit'
+import { SKIP, visit } from 'unist-util-visit'
 import { VFile } from 'vfile'
-import type { Definition, Image, Root as MdastRoot } from 'mdast'
+import type { Definition, Image, Link, PhrasingContent, Root as MdastRoot, Text as MdastText } from 'mdast'
+import { slug } from './parse.ts'
 import type { ContentError, Text } from './parse.ts'
 
 /** Image types that can be inlined, by file extension. */
@@ -29,6 +30,27 @@ export const IMAGE_TYPES: Readonly<Record<string, string>> = {
 
 const THEMES = { light: 'github-light', dark: 'github-dark' } as const
 
+export interface TermTarget {
+  id: string
+  term: string
+}
+
+export interface SectionTarget {
+  chapter: string
+  title: string
+}
+
+/** What a `[[...]]` link resolves against: one book's terms and sections, and what is being rendered. */
+export interface LinkContext {
+  bookId: string
+  /** Every entry id and other name of the book, slugged, so `[[Object Pool]]` and `[[object-pool]]` agree. */
+  terms: ReadonlyMap<string, TermTarget>
+  /** The book's sections, by the id on their heading. */
+  sections: ReadonlyMap<string, SectionTarget>
+  /** What this chunk belongs to, so a link to itself can be rejected. */
+  self: { kind: 'section' | 'entry'; id: string } | null
+}
+
 export interface RenderContext {
   /** Absolute path of the repo root. */
   root: string
@@ -36,11 +58,21 @@ export interface RenderContext {
   dir: string
   /** The Markdown file the text came from, relative to `root`. */
   file: string
+  /** Left out only where no `[[...]]` link can appear; without it every such link is an error. */
+  links?: LinkContext
 }
 
 export interface Rendered {
   html: string
   errors: ContentError[]
+  /** Ids of the glossary entries this chunk links to, in order, with repeats. */
+  refs: string[]
+}
+
+/** True when `html` is exactly one paragraph, which is what a glossary summary has to be. */
+export function isOneParagraph(html: string): boolean {
+  const trimmed = html.trim()
+  return trimmed.startsWith('<p>') && trimmed.endsWith('</p>') && !trimmed.slice(3, -4).includes('</p>')
 }
 
 /** What the plugins need to know about the chunk being rendered. The processor is shared, so it travels on the VFile. */
@@ -52,6 +84,9 @@ interface ChunkContext {
   contentDir: string
   /** Remove the single wrapping `<p>`, for options. */
   unwrap: boolean
+  links: LinkContext | null
+  /** Where `remarkCrossReferences` records the entries it resolved. */
+  refs: string[]
 }
 
 declare module 'vfile' {
@@ -141,6 +176,138 @@ const remarkInlineImages: Plugin<[], MdastRoot> = () => (tree, file) => {
   })
 }
 
+/** A `[[target]]` or `[[target|words to show]]` link. It never spans a line, and never contains a "]". */
+const REFERENCE = /\[\[([^\]\n]*)\]\]/g
+
+function textNode(value: string): MdastText {
+  return { type: 'text', value }
+}
+
+function anchorNode(url: string, label: string, kind: string): Link {
+  return { type: 'link', url, children: [textNode(label)], data: { hProperties: { className: ['ref', kind] } } }
+}
+
+/**
+ * A rough singular, so "[[strategies]]" still finds "strategy". Not a stemmer: one rule each way, and it is
+ * only ever used to guess what a failed link meant.
+ */
+function singular(name: string): string {
+  return name.replace(/ies$/, 'y').replace(/es$/, '').replace(/s$/, '')
+}
+
+/**
+ * The one entry a failed target plausibly meant: a term that contains it, is contained by it, or matches
+ * once both are made singular. Several candidates, or none, are no help, so the message says what to do.
+ */
+function suggestion(target: string, terms: ReadonlyMap<string, TermTarget>): string {
+  const key = slug(target)
+  const near = new Map<string, TermTarget>()
+  for (const [name, entry] of terms) {
+    if (key && (name.includes(key) || key.includes(name) || singular(name) === singular(key))) near.set(entry.id, entry)
+  }
+  const [only] = near.values()
+  return near.size === 1 ? `: did you mean "${only.term}"?` : ': add an entry for it in a "kind: glossary" file, or check the spelling'
+}
+
+/**
+ * One `[[...]]` to a link node, or null when it could not be resolved, having reported why. Every message
+ * lands on the line the link sits on, which `place` carries in.
+ */
+function resolveReference(inner: string, place: { line: number; column: number }, chunk: ChunkContext, file: VFile): PhrasingContent | null {
+  const fail = (reason: string) => {
+    file.message(reason, { place, source: 'refs' })
+    return null
+  }
+  const bar = inner.indexOf('|')
+  const target = (bar < 0 ? inner : inner.slice(0, bar)).trim()
+  const label = bar < 0 ? '' : inner.slice(bar + 1).trim()
+
+  if (!target) return fail('this "[[...]]" link has no target: write "[[term]]", "[[term|words to show]]" or "[[#section-id]]"')
+  if (bar >= 0 && !label) {
+    return fail(`this "[[...]]" link has nothing to show: write "[[${target}|words to show]]", or "[[${target}]]" to show the target itself`)
+  }
+  const links = chunk.links
+  if (!links) return fail('a "[[...]]" link cannot be resolved here, because this text was rendered outside a book')
+
+  if (target.startsWith('#')) {
+    const id = target.slice(1)
+    const section = links.sections.get(id)
+    if (!section) {
+      return fail(`no section has the id "${id}": a section id is the "{#...}" on its "##" heading, and it has to be in this book`)
+    }
+    if (links.self?.kind === 'section' && links.self.id === id) {
+      return fail(`this link points at the section it is written in ("${id}"): a reader is already here, so remove it`)
+    }
+    return anchorNode(`#/b/${links.bookId}/${section.chapter}/${id}`, label || section.title, 'ref-section')
+  }
+
+  const entry = links.terms.get(slug(target))
+  if (!entry) return fail(`no glossary entry is called "${target}"${suggestion(target, links.terms)}`)
+  if (links.self?.kind === 'entry' && links.self.id === entry.id) {
+    return fail(`this link points at the entry it is written in ("${entry.term}"): a reader is already here, so remove it`)
+  }
+  chunk.refs.push(entry.id)
+  return anchorNode(`#/g/${links.bookId}/${entry.id}`, label || target, 'ref-term')
+}
+
+/**
+ * Splits one text node around its `[[...]]` links, or null when it holds none. A text node can span
+ * several source lines, so the line of each link is counted from the newlines before it.
+ */
+function expandReferences(node: MdastText, chunk: ChunkContext, file: VFile): PhrasingContent[] | null {
+  const value = node.value
+  if (!value.includes('[[')) return null
+  const first = node.position?.start.line ?? 1
+  const placeOf = (offset: number) => ({ line: first + (value.slice(0, offset).match(/\n/g)?.length ?? 0), column: 1 })
+  const unclosed = (from: number, to: number) => {
+    const at = value.indexOf('[[', from)
+    if (at >= 0 && at < to) {
+      file.message('this "[[" is never closed: a link is written "[[term]]" on one line; to show the brackets, put them in a code span', { place: placeOf(at), source: 'refs' })
+    }
+  }
+
+  const parts: PhrasingContent[] = []
+  let last = 0
+  for (const match of value.matchAll(REFERENCE)) {
+    const at = match.index
+    unclosed(last, at)
+    if (at > last) parts.push(textNode(value.slice(last, at)))
+    parts.push(resolveReference(match[1], placeOf(at), chunk, file) ?? textNode(match[0]))
+    last = at + match[0].length
+  }
+  unclosed(last, value.length)
+  if (parts.length === 0) return null
+  if (last < value.length) parts.push(textNode(value.slice(last)))
+  return parts
+}
+
+/**
+ * Turns `[[term]]` and `[[#section-id]]` into links. It visits text nodes only, so code spans, fences and
+ * math never reach it: the parser has already made those nodes of their own, whatever order plugins run in.
+ */
+const remarkCrossReferences: Plugin<[], MdastRoot> = () => (tree, file) => {
+  const chunk = chunkOf(file)
+  visit(tree, (node, index, parent) => {
+    if (node.type === 'link' || node.type === 'linkReference') {
+      // Expanding here would put one <a> inside another, so it is an error rather than a silent nesting.
+      let inside = false
+      visit(node, 'text', (child) => {
+        if (child.value.includes('[[')) inside = true
+      })
+      if (inside) {
+        file.message('a "[[...]]" link cannot go inside a Markdown link: keep one of the two', { place: node.position, source: 'refs' })
+      }
+      return SKIP
+    }
+    if (node.type !== 'text' || !parent || index === undefined) return
+    const parts = expandReferences(node, chunk, file)
+    if (!parts) return
+    ;(parent.children as PhrasingContent[]).splice(index, 1, ...parts)
+    // Past the nodes just inserted: they are finished, and one of them is a link this visitor would reject.
+    return [SKIP, index + parts.length]
+  })
+}
+
 type Message = VFile['messages'][number]
 
 function textOf(element: Element): string {
@@ -210,6 +377,7 @@ function createProcessor(highlighter: Highlighter) {
     .use(remarkDoubleDollarDisplay)
     .use(remarkRejectHtml)
     .use(remarkInlineImages)
+    .use(remarkCrossReferences)
     .use(remarkRehype)
     .use(rehypeKatex, KATEX_OPTIONS)
     .use(rehypeHighlight, highlighter)
@@ -255,7 +423,15 @@ async function render(text: Text, context: RenderContext, unwrap: boolean): Prom
   const { processor } = await getRenderer()
   const contentDir = path.resolve(context.root, context.dir)
   const file = new VFile({ path: context.file, value: text.md })
-  file.data.chunk = { root: context.root, fileDir: path.dirname(path.resolve(context.root, context.file)), contentDir, unwrap }
+  const refs: string[] = []
+  file.data.chunk = {
+    root: context.root,
+    fileDir: path.dirname(path.resolve(context.root, context.file)),
+    contentDir,
+    unwrap,
+    links: context.links ?? null,
+    refs,
+  }
 
   const errors: ContentError[] = []
   const report = (chunkLine: number, message: string) => {
@@ -272,7 +448,7 @@ async function render(text: Text, context: RenderContext, unwrap: boolean): Prom
   // renders KaTeX's red error markup anyway, so the HTML of a chunk with any error is never returned.
   for (const message of file.messages) report(message.line ?? lineFromAncestors(message.ancestors) ?? 1, describe(message))
 
-  return { html: errors.length > 0 ? '' : String(file), errors: errors.sort((a, b) => a.line - b.line) }
+  return { html: errors.length > 0 ? '' : String(file), errors: errors.sort((a, b) => a.line - b.line), refs }
 }
 
 /** Renders a section's content, a prompt or an explanation: block Markdown to HTML. */
