@@ -120,7 +120,7 @@ Exercise: Write down which of the two receivers your current design implements, 
 - Event 11 would be applied to the wrong mission, because the numbers have shifted.
 > Remembering only the largest sequence number assumes earlier work has already been handled, or is included in a later result. Without that guarantee, ignoring a late event can lose progress.
 
-?+ What is needed in addition to the same random seed for reliable replay?
+?? missions-replay-inputs What is needed in addition to the same random seed for reliable replay?
 * The same initial state, rule revisions, input order, and random algorithm.
 - A separate seed for each subsystem, drawn again at the start of every replay.
 - The recorded output of the original run, so the replay can be compared against it.
@@ -278,6 +278,15 @@ Exercise: Set a timer for ten minutes and explain this chapter's mission system 
 - 20, counting each mission once per second.
 - 200, treating the scan as ten events per second.
 > Each of the 100 events is checked against 20 missions: 100 times 20 equals 2,000 evaluations. Actual cost still depends on the predicate work.
+
+?+ With 20 active missions and 100 events per second, a full scan makes 2,000 predicate checks per second. What does that figure not establish?
+* Whether the checks fit the frame budget, since predicate costs and devices vary.
+* That 2,000 checks a second is affordable on the slowest supported device.
+- How many predicate checks the current design makes each second.
+- Whether adding a mission raises the number of checks a scan makes.
+- That doubling the event rate doubles the number of checks.
+- How many checks each incoming event causes in a full scan.
+> The product counts checks and says nothing about what one check costs. Predicates differ in cost and devices differ in speed, so the estimate tells you what to measure rather than whether the scan is affordable.
 
 ?? missions-proportional-design When should a simple direct-call mission counter gain a durable event-processing layer?
 * When requirements such as retry, recovery, or cross-system processing justify its additional complexity.

@@ -235,7 +235,7 @@ Exercise: Write the composition root for a feature you know, as a plain list of 
 - The subscription should move to `Start`, so it runs after the scene has finished loading.
 > The publisher keeps delegates that refer to its subscribers. Unsubscribe when the binding ends, so the publisher does not keep the old HUD or send it notifications after the scene unloads.
 
-?+ Which dependency is most useful to inject into a rule that expires effects?
+?? architecture-inject-time Which dependency is most useful to inject into a rule that expires effects?
 * The relevant clock or the current time value.
 - A coroutine runner, so the rule can schedule its own expiry callback.
 - The save adapter, so the remaining time survives a restart.

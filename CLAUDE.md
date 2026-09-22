@@ -23,7 +23,7 @@ Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm 
 - `npm test` — runs the Vitest suite.
 - `npm run typecheck` — type-checks without emitting.
 - `npm run check` — parses and renders everything under `content/` (Markdown, KaTeX, Shiki, images) and prints each problem as `file:line: message`.
-- `npm run guard -- questions` — fails if any question block differs from `HEAD`, or from `--base <rev>`, ignoring line numbers; `--allow distractors` accepts changed `-` options. `npm run guard -- style` checks the book's prose conventions: no em dashes, no contractions, no straight double quotes in prose, and each section closing with its exercise.
+- `npm run guard -- questions` — fails if any question block differs from `HEAD`, or from `--base <rev>`, ignoring line numbers; `--allow distractors` accepts changed `-` options, and `--allow structure --changes <file>` accepts the new concepts, moved or added variants, and added answers a JSON file lists. `npm run guard -- style` checks the book's prose conventions: no em dashes, no contractions, no straight double quotes in prose, and each section closing with its exercise.
 
 ## Layout
 
@@ -41,7 +41,7 @@ src/
 scripts/verify-dist.mjs   checks dist/ has only index.html, no external references and none of the dev-only UI
 ```
 
-The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 apply the review requests in `docs/review-requests/`, which record what a teacher's read of the book found, and each phase deletes the requests it closes. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
+The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 applied the review requests a teacher's read of the book left in `docs/review-requests/`; the folder keeps its README and `structure-changes.json`, the record of which concept each moved question came from. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
 
 ## Notes
 

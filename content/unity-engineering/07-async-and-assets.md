@@ -50,7 +50,7 @@ Exercise: Take an `async` method in your code and mark, for each line after the 
 * false
 > A coroutine can pause at a yield point. The synchronous work between those points still runs on the executing thread, normally Unity's main thread.
 
-?+ A coroutine runs on a MonoBehaviour. Only that component's enabled property is set to false while its GameObject stays active. Under the documented coroutine behavior, what happens?
+?? async-coroutine-lifetime A coroutine runs on a MonoBehaviour. Only that component's enabled property is set to false while its GameObject stays active. Under the documented coroutine behavior, what happens?
 * The coroutine is not automatically stopped by disabling the component alone.
 - The coroutine pauses and resumes when the component is enabled again.
 - The coroutine continues, but its `WaitForSeconds` yields stop advancing.

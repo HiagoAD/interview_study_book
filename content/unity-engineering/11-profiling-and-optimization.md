@@ -40,7 +40,7 @@ Treat these numbers as a worked example rather than as targets. Derive your own 
 Exercise: Write this table for your own project using measured numbers. Then state how many milliseconds a new feature may use, before anyone starts building it.
 
 ?? performance-60-budget [short] What is the approximate frame interval at 60 FPS, in milliseconds? Give two decimal places.
-= 16.67
+= 16.67 | 16.67ms
 > Dividing 1000 milliseconds by 60 frames gives approximately 16.67 milliseconds per frame.
 
 ?? performance-percentile Why can average FPS look healthy while gameplay visibly stutters?
@@ -151,6 +151,15 @@ Exercise: Take a costly system you know and answer all four questions in order. 
 - 200 ms, carrying an extra factor of ten.
 - 0.02 ms, since the operations run in parallel.
 > Repeated cost multiplies by the number of executions. Small per-entity work can exceed an entire frame budget at scale.
+
+?+ An operation measured at 0.02 ms runs serially for 1,000 entities, so the estimate is 20 ms. What does that estimate not establish?
+* That each call still costs 0.02 ms when 1,000 of them run back to back.
+* Whether the work has to finish within a single frame at all.
+- That the estimated total is larger than a 16.67 ms frame at 60 FPS.
+- What the total comes to if the per-call cost holds at 0.02 ms.
+- That a per-call cost under a tenth of a millisecond can still add up.
+- That the total comes from many small calls rather than one slow one.
+> The estimate assumes each call costs the same at scale, which caching, contention, and allocation can change, and it says nothing about whether the work must finish in one frame. Treat the figure as a reason to measure the loop as it runs.
 
 ?? performance-ui-updates What is a useful first optimization for a score label rebuilt every frame despite an unchanged displayed score?
 * Update it only when the displayed value changes.

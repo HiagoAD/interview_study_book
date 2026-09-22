@@ -10,10 +10,10 @@ facts these requests assert against Unity's 6.0 manual and scripting reference, 
 requests quote Unity where they correct the book. The scratch programs it used are not
 kept in the repo.
 
-Phases 11 to 15 of [docs/PLAN.md](../PLAN.md) applied the second read: every accuracy,
-coverage, consistency and forward-reference request, each file deleted as it closed. What
-remains are the question-design requests, which change question blocks and so wait for
-Phases 16 and 17.
+Phases 11 to 17 of [docs/PLAN.md](../PLAN.md) applied the second read, and each request's
+file was deleted as it closed. [structure-changes.json](structure-changes.json) stays: it
+lists the concepts Phase 17 split off and the variants it moved, which is the one record of
+where those questions came from.
 
 ## Kinds of request
 
@@ -48,15 +48,7 @@ explicit decision, and the request says what it would cost the reader's review h
 
 ## Open requests
 
-Phase 16 applied the first-use hitch request and the distractor half of the option sets,
-changing only `-` lines. Phase 17 applies the two that remain: the variants request, which
-adds concepts and moves variants, and the rest of the option sets, which adds variants and
-an accepted answer.
-
-| Request | Where | Priority |
-| --- | --- | --- |
-| [Variants that test a different concept](variants-that-test-another-concept.md) | nine concepts, chapters 01 to 09 | medium to high |
-| [Questions that test arithmetic, and one accepted-answer list](option-sets.md) | four concepts | low |
+None. A later read adds one file per problem here, with a row in this section.
 
 ## How to close one
 
@@ -82,7 +74,10 @@ arrangement here: the entry is the short answer, the section is the long one.
 entries that repeat the claim.
 
 **Question design** requests close with a decision about the question block, taken with
-the cost to review history that the request states.
+the cost to review history that the request states. `npm run guard -- questions` then
+shows that nothing else moved: `--allow distractors` for a change to `-` lines, and
+`--allow structure` with a changes file like `structure-changes.json` for new concepts,
+moved or added variants, and added answers.
 
 **Coverage and consistency** requests close in place, a clause or a link at a time.
 

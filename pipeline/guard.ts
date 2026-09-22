@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { assembleBooks, findContentFiles } from './load.ts'
 import type { RawBook, Source } from './load.ts'
-import { findFenceEnd, formatError, openFence, parseContentFile } from './parse.ts'
+import { ID_PATTERN, findFenceEnd, formatError, openFence, parseContentFile } from './parse.ts'
 import type { ContentError, RawConcept, RawSection, RawVariant, Text } from './parse.ts'
 
 /** What `questions` accepts besides moved lines: nothing, or wrong options changed, added and removed. */
@@ -83,31 +83,14 @@ function moved(before: string[], after: string[]): { key: string; was: string | 
  * change, appear or disappear; everything else, and every section id and its place, must be the same.
  */
 export function compareQuestions(base: Source[], work: Source[], { rev, allow }: { rev: string; allow: Allow }): QuestionReport {
-  const report: QuestionReport = { errors: [], sections: 0, concepts: 0, variants: 0, distractors: { added: 0, removed: 0 } }
-  const note = (file: string, line: number, message: string) => report.errors.push({ file, line, message })
-  const before = assembleBooks(base)
-  const after = assembleBooks(work)
-  for (const error of before.errors) note(error.file, error.line, `at ${rev}: ${error.message}`)
-  report.errors.push(...after.errors)
-  // Both models are best-effort when the content has errors, so a comparison would only add noise.
-  if (report.errors.length > 0) return report
-
-  const old = index(before.books)
-  const now = index(after.books)
+  const report = emptyReport()
+  const loaded = loadBoth(base, work, rev, report)
+  if (!loaded) return report
+  const { old, now } = loaded
+  const note = noter(report)
   const gone = `(this line is at ${rev})`
 
-  for (const [key, section] of old.sections) {
-    if (!now.sections.has(key)) note(section.file, section.line, `section "${section.id}" is gone ${gone}: section ids may not change, so restore it or its id`)
-  }
-  for (const [key, section] of now.sections) {
-    if (!old.sections.has(key)) note(section.file, section.line, `section "${section.id}" is new: section ids may not change, and it is not at ${rev}`)
-  }
-  const placed = (key: string | null) => (key ? `after "${key.slice(key.indexOf('/') + 1)}"` : 'first in its book')
-  for (const move of moved([...old.sections.keys()], [...now.sections.keys()])) {
-    const section = now.sections.get(move.key)!
-    note(section.file, section.line, `section "${section.id}" has moved: at ${rev} it came ${placed(move.was)}, and now it comes ${placed(move.now)}`)
-  }
-
+  compareSections(old, now, rev, note)
   for (const [key, was] of old.concepts) {
     const is = now.concepts.get(key)
     if (!is) {
@@ -122,6 +105,45 @@ export function compareQuestions(base: Source[], work: Source[], { rev, allow }:
   for (const [key, is] of now.concepts) {
     if (!old.concepts.has(key)) note(is.file, is.concept.line, `concept "${is.concept.id}" is new: it is not at ${rev}`)
   }
+  compareConceptOrder(old, now, rev, note)
+  return finish(report, now)
+}
+
+function emptyReport(): QuestionReport {
+  return { errors: [], sections: 0, concepts: 0, variants: 0, distractors: { added: 0, removed: 0 } }
+}
+
+function noter(report: QuestionReport): (file: string, line: number, message: string) => void {
+  return (file, line, message) => report.errors.push({ file, line, message })
+}
+
+/** Both versions indexed, or null after reporting their content errors: a best-effort model would only add noise. */
+function loadBoth(base: Source[], work: Source[], rev: string, report: QuestionReport): { old: Index; now: Index } | null {
+  const before = assembleBooks(base)
+  const after = assembleBooks(work)
+  for (const error of before.errors) report.errors.push({ ...error, message: `at ${rev}: ${error.message}` })
+  report.errors.push(...after.errors)
+  return report.errors.length > 0 ? null : { old: index(before.books), now: index(after.books) }
+}
+
+/** Section ids and their order may never change, whatever else is allowed. */
+function compareSections(old: Index, now: Index, rev: string, note: ReturnType<typeof noter>): void {
+  const gone = `(this line is at ${rev})`
+  for (const [key, section] of old.sections) {
+    if (!now.sections.has(key)) note(section.file, section.line, `section "${section.id}" is gone ${gone}: section ids may not change, so restore it or its id`)
+  }
+  for (const [key, section] of now.sections) {
+    if (!old.sections.has(key)) note(section.file, section.line, `section "${section.id}" is new: section ids may not change, and it is not at ${rev}`)
+  }
+  const placed = (key: string | null) => (key ? `after "${key.slice(key.indexOf('/') + 1)}"` : 'first in its book')
+  for (const move of moved([...old.sections.keys()], [...now.sections.keys()])) {
+    const section = now.sections.get(move.key)!
+    note(section.file, section.line, `section "${section.id}" has moved: at ${rev} it came ${placed(move.was)}, and now it comes ${placed(move.now)}`)
+  }
+}
+
+/** The concepts each section shares with the other version must keep their order. */
+function compareConceptOrder(old: Index, now: Index, rev: string, note: ReturnType<typeof noter>): void {
   for (const [key, section] of now.sections) {
     const was = old.sections.get(key)
     if (!was) continue
@@ -131,7 +153,9 @@ export function compareQuestions(base: Source[], work: Source[], { rev, allow }:
       note(concept.file, concept.concept.line, `concept "${move.key}" has moved within section "${section.id}": at ${rev} it came ${where(move.was)}, and now it comes ${where(move.now)}`)
     }
   }
+}
 
+function finish(report: QuestionReport, now: Index): QuestionReport {
   report.sections = now.sections.size
   report.concepts = now.concepts.size
   report.variants = [...now.concepts.values()].reduce((sum, c) => sum + c.concept.variants.length, 0)
@@ -201,6 +225,259 @@ function compareOptions(
     if (added.length === 0 && remaining.length === 0 && order(was) !== order(is)) differ(is[0].line, `the ${noun}s are in a different order`)
   }
   return { added: added.length, removed: remaining.length }
+}
+
+/** A variant named by its concept and its number from 1, the way the guard's messages number them. */
+export interface VariantRef {
+  from: string
+  variant: number
+}
+
+/**
+ * The question-structure changes `questions --allow structure` accepts, read from a JSON file. A source
+ * variant is numbered as it stands at the base revision, an added variant as it stands after the change.
+ */
+export interface StructureChanges {
+  about?: string
+  newConcepts: { id: string; section: string; variants: VariantRef[] }[]
+  movedVariants: (VariantRef & { to: string })[]
+  addedVariants: { concept: string; variant: number }[]
+  addedAnswers: { concept: string; variant: number; answers: string[] }[]
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+type Field = 'string' | 'number' | 'strings' | 'list'
+
+const FIELD_NAMES: Record<Field, string> = {
+  string: 'a non-empty string',
+  number: 'a whole number from 1',
+  strings: 'a non-empty list of non-empty strings',
+  list: 'a non-empty list',
+}
+
+/** Reads a changes file and checks its shape; whether what it names exists is checked against the content. */
+export function readStructureChanges(text: string, file: string): { changes: StructureChanges | null; errors: ContentError[] } {
+  const errors: ContentError[] = []
+  const fail = (message: string) => errors.push({ file, line: 1, message })
+  let data: unknown
+  try {
+    data = JSON.parse(text)
+  } catch (error) {
+    fail(`not valid JSON: ${(error as Error).message}`)
+    return { changes: null, errors }
+  }
+  const keys = ['about', 'newConcepts', 'movedVariants', 'addedVariants', 'addedAnswers']
+  if (!isRecord(data)) {
+    fail(`the file must hold one object, with the keys ${keys.map((key) => `"${key}"`).join(', ')}`)
+    return { changes: null, errors }
+  }
+  for (const key of Object.keys(data)) if (!keys.includes(key)) fail(`unknown key "${key}": the keys are ${keys.map((k) => `"${k}"`).join(', ')}`)
+  if (data.about !== undefined && typeof data.about !== 'string') fail('"about" must be a string')
+
+  const list = (key: string): unknown[] => {
+    const value = data[key]
+    if (value === undefined) return []
+    if (Array.isArray(value)) return value
+    fail(`"${key}" must be a list`)
+    return []
+  }
+  const entry = (where: string, value: unknown, fields: Record<string, Field>): Record<string, unknown> | null => {
+    if (!isRecord(value)) {
+      fail(`${where} must be an object with ${Object.keys(fields).map((key) => `"${key}"`).join(', ')}`)
+      return null
+    }
+    let ok = true
+    for (const key of Object.keys(value)) {
+      if (!(key in fields)) {
+        fail(`${where} has an unknown key "${key}"`)
+        ok = false
+      }
+    }
+    for (const [key, kind] of Object.entries(fields)) {
+      const v = value[key]
+      const good =
+        kind === 'string' ? typeof v === 'string' && v.trim() !== ''
+        : kind === 'number' ? Number.isInteger(v) && (v as number) >= 1
+        : kind === 'strings' ? Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === 'string' && s.trim() !== '')
+        : Array.isArray(v) && v.length > 0
+      if (!good) {
+        fail(`${where}: "${key}" must be ${FIELD_NAMES[kind]}`)
+        ok = false
+      }
+    }
+    return ok ? value : null
+  }
+
+  const changes: StructureChanges = { newConcepts: [], movedVariants: [], addedVariants: [], addedAnswers: [] }
+  if (typeof data.about === 'string') changes.about = data.about
+  list('newConcepts').forEach((raw, i) => {
+    const e = entry(`newConcepts[${i}]`, raw, { id: 'string', section: 'string', variants: 'list' })
+    if (!e) return
+    const variants = (e.variants as unknown[]).flatMap((ref, j) => {
+      const r = entry(`newConcepts[${i}].variants[${j}]`, ref, { from: 'string', variant: 'number' })
+      return r ? [{ from: r.from as string, variant: r.variant as number }] : []
+    })
+    changes.newConcepts.push({ id: e.id as string, section: e.section as string, variants })
+  })
+  list('movedVariants').forEach((raw, i) => {
+    const e = entry(`movedVariants[${i}]`, raw, { from: 'string', variant: 'number', to: 'string' })
+    if (e) changes.movedVariants.push({ from: e.from as string, variant: e.variant as number, to: e.to as string })
+  })
+  list('addedVariants').forEach((raw, i) => {
+    const e = entry(`addedVariants[${i}]`, raw, { concept: 'string', variant: 'number' })
+    if (e) changes.addedVariants.push({ concept: e.concept as string, variant: e.variant as number })
+  })
+  list('addedAnswers').forEach((raw, i) => {
+    const e = entry(`addedAnswers[${i}]`, raw, { concept: 'string', variant: 'number', answers: 'strings' })
+    if (e) changes.addedAnswers.push({ concept: e.concept as string, variant: e.variant as number, answers: (e.answers as string[]).map((a) => a.trim()) })
+  })
+  return { changes: errors.length > 0 ? null : changes, errors }
+}
+
+/** What one position of a concept should hold after the change: a variant from the base, or null for an added one. */
+type Slot = { variant: RawVariant; origin: string | null } | null
+
+/**
+ * Compares question blocks like `compareQuestions`, except that the structure changes the file lists are
+ * expected: a new concept holding the variants it takes, a variant moved to the end of another concept, an
+ * added variant, and added accepted answers. Every base concept must survive, and a concept may give up
+ * only its last variants, because progress records name variants by position.
+ */
+export function compareStructure(base: Source[], work: Source[], { rev, changes, file }: { rev: string; changes: StructureChanges; file: string }): QuestionReport {
+  const report = emptyReport()
+  const loaded = loadBoth(base, work, rev, report)
+  if (!loaded) return report
+  const { old, now } = loaded
+  const note = noter(report)
+  const changeError = (message: string) => note(file, 1, message)
+  const bookOf = (key: string) => key.slice(0, key.indexOf('/'))
+  const idOf = (key: string) => key.slice(key.indexOf('/') + 1)
+
+  // Ids in the changes file carry no book, so each must name exactly one concept at the base.
+  const oldKey = (id: string, role: string): string | null => {
+    const keys = [...old.concepts.keys()].filter((key) => idOf(key) === id)
+    if (keys.length === 1) return keys[0]
+    changeError(keys.length === 0 ? `${role} "${id}" is not a concept at ${rev}` : `${role} "${id}" names a concept in more than one book`)
+    return null
+  }
+  const leaving = new Map<string, Set<number>>()
+  const take = (ref: VariantRef, role: string): { key: string; variant: RawVariant; origin: string } | null => {
+    const key = oldKey(ref.from, role)
+    if (!key) return null
+    const variants = old.concepts.get(key)!.concept.variants
+    if (ref.variant > variants.length) {
+      changeError(`${role} names variant ${ref.variant} of "${ref.from}", which has ${variants.length} at ${rev}`)
+      return null
+    }
+    const taken = leaving.get(key) ?? new Set<number>()
+    if (taken.has(ref.variant - 1)) {
+      changeError(`variant ${ref.variant} of "${ref.from}" is taken twice`)
+      return null
+    }
+    leaving.set(key, taken.add(ref.variant - 1))
+    return { key, variant: variants[ref.variant - 1], origin: `variant ${ref.variant} of "${ref.from}" at ${rev}` }
+  }
+
+  const expected = new Map<string, Slot[]>()
+  const newSections = new Map<string, string>()
+  for (const concept of changes.newConcepts) {
+    const role = `new concept "${concept.id}"`
+    const sources = concept.variants.map((ref) => take(ref, role))
+    if (!ID_PATTERN.test(concept.id)) {
+      changeError(`${role} is not a valid id: use lowercase letters, digits and single hyphens`)
+      continue
+    }
+    const first = sources.find((source) => source !== null)
+    if (!first) continue
+    const key = `${bookOf(first.key)}/${concept.id}`
+    if (old.concepts.has(key) || newSections.has(key)) {
+      changeError(`${role} is ${old.concepts.has(key) ? `already a concept at ${rev}` : 'listed twice'}`)
+      continue
+    }
+    for (const source of sources) {
+      const section = source && old.concepts.get(source.key)!.section
+      if (section && section !== concept.section) {
+        changeError(`${role} is placed in section "${concept.section}", but its variant from "${idOf(source.key)}" is in section "${section}": a concept split off another stays in its section`)
+      }
+    }
+    newSections.set(key, concept.section)
+    expected.set(key, sources.flatMap((source) => (source ? [{ variant: source.variant, origin: source.origin }] : [])))
+  }
+  const moves = changes.movedVariants.flatMap((move) => {
+    const source = take(move, 'moved variant')
+    const to = oldKey(move.to, 'destination')
+    if (source && to === source.key) changeError(`variant ${move.variant} of "${move.from}" is moved to the concept it is already in`)
+    return source && to && to !== source.key ? [{ to, slot: { variant: source.variant, origin: source.origin } }] : []
+  })
+
+  for (const [key, at] of old.concepts) {
+    const count = at.concept.variants.length
+    const taken = leaving.get(key) ?? new Set<number>()
+    const early = [...taken].filter((i) => i < count - taken.size).map((i) => i + 1)
+    if (early.length > 0) {
+      changeError(`"${at.concept.id}" would give up variant ${early.join(', ')} while a later one stays: take its last variants only, so the ones that stay keep their numbers, which progress records store`)
+    }
+    if (taken.size === count) changeError(`"${at.concept.id}" would be left with no variants, and every concept id has to survive`)
+    expected.set(key, at.concept.variants.flatMap((variant, i) => (taken.has(i) ? [] : [{ variant, origin: null }])))
+  }
+  for (const move of moves) expected.get(move.to)!.push(move.slot)
+  for (const added of changes.addedVariants) {
+    const key = oldKey(added.concept, 'added variant')
+    if (!key) continue
+    const slots = expected.get(key)!
+    if (added.variant !== slots.length + 1) {
+      changeError(`the added variant of "${added.concept}" is listed as variant ${added.variant}, but added variants follow the others, so it is variant ${slots.length + 1}`)
+      continue
+    }
+    slots.push(null)
+  }
+  for (const added of changes.addedAnswers) {
+    const key = oldKey(added.concept, 'added answers')
+    if (!key) continue
+    const slot = expected.get(key)![added.variant - 1]
+    if (!slot || slot.origin !== null || slot.variant.type !== 'short') {
+      changeError(`added answers name variant ${added.variant} of "${added.concept}", which has to be a short-answer variant that stays in place`)
+      continue
+    }
+    const repeated = added.answers.filter((answer) => slot.variant.type === 'short' && slot.variant.accepted.includes(answer))
+    if (repeated.length > 0) changeError(`added answers for "${added.concept}" repeat ${repeated.map((a) => `"${a}"`).join(', ')}, which it already accepts`)
+    expected.get(key)![added.variant - 1] = { variant: { ...slot.variant, accepted: [...slot.variant.accepted, ...added.answers] }, origin: null }
+  }
+
+  compareSections(old, now, rev, note)
+  for (const [key, was] of old.concepts) {
+    const is = now.concepts.get(key)
+    if (!is) note(was.file, was.concept.line, `concept "${was.concept.id}" is gone (this line is at ${rev}): every concept id has to survive a structure change`)
+    else if (is.section !== was.section) note(is.file, is.concept.line, `concept "${is.concept.id}" has moved from section "${was.section}" to section "${is.section}"`)
+  }
+  for (const [key, section] of newSections) {
+    const is = now.concepts.get(key)
+    if (!is) changeError(`the changes file lists new concept "${idOf(key)}", but the book has no such concept`)
+    else if (is.section !== section) note(is.file, is.concept.line, `concept "${idOf(key)}" is in section "${is.section}", but the changes file places it in "${section}"`)
+  }
+  for (const [key, is] of now.concepts) {
+    if (!old.concepts.has(key) && !newSections.has(key)) note(is.file, is.concept.line, `concept "${is.concept.id}" is new, and the changes file does not list it`)
+  }
+  compareConceptOrder(old, now, rev, note)
+  for (const [key, slots] of expected) {
+    const is = now.concepts.get(key)
+    if (is) compareSlots(slots, is, rev, report)
+  }
+  return finish(report, now)
+}
+
+function compareSlots(slots: Slot[], actual: ConceptAt, rev: string, report: QuestionReport): void {
+  const { file, concept } = actual
+  if (concept.variants.length !== slots.length) {
+    report.errors.push({ file, line: concept.line, message: `concept "${concept.id}" has ${concept.variants.length} variants, where the changes file leads to ${slots.length}` })
+  }
+  for (let i = 0; i < Math.min(slots.length, concept.variants.length); i++) {
+    const slot = slots[i]
+    if (!slot) continue
+    const label = `concept "${concept.id}", variant ${i + 1}${slot.origin ? `, which was ${slot.origin}` : ''}`
+    compareVariant(slot.variant, concept.variants[i], file, label, rev, null, report)
+  }
 }
 
 const CLOSING = /^(?:Exercise|[A-Z][a-z]+ exercise):/
@@ -354,9 +631,12 @@ export function checkStyle(sources: Source[]): ContentError[] {
 }
 
 const USAGE = `usage: npm run guard -- questions [--base <rev>] [--allow distractors]
+       npm run guard -- questions [--base <rev>] --allow structure --changes <file>
        npm run guard -- style
 
-questions  compares every question block with the one at <rev> (default HEAD), ignoring line numbers
+questions  compares every question block with the one at <rev> (default HEAD), ignoring line numbers;
+           --allow distractors accepts changed "-" options, and --allow structure accepts the new
+           concepts, moved and added variants, and added answers that the JSON changes file lists
 style      checks the prose conventions of every chapter and glossary file`
 
 function readWorkingTree(root: string): Source[] {
@@ -378,14 +658,17 @@ function usage(problem: string): number {
 
 function runQuestions(root: string, args: string[]): number {
   let rev = 'HEAD'
-  let allow: Allow = null
+  let allow: Allow | 'structure' = null
+  let changesFile: string | null = null
   for (let i = 0; i < args.length; i++) {
     const value = args[i + 1]
     if (args[i] === '--base' && value) rev = value
-    else if (args[i] === '--allow' && value === 'distractors') allow = value
+    else if (args[i] === '--allow' && (value === 'distractors' || value === 'structure')) allow = value
+    else if (args[i] === '--changes' && value) changesFile = value
     else return usage(`unknown or incomplete option "${args.slice(i).join(' ')}"`)
     i++
   }
+  if ((allow === 'structure') !== (changesFile !== null)) return usage('--allow structure and --changes <file> go together')
   let base: Source[]
   try {
     base = readRevision(root, rev)
@@ -393,7 +676,29 @@ function runQuestions(root: string, args: string[]): number {
     const stderr = (error as { stderr?: string }).stderr?.trim()
     return usage(`cannot read content/ at "${rev}": ${stderr || (error as Error).message}`)
   }
-  const report = compareQuestions(base, readWorkingTree(root), { rev, allow })
+  let report: QuestionReport
+  if (allow === 'structure' && changesFile !== null) {
+    let text: string
+    try {
+      text = readFileSync(path.resolve(changesFile), 'utf8')
+    } catch (error) {
+      return usage(`cannot read the changes file "${changesFile}": ${(error as Error).message}`)
+    }
+    const { changes, errors } = readStructureChanges(text, changesFile)
+    if (!changes) {
+      for (const error of errors) console.error(formatError(error))
+      return 1
+    }
+    report = compareStructure(base, readWorkingTree(root), { rev, changes, file: changesFile })
+    if (report.errors.length === 0) {
+      const many = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`
+      const counts = [many(changes.newConcepts.length, 'new concept'), many(changes.movedVariants.length, 'moved variant'), many(changes.addedVariants.length, 'added variant'), many(changes.addedAnswers.length, 'added answer')].join(', ')
+      console.log(`questions match ${rev} with the listed structure changes (${counts}): ${report.sections} sections, ${report.concepts} concepts, ${report.variants} variants`)
+      return 0
+    }
+  } else {
+    report = compareQuestions(base, readWorkingTree(root), { rev, allow: allow === 'structure' ? null : allow })
+  }
   if (report.errors.length > 0) {
     for (const error of report.errors) console.error(formatError(error))
     console.error(`\nquestions differ from ${rev}: ${report.errors.length} ${report.errors.length === 1 ? 'difference' : 'differences'}`)

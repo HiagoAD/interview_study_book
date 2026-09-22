@@ -173,7 +173,7 @@ Exercise: Write the two assertions that distinguish a strict deadline from an in
 - It expires once `Remaining` has been called and returns zero.
 > The deadline is 15 and the comparison is strict, so time 15 is the first expired boundary.
 
-?+ The simulation clock freezes while paused. What happens to a deadline measured on that same clock?
+?? powerup-pause-clock The simulation clock freezes while paused. What happens to a deadline measured on that same clock?
 * Its remaining gameplay duration stays unchanged.
 - The remaining time keeps decreasing, because the deadline was stored as a number of seconds.
 - The effect has expired by the time play resumes, because its deadline is now in the past.
@@ -227,7 +227,7 @@ Design exercise: Explain how a magnet and a double-score effect interact with de
 - 5, because the effect restarts with the new duration measured from zero.
 > Extension should start from the current deadline only while that deadline is still in the future. Otherwise it starts from now.
 
-?+ An effect has 8 seconds remaining and a new pickup has duration 5. Under the chapter's refresh policy, how much time remains immediately afterward?
+?? powerup-refresh-policy An effect has 8 seconds remaining and a new pickup has duration 5. Under the chapter's refresh policy, how much time remains immediately afterward?
 * 5 seconds.
 - 13 seconds, adding the new duration to the time that remained.
 - 8 seconds, because a refresh keeps whichever duration is longer.
@@ -306,7 +306,7 @@ Exercise: Trace one coin from spawn to committed reward, naming the owner at eac
 - The time at which the attraction animation started.
 > Reusing the object creates a new logical coin. Checking its generation prevents an old callback from collecting or rewarding the new coin.
 
-?+ A repeated collection request refers to an already collected spawn ID. What should happen?
+?? powerup-duplicate-collection A repeated collection request refers to an already collected spawn ID. What should happen?
 * Return the existing outcome or an already-collected result without adding currency.
 - Add the reward, then subtract it again once the duplicate is detected.
 - Log a warning and let the balance update proceed, since the coin was genuinely collected.

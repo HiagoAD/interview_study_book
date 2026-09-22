@@ -1,0 +1,24 @@
+{
+  "about": "The question-structure changes of Phase 17 in docs/PLAN.md, and the record of which concept each moved question came from. npm run guard -- questions --base <the commit before them> --allow structure --changes docs/review-requests/structure-changes.json checks them. Variants are numbered from 1: a source variant by its place before the change, an added variant by its place after it.",
+  "newConcepts": [
+    { "id": "architecture-inject-time", "section": "architecture-dependencies", "variants": [{ "from": "architecture-lifetime", "variant": 2 }] },
+    { "id": "powerup-pause-clock", "section": "powerup-expiration", "variants": [{ "from": "powerup-deadline-boundary", "variant": 2 }] },
+    { "id": "powerup-refresh-policy", "section": "powerup-stacking", "variants": [{ "from": "powerup-extend-expired", "variant": 2 }] },
+    { "id": "powerup-duplicate-collection", "section": "powerup-collection", "variants": [{ "from": "powerup-pool-identity", "variant": 2 }] },
+    { "id": "missions-replay-inputs", "section": "missions-event-ordering", "variants": [{ "from": "missions-sequence-gap", "variant": 2 }] },
+    { "id": "async-coroutine-lifetime", "section": "async-models", "variants": [{ "from": "async-coroutine-thread", "variant": 2 }] },
+    { "id": "structures-index-repair", "section": "structures-arrays-lists", "variants": [{ "from": "structures-swap-back", "variant": 2 }, { "from": "structures-swap-back", "variant": 3 }] }
+  ],
+  "movedVariants": [
+    { "from": "csharp-mutable-key", "variant": 2, "to": "csharp-hash-contract" },
+    { "from": "testing-zero-tests", "variant": 2, "to": "testing-evidence-scope" }
+  ],
+  "addedVariants": [
+    { "concept": "missions-scale-estimate", "variant": 2 },
+    { "concept": "structures-pair-count", "variant": 2 },
+    { "concept": "performance-work-frequency", "variant": 2 }
+  ],
+  "addedAnswers": [
+    { "concept": "performance-60-budget", "variant": 1, "answers": ["16.67ms"] }
+  ]
+}

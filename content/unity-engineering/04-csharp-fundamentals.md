@@ -161,14 +161,6 @@ Exercise: Take an identifier type from your own code and check which of those fo
 - Values that compare equal should return the same string representation.
 > Hashing narrows the search; equality establishes a match. Collisions are expected, while inconsistent hashes for equal keys break lookup assumptions.
 
-?? csharp-mutable-key Why is changing a dictionary key's equality fields dangerous?
-* Its new hash may no longer identify the bucket where it was inserted.
-- The dictionary rehashes on the next insertion, which is expensive.
-- The key's previous value is retained, so the entry holds more memory than expected.
-- The comparer does not observe the change until the dictionary is enumerated.
-- Equality still matches, but the entry moves to the end of the enumeration order.
-> Hash-based lookup relies on the key's equality and hash behavior remaining stable while it is stored.
-
 ?+ Two unequal spawn IDs produce the same hash code. What should a correct dictionary do?
 * Use equality to distinguish them and allow both keys.
 - Replace the existing entry, since that bucket is already occupied.
@@ -176,6 +168,14 @@ Exercise: Take an identifier type from your own code and check which of those fo
 - Rehash the collection with a different seed until the collision disappears.
 - Reject the second insertion and report a duplicate key.
 > Hash collisions are valid. Equality resolves candidates within the relevant hash structure.
+
+?? csharp-mutable-key Why is changing a dictionary key's equality fields dangerous?
+* Its new hash may no longer identify the bucket where it was inserted.
+- The dictionary rehashes on the next insertion, which is expensive.
+- The key's previous value is retained, so the entry holds more memory than expected.
+- The comparer does not observe the change until the dictionary is enumerated.
+- Equality still matches, but the entry moves to the end of the enumeration order.
+> Hash-based lookup relies on the key's equality and hash behavior remaining stable while it is stored.
 
 ## Generics, boxing, and allocation claims {#csharp-generics-boxing}
 

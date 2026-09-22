@@ -807,3 +807,11 @@ Replaced eight `-` lines and added four; `npm run guard -- questions --allow dis
 Rejected while writing: a negative price as a caller bug, since the book's own `TrySpend` rejects negative amounts by returning false, which would make that option defensible.
 
 Next phase: export progress from the Data page first, as the plan says.
+
+### Phase 17: Question structure
+
+Built `questions --allow structure --changes <file>`: `readStructureChanges` refuses a file of the wrong shape and names every problem, and `compareStructure` builds each concept's expected variants from the file and compares them with the book. On top of the plan's rules, a concept may give up only its last variants, so the ones it keeps keep their numbers, which progress records store; all nine cases already met that. Moved variants go to the end of their new concept. Six tests (652 in all), and on the real book a changed moved variant, a new concept missing from the file, and a changed `-` line each fail.
+
+Applied both defaults: seven splits and two moves, recorded in `docs/review-requests/structure-changes.json`; one `?+` variant on each arithmetic concept, with two correct answers and four wrong ones, none using the standard's word list; and `16.67ms` accepted for `performance-60-budget`. `npm run check` reports 160 concepts and 190 variants, and the structure check against `7247787` passes. The heuristic now rejects 7.0% of 187 correct options and 3.3% of 718 wrong ones. The progress export the plan asks for is the reader's step in the browser, and was not taken in this session; no repo change touches stored progress, so it can still be taken before opening the rebuilt site.
+
+Practise these sections again, because nothing on screen prompts for a new concept or a variant never shown: the seven new concepts are in `architecture-dependencies` (01), `powerup-expiration`, `powerup-stacking` and `powerup-collection` (02), `missions-event-ordering` (03), `async-models` (07) and `structures-arrays-lists` (09); the moved variants are in `csharp-equality-hashing` (04) and `testing-evidence` (08); the added variants are in `missions-design-presentation` (03), `structures-complexity` (09) and `performance-cpu-work` (11).

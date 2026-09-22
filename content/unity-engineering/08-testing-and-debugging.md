@@ -237,14 +237,6 @@ Exercise: Write this block for the last change you shipped. If the â€œdoes notâ€
 - The run can be treated as a pass for the purposes of the release gate.
 > A successful process without the intended tests is not evidence of behavioral correctness.
 
-?+ A suite passes in the Editor, but the defect depends on native iOS callbacks after resume. What evidence is still needed?
-* A relevant target-platform integration check covering resume and callback lifetime.
-- A Play Mode run in the Editor that simulates the resume callback.
-- A longer Editor run that exercises the same code path many times.
-- An Android device run covering the same resume sequence.
-- A unit test that calls the callback handler directly with a fake payload.
-> Exercise the native callback after resume on the relevant platform. Editor rule tests cannot verify that callback's timing and lifetime.
-
 ?? testing-evidence-scope What does a passing plain C# timer test establish?
 * The tested timer rules for the supplied inputs.
 - That the timer behaves correctly for inputs outside the tested range.
@@ -252,3 +244,11 @@ Exercise: Write this block for the last change you shipped. If the â€œdoes notâ€
 - That the timer's clock source advances correctly in a build.
 - That expiry notifications reach the HUD in the intended order.
 > The timer test checks the supplied inputs and expected results. Integration and platform checks provide separate evidence about the parts it does not exercise.
+
+?+ A suite passes in the Editor, but the defect depends on native iOS callbacks after resume. What evidence is still needed?
+* A relevant target-platform integration check covering resume and callback lifetime.
+- A Play Mode run in the Editor that simulates the resume callback.
+- A longer Editor run that exercises the same code path many times.
+- An Android device run covering the same resume sequence.
+- A unit test that calls the callback handler directly with a fake payload.
+> Exercise the native callback after resume on the relevant platform. Editor rule tests cannot verify that callback's timing and lifetime.

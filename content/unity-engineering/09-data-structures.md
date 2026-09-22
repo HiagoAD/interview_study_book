@@ -51,6 +51,15 @@ Exercise: For a loop in your project, name the input, the current size, the size
 - 10,000, assuming each enemy checks ten candidates.
 > Nested full scans multiply the dimensions. This estimate helps identify whether reducing candidates is worth investigating.
 
+?+ A naive loop makes about a million checks a frame for 1,000 enemies against 1,000 candidates. What does that count not establish?
+* How long the frame takes, since that depends on what each check costs.
+* Whether the loop fits the frame budget on the slowest supported device.
+- How many checks the loop makes each frame at these populations.
+- That the work grows with the product of the two populations.
+- That halving the candidates halves the number of checks.
+- Whether the work grows quadratically when both populations grow together.
+> The count measures the size of the work and says nothing about its duration. One check can be a subtraction or a raycast, so the same million can be trivial or far over budget, and a measurement on the target device settles which.
+
 ## Arrays, lists, and removal policies {#structures-arrays-lists}
 
 An array provides a fixed number of indexed slots. `List<T>` uses a resizable array, with a count for the elements in use and a capacity for the storage reserved. Both support constant-time indexed access. Inserting or removing an item near the front of a list moves later elements.
@@ -123,7 +132,7 @@ Exercise: Write the second loop from memory, then test it with a list where the 
 - Correct behavior when the list holds duplicate values.
 > Moving the last element into the removed slot avoids shifting but changes ordering.
 
-?+ A dictionary maps each entity to its index in a list. After swap-back removal, what must be repaired?
+?? structures-index-repair A dictionary maps each entity to its index in a list. After swap-back removal, what must be repaired?
 * The moved entity's index mapping and the removed entity's dictionary entry.
 - The removed entity's entry, since the moved entity keeps its old index.
 - The moved entity's entry, since the removed entity's key is reused.

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { checkStyle, compareQuestions, maskNonProse } from './guard.ts'
-import type { Allow } from './guard.ts'
+import { checkStyle, compareQuestions, compareStructure, maskNonProse, readStructureChanges } from './guard.ts'
+import type { Allow, StructureChanges } from './guard.ts'
 import type { Source } from './load.ts'
 
 const PATH = 'content/a.md'
@@ -166,6 +166,91 @@ test('a book split across files compares by section id, whichever file holds the
   const split = [source([...head, ...one]), source(['---', 'book: Test', '---', '# Intro Two', ...two], 'content/b.md')]
   const report = compareQuestions([source(BASE)], split, { rev: 'base', allow: null })
   expect(report.errors).toEqual([])
+})
+
+const NO_CHANGES: StructureChanges = { newConcepts: [], movedVariants: [], addedVariants: [], addedAnswers: [] }
+
+function structure(work: string[], changes: Partial<StructureChanges>) {
+  return compareStructure([source(BASE)], [source(work)], { rev: 'base', changes: { ...NO_CHANGES, ...changes }, file: 'changes.json' })
+}
+
+const fileLines = (errors: { file: string; line: number; message: string }[]) => errors.map((e) => [`${e.file}:${e.line}`, e.message])
+
+/** BASE with c1's second variant turned into the first variant of a new concept, c1b. */
+const SPLIT = edited({ 17: '?? c1b [short] Name it.' })
+const SPLIT_C1B = { id: 'c1b', section: 'one', variants: [{ from: 'c1', variant: 2 }] }
+
+test('a split listed in the changes file passes; unlisted or not done, it fails', () => {
+  const report = structure(SPLIT, { newConcepts: [SPLIT_C1B] })
+  expect(report.errors).toEqual([])
+  expect(report).toMatchObject({ concepts: 5, variants: 5 })
+
+  expect(fileLines(structure(SPLIT, {}).errors)).toEqual([
+    [`${PATH}:10`, 'concept "c1" has 1 variants, where the changes file leads to 2'],
+    [`${PATH}:17`, 'concept "c1b" is new, and the changes file does not list it'],
+  ])
+  expect(fileLines(structure(BASE, { newConcepts: [SPLIT_C1B] }).errors)).toEqual([
+    ['changes.json:1', 'the changes file lists new concept "c1b", but the book has no such concept'],
+    [`${PATH}:10`, 'concept "c1" has 2 variants, where the changes file leads to 1'],
+  ])
+})
+
+test('a moved variant goes to the end of its new concept, unchanged', () => {
+  const moved = [...edited({ 17: null, 18: null, 19: null }), '', '?+ [short] Name it.', '= it | that', '> Its name.']
+  expect(structure(moved, { movedVariants: [{ from: 'c1', variant: 2, to: 'c4' }] }).errors).toEqual([])
+
+  const changed = [...moved.slice(0, -1), '> Its new name.']
+  expect(fileLines(structure(changed, { movedVariants: [{ from: 'c1', variant: 2, to: 'c4' }] }).errors)).toEqual([
+    [`${PATH}:39`, 'concept "c4", variant 2, which was variant 2 of "c1" at base: the explanation changed; at base it was "Its name."'],
+  ])
+})
+
+test('a concept may give up only its last variants, and has to keep one', () => {
+  const early = structure(BASE, { newConcepts: [{ id: 'c1a', section: 'one', variants: [{ from: 'c1', variant: 1 }] }] })
+  expect(early.errors[0]).toMatchObject({ file: 'changes.json', line: 1 })
+  expect(early.errors[0].message).toContain('"c1" would give up variant 1 while a later one stays: take its last variants only')
+
+  const empty = structure(BASE, { movedVariants: [{ from: 'c3', variant: 1, to: 'c4' }] })
+  expect(empty.errors.map((e) => e.message)).toContain('"c3" would be left with no variants, and every concept id has to survive')
+})
+
+test('added variants and answers pass where the file lists them, and nowhere else', () => {
+  const work = edited({ 18: '= it | that | those', 28: '> Yes.\n\n?+ Another again?\n* yes\n- no\n> Yes again.' })
+  const listed = { addedVariants: [{ concept: 'c3', variant: 2 }], addedAnswers: [{ concept: 'c1', variant: 2, answers: ['those'] }] }
+  expect(structure(work, listed).errors).toEqual([])
+
+  expect(fileLines(structure(work, { ...listed, addedVariants: [{ concept: 'c3', variant: 3 }] }).errors)).toEqual([
+    ['changes.json:1', 'the added variant of "c3" is listed as variant 3, but added variants follow the others, so it is variant 2'],
+    [`${PATH}:25`, 'concept "c3" has 2 variants, where the changes file leads to 1'],
+  ])
+  expect(fileLines(structure(work, { addedVariants: listed.addedVariants }).errors)).toEqual([
+    [`${PATH}:17`, 'concept "c1", variant 2: the accepted answers changed from "it | that" to "it | that | those"'],
+  ])
+})
+
+test('a concept split off another stays in its section, and every base concept survives', () => {
+  expect(fileLines(structure(SPLIT, { newConcepts: [{ ...SPLIT_C1B, section: 'two' }] }).errors)).toEqual([
+    ['changes.json:1', 'new concept "c1b" is placed in section "two", but its variant from "c1" is in section "one": a concept split off another stays in its section'],
+    [`${PATH}:17`, 'concept "c1b" is in section "one", but the changes file places it in "two"'],
+  ])
+  expect(fileLines(structure(edited({ 25: null, 26: null, 27: null, 28: null }), {}).errors)).toEqual([
+    [`${PATH}:25`, 'concept "c3" is gone (this line is at base): every concept id has to survive a structure change'],
+  ])
+})
+
+test('a changes file of the wrong shape is refused, with every problem named', () => {
+  const text = '{"newConcepts": [{"id": "x"}], "extra": 1, "addedAnswers": [{"concept": "c1", "variant": 0, "answers": []}]}'
+  const { changes, errors } = readStructureChanges(text, 'changes.json')
+  expect(changes).toBeNull()
+  expect(errors.map((e) => e.message)).toEqual([
+    'unknown key "extra": the keys are "about", "newConcepts", "movedVariants", "addedVariants", "addedAnswers"',
+    'newConcepts[0]: "section" must be a non-empty string',
+    'newConcepts[0]: "variants" must be a non-empty list',
+    'addedAnswers[0]: "variant" must be a whole number from 1',
+    'addedAnswers[0]: "answers" must be a non-empty list of non-empty strings',
+  ])
+  expect(readStructureChanges('{', 'changes.json').errors[0].message).toMatch(/^not valid JSON/)
+  expect(readStructureChanges(JSON.stringify({ about: 'x', ...NO_CHANGES }), 'changes.json').changes).toEqual({ about: 'x', ...NO_CHANGES })
 })
 
 const glossary = (...lines: string[]) => source(['---', 'book: Test', 'kind: glossary', '---', ...lines], 'content/glossary.md')
