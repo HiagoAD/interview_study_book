@@ -67,23 +67,23 @@ Use a compact matrix:
 
 You do not need to test every possible combination in the matrix. Choose combinations whose behaviors can affect each other, along with cases for known bugs. For example, combine a late asynchronous result with [[object pool|pool]] reuse: the same object can now represent a different item.
 
-Property-style tests generate many inputs and check a rule that should hold for all of them. Examples include a wallet never becoming negative, a shuffle preserving each element exactly once, or a capped mission count never exceeding its target. Use reproducible seeds and report the inputs that failed.
+Property-style tests generate many inputs and check a rule that should hold for all of them. Examples include a wallet never becoming negative, a shuffle preserving each element exactly once, or a capped mission count never exceeding its target. Use reproducible seeds and report the inputs that failed. A seeded board is the cheapest version of this: a match-3 level generated from a fixed seed gives every run of the test the same starting grid, so a failure can be reported as a seed rather than as a screenshot, and the fix can be proved against the board that broke.
 
 When an exact expected answer is difficult to calculate, a metamorphic test compares related executions. A modifier that does nothing should leave damage unchanged. Processing a deduplicated event twice should give the same result as processing it once. Check that the relationship itself is a valid gameplay rule before using it as a test.
 
 Control asynchronous completion with a fake loader, so the test can decide which request finishes first. Advance a fake clock to test time rules. Depending on real network delays or sleeping for an arbitrary duration makes the result depend on the test machine's timing.
 
-Choosing combinations has a method, and it is cheaper than it sounds. Take the dimensions in the table and pair only those whose mechanisms actually touch. Timing and delivery interact, because a duplicate that arrives after a deadline is a different case from one that arrives before. Lifetime and timing interact, because a result arriving after the owner is gone is this book's recurring defect. Numeric boundary and content do not interact for the magnet, because an invalid ID is rejected before any arithmetic runs.
+Choosing combinations has a method, and it is cheaper than it sounds. Take the dimensions in the table and pair only those whose mechanisms actually touch. Timing and delivery interact, because a duplicate that arrives after a deadline is a different case from one that arrives before. Lifetime and timing interact, because a result arriving after the owner is gone is this book's recurring defect. Numeric boundary and content do not interact for a launched projectile, because an invalid ID is rejected before any arithmetic runs.
 
-For the magnet, that yields a short and high-value list:
+For the slingshot launch of the previous chapter, that yields a short and high-value list:
 
 | Combination | Case worth a test |
 | --- | --- |
-| Timing and delivery | A second pickup arriving exactly at the old deadline |
-| Lifetime and timing | The run restarts with an attraction in flight |
-| Delivery and persistence | A duplicate event arriving after the save that recorded the first |
-| Numeric boundary alone | Activation with the maximum allowed duration |
-| Content alone | An unknown effect ID from an older save |
+| Timing and delivery | A second launch arriving exactly as the first shot commits |
+| Lifetime and timing | The level restarts with a shot still in flight |
+| Delivery and persistence | A duplicate impact arriving after the save that recorded the first |
+| Numeric boundary alone | A launch at the maximum allowed impulse |
+| Content alone | An unknown projectile ID from an older save |
 
 Five tests, each of which can fail for a distinct reason. Compare that with the full cross product of the six dimensions, which is in the thousands and mostly combinations no mechanism connects.
 

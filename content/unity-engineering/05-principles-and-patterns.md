@@ -9,7 +9,7 @@ Object-oriented programming brings state and behavior together behind defined op
 
 For a wallet, encapsulation means a caller cannot simply assign a negative balance. Callers use operations such as grant and spend; the wallet validates the amount and keeps the balance within its rules. A class of public mutable fields can organize the data, but cannot enforce those rules on its own.
 
-An `IDamageReceiver` interface can let an attack request damage without knowing whether its target is a crate or an enemy. The interface still needs a clear contract: whether the target can reject damage, what happens if it is already dead, and whether the result is available immediately.
+In a card battler, an `ICardEffect` interface can let the resolver apply a played card without knowing whether it deals damage, draws, or buffs. The interface still needs a clear contract: whether an effect may be rejected, what happens when its target has left play before it resolves, and whether the result is available immediately.
 
 Polymorphism helps when the same operation needs different behavior from different implementations. For a small, fixed set of states, a value identifying the state and a switch may be easier to read. If callers routinely cast an interface back to concrete types, check whether the interface actually provides what they need.
 
@@ -174,7 +174,7 @@ A design pattern describes an arrangement of responsibilities and its tradeoffs.
 
 | Pattern | Gameplay use | Cost or misuse |
 | --- | --- | --- |
-| [[Strategy]] | Swap an aim or reward-selection policy | Indirection for a trivial fixed rule |
+| [[Strategy]] | Swap a card targeting or reward-selection policy | Indirection for a trivial fixed rule |
 | [[State]] | Encapsulate behavior for run phases | Many classes for three simple transitions |
 | [[Observer]] | Notify UI and audio of committed facts | Hidden order, retention, and reentrancy |
 | [[Command]] | Represent a player intent for queuing or replay | Assuming every command can be undone |

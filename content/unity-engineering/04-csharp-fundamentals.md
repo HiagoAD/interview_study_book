@@ -10,20 +10,20 @@ A value-type variable holds a value, and assignment normally copies it. A refere
 ```csharp
 using System.Collections.Generic;
 
-public struct InventorySnapshot
+public struct BoardSnapshot
 {
-    public int Coins;
-    public List<string> Items;
+    public int MovesLeft;
+    public List<string> Boosters;
 }
 
 // Inside a method:
-// var a = new InventorySnapshot {
-//     Coins = 10, Items = new List<string> { "magnet" }
+// var a = new BoardSnapshot {
+//     MovesLeft = 10, Boosters = new List<string> { "striped" }
 // };
 // var b = a;
-// b.Coins = 20;
-// b.Items.Add("shield");
-// a.Coins is still 10, but a.Items now contains both items.
+// b.MovesLeft = 20;
+// b.Boosters.Add("wrapped");
+// a.MovesLeft is still 10, but a.Boosters now contains both boosters.
 ```
 
 The example shows why “struct means deep copy” is incorrect: the integer is copied, but both structs still refer to the same list. The rule “structs live on the stack and classes live on the heap” is also too simple to guide a design. A struct can be a field in a heap object, an array element, or a boxed value. Choose a type based on how it should be copied and changed, its size, and how the program uses it.
@@ -37,21 +37,21 @@ Reading a struct through a `List<T>` index returns a value. To change an ordinar
 Iteration makes the same copy quietly. A `foreach` over a collection of structs hands you a copy of each element, and C# forbids assigning to that copy precisely because the assignment would be lost:
 
 ```csharp
-// Given: struct Enemy { public int Health; }
-// List<Enemy> enemies;
+// Given: struct Cell { public int Blocker; }
+// List<Cell> cells;
 
-foreach (var enemy in enemies)
-    enemy.Health -= 10;   // Compile error: the iteration variable is read only.
+foreach (var cell in cells)
+    cell.Blocker -= 1;    // Compile error: the iteration variable is read only.
 
-for (int i = 0; i < enemies.Count; i++)
+for (int i = 0; i < cells.Count; i++)
 {
-    var copy = enemies[i];
-    copy.Health -= 10;
-    enemies[i] = copy;    // The write back is what makes the change survive.
+    var copy = cells[i];
+    copy.Blocker -= 1;
+    cells[i] = copy;      // The write back is what makes the change survive.
 }
 ```
 
-The compiler error is the helpful case. The same mistake through a method is silent: if `Enemy` has a `TakeDamage` method, `enemies[i].TakeDamage(10)` on a `List<T>` does not compile, but the same expression on an *array* does compile and does work, because an array element is a storage location and a list indexer is a value-returning property. Two containers that look interchangeable behave differently, and neither behavior is a bug.
+The compiler error is the helpful case. The same mistake through a method is silent: if `Cell` has a `Weaken` method, `cells[i].Weaken()` on a `List<T>` does not compile, but the same expression on an *array* does compile and does work, because an array element is a storage location and a list indexer is a value-returning property. Two containers that look interchangeable behave differently, and neither behavior is a bug.
 
 A related copy appears around `readonly`. Calling an ordinary instance method on a `readonly` field of a mutable struct type makes a defensive copy first, so any change the method makes is discarded. Where the project's language version supports it, marking such members `readonly` removes the copy and makes the intent explicit. This is the same mechanism behind the defensive copies mentioned above for `in` parameters.
 
@@ -95,7 +95,7 @@ static void Example()
 
 ## Equality, hashing, and stable identifiers {#csharp-equality-hashing}
 
-Object identity asks whether two references point to the same object. Value equality asks whether two values mean the same thing. Mission IDs should usually compare by identifier value. Two scene components, however, do not become interchangeable just because their visible properties match.
+Object identity asks whether two references point to the same object. Value equality asks whether two values mean the same thing. Board coordinates and card identifiers should usually compare by value. Two scene components, however, do not become interchangeable just because their visible properties match.
 
 Hash collections depend on one rule: values that compare equal must have equal hash codes. Different values can still have the same hash; that is a collision. A hash code is therefore unsuitable as a globally unique ID. Runtime hash codes should not be saved as persistent identifiers either.
 
@@ -307,7 +307,7 @@ An `IEnumerable<T>` describes how to visit a sequence of values. It does not gua
 
 Use `ToArray` or `ToList` when you need to capture which elements are in a sequence at a particular moment. That allocates storage and copies the elements. If the elements are references, the copy still points to the original objects; it does not freeze their fields.
 
-Changing a typical list during a `foreach` loop invalidates its enumerator. You can instead collect the removals and apply them afterward, or walk indices backward when removing elements. Other collections may support different rules for changes during iteration. Check the contract of the collection and runtime you use.
+Changing a typical list during a `foreach` loop invalidates its enumerator. A match-3 cascade is where this usually bites, because the pass that walks the matched cells is the same pass that wants to clear them. You can instead collect the removals and apply them afterward, or walk indices backward when removing elements. Other collections may support different rules for changes during iteration. Check the contract of the collection and runtime you use.
 
 Walking backward prevents removal from skipping an element that shifts into an earlier index. Each `RemoveAt` can still move data, though. For a large filtering pass, it may be cheaper to compact the surviving elements once. If order does not matter, move the last element into the removed slot instead; this is swap-back removal, and any stored index mappings must be updated.
 
@@ -316,11 +316,11 @@ Check for hidden repeated enumeration. A method that accepts `IEnumerable<T>` ca
 The declared type of the variable you loop over also decides whether the loop allocates. `List<T>` returns a struct enumerator, so iterating a `List<T>`-typed variable copies that struct onto the stack and allocates nothing. Iterating the same list through a variable typed `IEnumerable<T>` calls the interface method instead, which boxes the enumerator and produces one allocation per loop:
 
 ```csharp
-List<Enemy> enemies = registry.Active;
-foreach (var enemy in enemies) { }      // No enumerator allocation.
+List<Cell> cells = board.Filled;
+foreach (var cell in cells) { }         // No enumerator allocation.
 
-IEnumerable<Enemy> asSequence = enemies;
-foreach (var enemy in asSequence) { }   // Boxes the struct enumerator.
+IEnumerable<Cell> asSequence = cells;
+foreach (var cell in asSequence) { }    // Boxes the struct enumerator.
 ```
 
 One allocation per loop is irrelevant at startup and is worth knowing about in a method that runs for every entity every frame. It also gives a concrete reason to choose parameter types deliberately. Accepting `IEnumerable<T>` is the most permissive signature and the least informative one: the callee cannot count cheaply, cannot index, cannot know whether enumerating twice is free, and will box the enumerator of the most common concrete argument. Accepting `IReadOnlyList<T>` keeps the caller free to pass an array or a list while giving the callee a count and an indexer. Accepting the concrete `List<T>` gives up flexibility for the struct enumerator.

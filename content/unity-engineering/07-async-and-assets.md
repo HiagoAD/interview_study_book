@@ -158,6 +158,8 @@ Loading a prefab through Addressables and cloning it with ordinary `Object.Insta
 
 A game-owned adapter can represent an acquired asset as a lease: an object that provides the result and one way to release it. Decide who holds that lease. A cache might retain it while views borrow access, or each view might acquire and release its own load. Make borrowed and owned references distinguishable, so callers know which ones they must release.
 
+A level-based puzzle gives that decision a natural boundary. Everything acquired for level 47 is released when level 47 ends, so the lease belongs to the level session rather than to any view inside it. A view that acquires its own art and is then destroyed by a restart has to release it on a path few projects test, whereas the end of a level is an event the game already handles carefully.
+
 Check the cleanup required when a load fails. Keep error handling and release logic together, so cancellation, failure, and a successful but stale result all follow the ownership rules.
 
 An asynchronous load can still perform work on the main thread. Deserialization, object creation, shader work, and scene activation may cause hitches after the bytes arrive. Measure the time until the content is ready to use, including those steps.
@@ -194,7 +196,7 @@ Exercise: List the runtime-loaded assets in a feature you know, and mark each on
 
 ## Choose loading boundaries from peak memory and latency {#assets-loading-boundaries}
 
-Suppose scene A uses 300 MB of content and scene B uses 250 MB. Keeping A loaded while loading B can require much more memory than either scene uses alone. Compressed data, decompressed buffers, and engine objects may all overlap during the transition. Shared dependencies save memory only if packaging and loading actually share them.
+Take a level-based puzzle in which each level is its own scene. Suppose the level being left, scene A, uses 300 MB of content, and the level being entered, scene B, uses 250 MB. Keeping A loaded while loading B can require much more memory than either scene uses alone. Compressed data, decompressed buffers, and engine objects may all overlap during the transition. Shared dependencies save memory only if packaging and loading actually share them.
 
 Include overlapping and temporary resources in the transition estimate:
 

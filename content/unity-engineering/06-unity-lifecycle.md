@@ -31,16 +31,16 @@ Script Execution Order can coordinate known script types, but a long ordering li
 The safe instantiation order is short enough to keep in your head:
 
 ```csharp
-public Coin Spawn(CoinDefinition definition, ICollectionOperation collection)
+public Projectile Launch(ProjectileDefinition definition, IImpactListener impacts)
 {
     // The prefab's root is inactive, so no lifecycle callback has run yet.
-    var instance = Object.Instantiate(inactivePrefab, spawnPoint, Quaternion.identity);
+    var instance = Object.Instantiate(inactivePrefab, launchPoint, Quaternion.identity);
 
-    var coin = instance.GetComponent<Coin>();
-    coin.Initialize(definition, collection, generation: nextGeneration++);
+    var projectile = instance.GetComponent<Projectile>();
+    projectile.Initialize(definition, impacts, generation: nextGeneration++);
 
     instance.SetActive(true);   // Awake, then OnEnable, then Start run from here.
-    return coin;
+    return projectile;
 }
 ```
 
@@ -90,6 +90,8 @@ Exercise: For one prefab you spawn at runtime, write which of the four rows its 
 Capture input when the selected input system processes it, then pass the command to the simulation at a defined point. A button press that is visible for only one frame can be missed or mishandled if you read it only in a fixed loop running on a different schedule. Check the Input System's update mode and action configuration when choosing where to read it.
 
 For simple motion outside physics, displacement is velocity multiplied by elapsed simulation time. For an object controlled by physics, use the appropriate Rigidbody API at the appropriate simulation step. Arbitrary transform changes can conflict with the solver. Rigidbody interpolation smooths the displayed motion between simulation states; it does not make the physics more accurate.
+
+A physics slingshot makes the distinction concrete and unforgiving. The launch is one impulse applied on a fixed step, and everything after it belongs to the solver. If a replay of the same shot has to land in the same place, the shot must be described by what was fed into that step, the impulse and the step it was applied on, rather than by the positions observed afterward. Positions are an output of the simulation, and they diverge as soon as the number of steps does.
 
 Use `LateUpdate` for work that should follow ordinary frame updates, such as a camera following a character moved through its transform. Multiple scripts using `LateUpdate` still need an explicit ordering rule if one depends on another.
 
@@ -198,9 +200,9 @@ Separate authored Unity data from player saves. Scenes and prefabs describe cont
 The conversion from authored list to runtime lookup is worth writing once, because the validation is the point of it:
 
 ```csharp
-public Dictionary<string, PowerUpDefinition> BuildCatalog(IReadOnlyList<Entry> entries)
+public Dictionary<string, ProjectileDefinition> BuildCatalog(IReadOnlyList<Entry> entries)
 {
-    var catalog = new Dictionary<string, PowerUpDefinition>(entries.Count, StringComparer.Ordinal);
+    var catalog = new Dictionary<string, ProjectileDefinition>(entries.Count, StringComparer.Ordinal);
     foreach (var entry in entries)
     {
         if (string.IsNullOrWhiteSpace(entry.Id))
@@ -213,7 +215,7 @@ public Dictionary<string, PowerUpDefinition> BuildCatalog(IReadOnlyList<Entry> e
 }
 ```
 
-Using `catalog[entry.Id] = ...` instead of the check and `Add` would make a duplicate ID silently keep the last entry. The author would see one of their two power-ups quietly stop existing, with nothing in the log to explain it. The explicit comparer matters for the same reason as in the equality section: an ID lookup must not depend on the device's language settings.
+Using `catalog[entry.Id] = ...` instead of the check and `Add` would make a duplicate ID silently keep the last entry. The author would see one of their two projectiles quietly stop existing, with nothing in the log to explain it. The explicit comparer matters for the same reason as in the equality section: an ID lookup must not depend on the device's language settings.
 
 Run this conversion where a failure is cheap. An import step or a build-time validation reports the problem to the author with the asset name attached. The same exception thrown during a player's run reports it to nobody useful.
 

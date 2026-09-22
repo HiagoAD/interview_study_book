@@ -7,7 +7,7 @@ chapter: 01: Reasoning about gameplay architecture
 
 Start with a gameplay feature. Decide which part of the code owns its state, then explain what happens when something fails. The later chapters build on those decisions: they cover C#, Unity production work, algorithms, mobile performance, live operations, collaboration, and examples from your own projects. The order runs from design reasoning to production concerns, which is roughly how a technical interview works through them. Published interview reports can suggest topics to practise, but one candidate's experience cannot tell you what a studio will ask next.
 
-The running example is an imaginary mobile runner. Players collect coins, activate power-ups, complete missions, and participate in seasonal events. The requirements are invented for the exercises; they make no claims about the internals of any commercial game.
+The worked example in chapters 1 to 3 is an imaginary mobile endless runner. Players collect coins, activate power-ups, complete missions, and participate in seasonal events. Later chapters change genre on purpose, taking their examples from match-3 boards, physics puzzles, card battlers, tower defense, builders, and idle games, because a principle you have only ever seen in one kind of game is easy to mistake for a fact about that kind of game. The requirements are invented for the exercises; they make no claims about the internals of any commercial game.
 
 | Preparation area | Chapters |
 | --- | --- |
