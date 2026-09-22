@@ -82,6 +82,17 @@ A framework is optional and the term is often confused with one. [[#architecture
 
 A container earns its place when the graph is large enough that writing it out becomes the bigger cost, and it charges for that in registration errors, lifetime configuration, and a layer that stands between a failure and its cause. Either way the design question is the same, which is who owns each object and how long it lives.
 
+## Destroyed Unity object {#destroyed-unity-object}
+= managed wrapper | fake null | Unity null
+
+A `UnityEngine.Object` is a C# wrapper around an object the engine owns. Destroying it, or unloading its scene, removes the engine object, while the wrapper stays reachable for as long as anything refers to it. Unity's overloaded `==` then reports the wrapper as null, although `is null`, `?.` and `??` do not.
+
+The split is what lets a lifetime bug surface long after its cause. A static event or a persistent service that still holds a delegate keeps the wrapper alive after its scene has gone, and when the event fires, the handler runs: its plain C# fields still read, and the first access to anything the engine owned, such as its `transform`, throws a `MissingReferenceException`.
+
+Which check notices the destruction depends on how the reference is declared as well as on the operator. `hud == null` uses Unity's check only when `hud` is declared as a Unity type. Through an interface or an `object` reference, or with `is null`, `?.` and `??`, a destroyed object looks alive, so `hud?.Refresh()` still calls into it.
+
+[[#unity-destruction]] covers the rest: when a `Destroy` call takes effect, and which cleanup belongs in `OnDisable` and which in `OnDestroy`.
+
 ## Draw call {#draw-call}
 = draw calls
 -> srp-batcher
@@ -163,10 +174,10 @@ Three problems are worth naming before an interviewer names them. Order: listene
 
 Announce facts that have already happened, rather than requests. “Reward granted” can be handled by any number of listeners in any order. “Grant reward” cannot, because two listeners would grant it twice.
 
-## Play Mode tests {#play-mode-tests}
+## Edit Mode and Play Mode tests {#play-mode-tests}
 = Edit Mode tests | Unity Test Framework
 
-Tests that run with the engine playing, so component lifecycles, scenes, prefabs, physics, and coroutines behave as they do in the game. Edit Mode tests run without entering play mode and suit rules that need no engine at all.
+Play Mode tests run with the engine playing, so component lifecycles, scenes, prefabs, physics, and coroutines behave as they do in the game. Edit Mode tests run without entering play mode and suit rules that need no engine at all.
 
 The distinction decides what a passing run establishes. An Edit Mode test over a plain C# model proves the rule; it says nothing about whether the prefab is wired up or the subscription is released on disable. A Play Mode test covers those and costs more time per run, which is why the rule layer in this book is kept free of engine types.
 
@@ -186,7 +197,7 @@ Because of that, “works in the Editor” is a statement about the Editor. [[#m
 
 A Unity asset that holds serialized data without belonging to a GameObject, used for configuration that several objects share and that designers author in the Editor.
 
-Its defining property is that the asset is shared. Writing to one at runtime changes it for everything that references it, and the Editor makes that worse rather than obvious: a write during play mode can persist on disk after play stops, while the same write in a player build lands in a loaded copy that disappears with the process. A feature that appears to save for weeks can lose everything on the first device test.
+Its defining property is that the asset is shared. Writing to one at runtime changes it for everything that references it, and the Editor makes that worse rather than obvious: a write during play mode stays in the loaded asset after play stops, and can reach disk the next time that asset is saved, while the same write in a player build lands in a loaded copy that disappears with the process. A feature that appears to save for weeks can lose everything on the first device test.
 
 Treat one as authored input, and convert it into validated runtime definitions the run owns, as [[#powerup-data-model]] describes. Player progress belongs in a save with a version and a migration path, which a ScriptableObject does not provide.
 

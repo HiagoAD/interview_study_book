@@ -66,7 +66,7 @@ Exercise: Pick a feature you have shipped. Write one sentence for each of the se
 
 “Add a coin magnet” leaves most engineering decisions unresolved. Does it attract coins through walls? Does it stack with another magnet? Does the duration pause during menus? Does death end it? Can a designer change its range without a code build? Can an attraction already in progress finish after the effect expires?
 
-Start with a short description of what the player should experience. Then write down the behavior they can observe. Separate functional rules from quality requirements. “Coins inside the radius move toward the player” describes what the feature does. “The feature fits the remaining [[frame budget]] on the minimum supported device” limits how much work it can do. “Designers can preview the radius in a test scene” describes what the authoring tools must support.
+Start with a short description of what the player should experience. Then write down the behavior they can observe. Separate functional rules from quality requirements. “Coins inside the radius move toward the player” describes what the feature does. “The feature fits the remaining [[frame budget]], about 16.67 ms at 60 FPS shared between every system, on the minimum supported device” limits how much work it can do. “Designers can preview the radius in a test scene” describes what the authoring tools must support.
 
 Record the behavior for each edge case:
 
@@ -193,7 +193,7 @@ Match object lifetimes explicitly:
 | Run | Score, effects, mission event buffer | Run end or restart |
 | View | Subscriptions, pending artwork request | Hide, unbind, or destroy, according to its contract |
 
-Check any service that keeps a reference to an object with a shorter lifetime. A static event, for example, can keep a scene HUD's managed wrapper reachable after the scene unloads. A task started by a view may also finish after that view has been reused for another item. Both are lifetime bugs, even if neither produces an exception.
+Check any service that keeps a reference to an object with a shorter lifetime. A static event, for example, can keep a scene HUD's [[managed wrapper]] reachable after the scene unloads. A task started by a view may also finish after that view has been reused for another item. Both are lifetime bugs, even if neither produces an exception.
 
 Use an interface when callers should depend on an operation without knowing its implementation. Examples include a clock, a storage operation, a reward service, or a selection policy that can be replaced. An immutable definition can remain a concrete type: if callers only need its data, an interface may add little.
 

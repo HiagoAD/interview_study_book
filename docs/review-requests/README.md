@@ -47,16 +47,14 @@ explicit decision, and the request says what it would cost the reader's review h
 
 | Request | Where | Priority |
 | --- | --- | --- |
-| [Double for time, integers for money](money-in-floating-point.md) | 02 `powerup-expiration` | medium |
-| [Where a Play Mode write to a ScriptableObject goes](scriptableobject-play-mode-writes.md) | 02 `powerup-data-model`, glossary | medium |
 | [Why an ID comparer is explicit](string-comparer-default.md) | 06 `unity-serialization`, 09 `structures-hash-collections` | medium |
 | [Grid cell size and the cells a query touches](grid-cell-size.md) | 10 `algorithms-spatial`, glossary | medium |
 | [What an inflated A-star heuristic gives up](weighted-heuristic-bound.md) | 10 `algorithms-pathfinding` | medium |
 | [What a physics replay needs besides its inputs](physics-replay-determinism.md) | 06 `unity-update-time` | medium |
 | [The Addressables summary promises too much](addressables-summary.md) | glossary | medium |
 | [Worked numbers that do not add up](worked-numbers.md) | 11, 14 (twice), 15 | medium |
-| [Code samples that do not do what the prose says](code-samples.md) | 02, 05, 06, 07, 09, 10, 13 | medium to low |
-| [Precision notes](precision-notes.md) | fourteen places | low |
+| [Code samples that do not do what the prose says](code-samples.md) | 06, 07, 09, 10, 13 | medium to low |
+| [Precision notes](precision-notes.md) | nine places | low |
 
 ### Question design
 
@@ -70,20 +68,15 @@ explicit decision, and the request says what it would cost the reader's review h
 
 | Request | Where | Priority |
 | --- | --- | --- |
-| [Name the Unity API where the book describes it](unity-api-names.md) | eleven places | medium |
+| [Name the Unity API where the book describes it](unity-api-names.md) | ten places | medium |
 | [Documentation links and the reference version](links-and-versions.md) | 10 of 28 links | medium |
-| [Cross-references, placement, and naming](cross-references-and-placement.md) | six places | medium to low |
+| [Cross-references, placement, and naming](cross-references-and-placement.md) | three places | medium to low |
 
 ### Forward references
 
 | Concept | First used | Explained in | Distance | Recommended ending |
 | --- | --- | --- | --- | --- |
-| [Object pool](object-pool.md) | 02 `powerup-collection` | 11 `performance-pooling` | 9 chapters | One clause in 02 |
-| [Managed wrapper](managed-wrapper.md) | 01 `architecture-dependencies` | 06 `unity-destruction` | 5 chapters, no entry | A new entry, linked in 01 |
-| [Frame budget](frame-budget.md) | 01 `architecture-requirements` | 11 `performance-frame-budget` | 10 chapters | The number in 01 |
 | [Scripting backend](scripting-backend.md) | 06 `unity-editor-vs-player` | 12 `mobile-build-integrations` | 6 chapters | Name both backends in 06 |
-| [Play Mode tests](play-mode-tests.md) | 02 `powerup-test-matrix` | 08 `testing-contracts` | 6 chapters | One clause in 02 |
-| [Idempotence](idempotence.md) | 01, in a question | 03 `missions-reward-claim` | 2 chapters | Name it in 02 |
 | [Spatial index](spatial-index.md) | 09 `structures-complexity` | 10 `algorithms-spatial` | 1 chapter | Name the grid in 09 |
 | [Breadth-first search](breadth-first-search.md) | 09 `structures-specialized` | 10 `algorithms-pathfinding` | 1 chapter | Turn the sentence around |
 | [Job System and Burst](job-system-and-burst.md) | 07 `async-models` | 07 `async-jobs-burst` | same chapter | One sentence under the table |
@@ -130,8 +123,6 @@ overruled rather than repeated:
   book's audience, and the sentences that use it early do not lean on the detail.
 - **Managed code stripping** (06, before 08 `debugging-unity-scenarios`). The scripting
   backend entry covers why it bites, and chapter 08 explains it where it matters.
-- **Deep profiling** (04, before 11 `performance-bottleneck`). One passing mention, in a
-  list of three ways to check a claim.
 - **NUnit** (02). Named once, as the framework the example is written in.
 - **Hitch** (07, 08, 11). Game jargon the surrounding sentences always make concrete.
 - **Entity Component System** (07). Named and expanded once, in a paragraph about

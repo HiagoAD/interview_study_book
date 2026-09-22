@@ -1,7 +1,7 @@
 # Review request: code samples that do not do what the prose says
 
 - **Kind:** accuracy
-- **Priority:** medium for the first three, low for the rest
+- **Priority:** medium for the first two, low for the rest
 - **Touches:** prose and code fences only; no question quotes these samples
 
 ## 1. The migration chain applies the wrong step (medium)
@@ -32,17 +32,6 @@ scheduler. `Cancel` needs to ignore an id that is no longer pending, through a s
 pending ids or a state on the task, and the sentence should say which case the marker
 removal covers.
 
-## 3. The wallet's invariant is half enforced (medium)
-
-`05-principles-and-patterns.md:22-41`, section `oop-encapsulation`. The comment says
-“Balance is never negative and never exceeds Maximum”, and the text says “The invariant is
-one comment and two conditions.” But `Maximum` has no constructor or setter, so it is
-always 0; there is no way to add money; and nothing checks the upper bound. The two
-conditions in `TrySpend` protect only the lower one. Either add a constructor and a
-`TryGrant` that checks `Maximum`, following the `TryGrant` in chapter 04 at line 367, or
-drop the `Maximum` half of the comment. The paragraph's argument, that the guarantee comes
-from the absence of any other way in, is unaffected.
-
 ## 4. `Start` does not run inside `SetActive` (low)
 
 `06-unity-lifecycle.md:42`:
@@ -61,12 +50,6 @@ first `Update`. The table at line 56 has it right. Suggested comment:
 the count, but a reader implementing it will reset the refill timestamp to now and lose up
 to one interval on every resume. Add that the stored timestamp advances by the whole
 intervals granted, and moves to now only when the cap is reached.
-
-## 6. `CollectResult` cannot be constructed (low)
-
-`02-power-up-design.md:280-285`: a `readonly struct` with get-only properties and no
-constructor, so every instance holds default values. Add the constructor, or a comment
-saying it is omitted, as chapter 04 marks its “Illustrative fragment”.
 
 ## 7. A discarded task in the cancellation example (low)
 

@@ -2,7 +2,7 @@
 
 - **Kind:** coverage
 - **Priority:** medium
-- **Where:** eleven places in chapters 02, 06, 07, 08, 09, 10 and 12
+- **Where:** ten places in chapters 06, 07, 08, 09, 10 and 12
 - **Touches:** prose only, a clause or a table column at a time
 
 ## The pattern
@@ -23,7 +23,6 @@ and the quoted phrases are Unity's.
 
 | Where | The book says | Name to add |
 | --- | --- | --- |
-| 02:164 | accumulated time should be a `double` | `Time.timeAsDouble` and `Time.unscaledTimeAsDouble`, since `Time.time` is a `float`; see [money-in-floating-point.md](money-in-floating-point.md) |
 | 06:98-105 | four time domains, in a table | Scaled: `Time.time`, `Time.deltaTime`. Unscaled: `Time.unscaledTime`, `Time.unscaledDeltaTime`. Monotonic: `Time.realtimeSinceStartupAsDouble` or a `Stopwatch`. UTC: `DateTime.UtcNow`, with a server's time as the trusted source. A column in the existing table. |
 | 07:41 | “return to the main thread before you do” | `await Awaitable.MainThreadAsync()`, and `Awaitable.BackgroundThreadAsync()` for the move off it: with the first, “continuation happens on the main thread”, and with the second, “on a background thread”. The chapter introduces `Awaitable` and never shows one of its members. |
 | 07:101-123 | a cancellation source owned by the binding | `MonoBehaviour.destroyCancellationToken` and `Application.exitCancellationToken`, the lifetimes Unity already provides. Linking the binding's source to one of them is the “more than one reason” case line 123 describes. |

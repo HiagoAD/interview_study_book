@@ -197,7 +197,7 @@ Suppose 500 active objects each allocate 128 bytes per frame at 60 frames per se
 
 Apply the same reasoning to queries. A LINQ query used during occasional setup may cost little enough to keep. The same query in every object's `Update` needs measurement. [[object pool|Pooling]] is another tradeoff: use it when the saved work justifies the extra rules for ownership and cleanup.
 
-Because the answer depends on the generated code, the useful skill is checking rather than predicting. Three methods, in increasing order of effort: read the allocation column of a Profiler capture in a player build with deep profiling on the suspect call; inspect the compiled IL for the method and look for `box` instructions; or write a short benchmark that runs the call many times and measures allocated bytes. The first is usually enough to decide whether the question matters at all.
+Because the answer depends on the generated code, the useful skill is checking rather than predicting. Three methods, in increasing order of effort: read the allocation column of a Profiler capture in a player build, with a `ProfilerMarker` around the suspect call or with allocation call stacks recorded; inspect the compiled IL for the method and look for `box` instructions; or write a short benchmark that runs the call many times and measures allocated bytes. The first is usually enough to decide whether the question matters at all.
 
 One rule is worth carrying, because it explains most of the surprising cases. When a generic method constrains its parameter with `where T : struct` or with an interface the struct implements directly, the compiler can emit a constrained call that invokes the struct's implementation without boxing. When the same value reaches a parameter typed as the interface itself, the conversion happens at the call site and the box is created there. The difference is visible in the signature:
 
@@ -213,7 +213,7 @@ static int Compare(System.IComparable left, System.IComparable right) =>
 
 Both lines read the same in calling code. Prefer the generic form for value types on a frequently executed path, and keep the interface form where the caller is already working with reference types or where clarity matters more than the allocation.
 
-Exercise: Estimate the allocation of one boxed `int` per entity per frame for 500 entities at 60 frames per second, then decide whether that figure would change your design before you measured it.
+Exercise: Estimate the allocation of one boxed `int` per entity per frame for 500 entities at 60 frames per second, taking a boxed `int` as about 24 bytes on a 64-bit runtime: a 16-byte object header, the 4-byte value, and padding. Then decide whether that figure would change your design before you measured it.
 
 ?? csharp-boxing-copy What value does `recovered` contain in the boxing example?
 * 7.
@@ -271,7 +271,7 @@ model.Changed += handler;
 model.Changed -= handler;               // Removes the subscription.
 ```
 
-The second `-=` in the first pair creates a new delegate over a new closure, finds no match in the invocation list, and returns without complaint. Repeat that binding cycle ten times and the handler runs ten times per event, which is a frequent cause of the “the event fires twice” report described above. Compiler behavior around non-capturing lambdas can differ, so do not rely on any lambda being removable; store the instance whenever you intend to unsubscribe.
+The second `-=` in the first pair creates a second delegate, finds no match in the invocation list, and returns without complaint. The two lambdas share one closure object, because they capture variables from the same scope, but each compiles to its own method, and delegate equality compares the method as well as the target. Repeat that binding cycle ten times and the handler runs ten times per event, which is a frequent cause of the “the event fires twice” report described above. Compiler behavior around non-capturing lambdas can differ, so do not rely on any lambda being removable; store the instance whenever you intend to unsubscribe.
 
 Raising an event has its own small contract. `Changed?.Invoke()` reads the field once and then invokes, which avoids a race where the last subscriber unsubscribes between the null check and the call. It does not make delivery thread safe in general, and it does not stop a handler that throws from preventing the handlers after it from running. Where every observer must be attempted, invoke the invocation list yourself and decide what a failing handler should do.
 
@@ -325,7 +325,7 @@ foreach (var cell in asSequence) { }    // Boxes the struct enumerator.
 
 One allocation per loop is irrelevant at startup and is worth knowing about in a method that runs for every entity every frame. It also gives a concrete reason to choose parameter types deliberately. Accepting `IEnumerable<T>` is the most permissive signature and the least informative one: the callee cannot count cheaply, cannot index, cannot know whether enumerating twice is free, and will box the enumerator of the most common concrete argument. Accepting `IReadOnlyList<T>` keeps the caller free to pass an array or a list while giving the callee a count and an indexer. Accepting the concrete `List<T>` gives up flexibility for the struct enumerator.
 
-Where the project's compatibility profile provides them, a `Span<T>` or `ReadOnlySpan<T>` parameter expresses “a contiguous run of elements I will read now and not retain” more precisely than any of these. Check availability in the project rather than assuming it, in the same way the later chapter treats newer collection APIs.
+Where the project's compatibility profile provides them, a `Span<T>` or `ReadOnlySpan<T>` parameter expresses “a contiguous run of elements I will read now and not retain” more precisely than any of these. Check availability in the project rather than assuming it, in the same way chapter 9 treats newer collection APIs such as `PriorityQueue<TElement, TPriority>`.
 
 Exercise: Find a method in your code that takes `IEnumerable<T>` and enumerate its body. If it calls `Count()` and then loops, decide whether the signature or the body should change.
 

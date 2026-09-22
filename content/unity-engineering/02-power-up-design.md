@@ -52,7 +52,7 @@ Seeing the three layers for one effect at once makes the split easier to hold:
 
 Read the table downward when you design, and upward when you debug. A wrong radius is a definition problem. A radius that is correct in the Inspector but wrong for one player is a runtime state problem. A correct effect with a stuck icon is a presentation problem.
 
-The Editor hides one asymmetry worth knowing before it costs you an afternoon. Changes written into a ScriptableObject asset during Play Mode can persist in the Editor after you stop, because the asset on disk was modified. The same code in a player build writes into a loaded copy that disappears with the process. A feature that appears to save correctly for weeks can therefore lose everything on the first device test. Treat any write to a shared asset at runtime as a mistake to find, rather than a storage mechanism to rely on.
+The Editor hides one asymmetry worth knowing before it costs you an afternoon. Changes written into a ScriptableObject asset during Play Mode can persist in the Editor after you stop, because the Editor keeps the loaded asset rather than reloading it. The change reaches the file on disk only if the asset is saved afterward, which can happen by accident when someone edits it in the Inspector. The same code in a player build writes into a loaded copy that disappears with the process. A feature that appears to save correctly for weeks can therefore lose everything on the first device test. Treat any write to a shared asset at runtime as a mistake to find, rather than a storage mechanism to rely on.
 
 Exercise: For one effect in a project you know, write the three rows of that table. Then name the file or object that holds each row, and say which of them a player build is allowed to modify.
 
@@ -161,7 +161,7 @@ public sealed class EffectTicker
 
 The edge, not the state, is what deserves an event. Publishing on every tick where the effect is inactive would send the same notification for the rest of the run. Note also that `Tick` changes `wasActive`, so it is deliberately a command rather than a query; `IsActive` remains free of side effects.
 
-The choice of `double` over `float` for time is worth stating, because it is a common follow-up. A `float` carries about seven significant decimal digits, so the spacing between representable values grows with the magnitude of the number. Near a simulation time of 3,600 seconds that spacing is roughly 0.00024 seconds; near 36,000 seconds it is roughly 0.004 seconds. A deadline compared against an accumulating `float` therefore becomes less exact the longer a session runs. A `double` keeps the spacing near this range far below anything gameplay can observe. Use `float` for positions and velocities, where its range and cost fit; prefer `double` for accumulated time and for money-like quantities you compare exactly.
+The choice of `double` over `float` for time is worth stating, because it is a common follow-up. A `float` carries about seven significant decimal digits, so the spacing between representable values grows with the magnitude of the number. Near a simulation time of 3,600 seconds that spacing is roughly 0.00024 seconds; near 36,000 seconds it is roughly 0.004 seconds. A deadline compared against an accumulating `float` therefore becomes less exact the longer a session runs. A `double` keeps the spacing near this range far below anything gameplay can observe. Use `float` for positions and velocities, where its range and cost fit, and `double` for accumulated time. Unity's own `Time.time` and `Time.unscaledTime` are `float` values, so read `Time.timeAsDouble` or `Time.unscaledTimeAsDouble` when a clock value will be compared against a deadline late in a session. Keep money in integers of its smallest unit, as the wallet in this book does, because no binary floating-point type represents most decimal amounts exactly, and an exact comparison is then the defect.
 
 Exercise: Write the two assertions that distinguish a strict deadline from an inclusive one, then decide which your design intends and where that intent is recorded.
 
@@ -208,7 +208,7 @@ A small enum and an explicit branch are enough when the available policies are f
 When effects combine, the order in which you apply their kinds is itself a rule, and leaving it unstated produces values that differ between systems. Fix one pipeline and document it:
 
 ```text
-effective = clamp(min, max, (base + sum of additive) * product of multiplicative)
+effective = clamp((base + sum of additive) * product of multiplicative, min, max)
 ```
 
 With a base speed of 10, one additive bonus of +2, one multiplicative bonus of 1.5, and a cap of 18, that pipeline gives `(10 + 2) * 1.5 = 18`. Applying the multiplier first instead gives `10 * 1.5 + 2 = 17`. Neither is wrong as a design; only one can be the implementation, and the HUD preview must use the same one as the gameplay rule.
@@ -247,7 +247,7 @@ Design exercise: Explain how a magnet and a double-score effect interact with de
 
 A coin can be detected by a trigger, a proximity query, and an attraction animation in the same frame. The collection owner must recognize that these refer to one logical coin.
 
-Give each spawned coin an identity that lasts for that spawn. A [[object pool|pooled]] GameObject may represent several different coins during one run, so its object identity alone is not enough. Combine a pool slot with a generation number, or assign a new spawn ID each time the object is taken from the pool.
+Give each spawned coin an identity that lasts for that spawn. A [[object pool|pooled]] GameObject, one that is disabled and handed out again instead of being destroyed, may represent several different coins during one run, so its object identity alone is not enough. Combine a pool slot with a generation number, or assign a new spawn ID each time the object is taken from the pool.
 
 A coin can follow these transitions:
 
@@ -259,7 +259,7 @@ Available or Attracting -> Despawned
 
 Decide exactly when the player earns the reward. If it is committed when the coin arrives, attraction can still be cancelled before arrival. If it is committed when attraction starts, the animation shows a reward the player has already earned. Either policy can work. Mixing the two can cause currency to be lost or granted twice.
 
-In a small local model that runs on one thread, begin by checking the run ID and the coin's generation and state. Then calculate the new balance, checking for overflow. Commit the balance and collected state together, with no external callbacks between those changes. A duplicate request returns an “already collected” result. The return value tells the caller what happened; observers can animate the result afterward.
+In a small local model that runs on one thread, begin by checking the run ID and the coin's generation and state. Then calculate the new balance, checking for overflow. Commit the balance and collected state together, with no external callbacks between those changes. A duplicate request returns an “already collected” result. The operation is then [[idempotence|idempotent]]: repeating the same logical request has no further effect. The return value tells the caller what happened; observers can animate the result afterward.
 
 If you mark the coin as collected before calling a reward service, decide how to recover when that service fails. One option is to commit collection and reward together in a single transaction. Another is to record a pending operation with a stable ID, then let retries of that ID safely recover the reward result. A remote wallet needs its own authoritative transaction; keeping a set of IDs locally cannot guarantee that the server saved the reward.
 
@@ -282,6 +282,13 @@ public readonly struct CollectResult
     public CollectOutcome Outcome { get; }
     public long Balance { get; }
     public int Awarded { get; }
+
+    public CollectResult(CollectOutcome outcome, long balance, int awarded)
+    {
+        Outcome = outcome;
+        Balance = balance;
+        Awarded = awarded;
+    }
 }
 ```
 
@@ -340,7 +347,7 @@ public sealed class RefreshingEffectTests
 
 These examples require the earlier model and a test assembly with NUnit available. They demonstrate rule tests, not a complete Unity test setup.
 
-Also test reset, invalid durations, and a clock that stops during pause. For collection, cover duplicate callbacks, a callback from an old spawn after [[object pool|pool]] reuse, overflow rejection, and a run restart. Check failures both before and after the reward is committed. Use [[Play Mode tests]] for the Unity adapter, where you can verify subscriptions during enable and disable, along with prefab behavior.
+Also test reset, invalid durations, and a clock that stops during pause. For collection, cover duplicate callbacks, a callback from an old spawn after [[object pool|pool]] reuse, overflow rejection, and a run restart. Check failures both before and after the reward is committed. Use [[Play Mode tests]], which run with the engine playing, for the Unity adapter, where you can verify subscriptions during enable and disable, along with prefab behavior.
 
 After checking correctness, measure the implementation on a target device with the largest expected number of active coins. Rule tests cannot tell you whether proximity queries, animation, or pool growth fit within the time available for a frame.
 

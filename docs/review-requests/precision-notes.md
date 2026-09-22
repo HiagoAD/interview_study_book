@@ -7,24 +7,6 @@
 Each item is right in spirit and imprecise in a way a careful interviewer could press on.
 None is urgent; they are listed together so one editing pass can take them.
 
-1. `04-csharp-fundamentals.md:200`: “with deep profiling on the suspect call”. Deep
-   profiling instruments every method or none. For one call, the tools are a
-   `ProfilerMarker` around it, or allocation call stacks for `GC.Alloc`, and neither needs
-   deep profiling; a player build must also be built with Deep Profiling Support before it
-   can be deep profiled at all.
-2. `04-csharp-fundamentals.md:216`, the exercise: the estimate needs the size of a boxed
-   `int`, which the book never gives, so the reader cannot check an answer. About 24 bytes
-   on a 64-bit runtime (a 16-byte object header, 4 bytes of value and padding) makes it
-   checkable: roughly 720 KB a second.
-3. `04-csharp-fundamentals.md:274`: “creates a new delegate over a new closure”. Two
-   lambdas in the same scope share one closure object; the removal fails because each
-   lambda compiles to its own method, and delegate equality compares the method as well as
-   the target. The conclusion is right, and a scratch program confirms the handler stays
-   subscribed.
-4. `05-principles-and-patterns.md:243`: “helping only the incremental case where your
-   edits stay inside one of them”. An edit recompiles the edited assembly and every
-   assembly that references it, so the gain is largest in assemblies few others depend on.
-   An edit to `Game.Domain` in the graph at line 225 rebuilds everything above it.
 5. `07-async-and-assets.md:36`: “The continuation resumes on a thread-pool thread.” It
    can; an operation that completes synchronously continues on the calling thread. “can
    resume” is exact.
@@ -53,8 +35,5 @@ None is urgent; they are listed together so one editing pass can take them.
 12. `06-unity-lifecycle.md:290`: “Fast Enter Play Mode” is an informal name that the
     Editor never shows. The installed 6000.3 Editor labels the setting Enter Play Mode
     Settings, with a “When entering Play Mode” choice such as Reload Domain and Scene.
-13. `02-power-up-design.md:215`: `clamp(min, max, value)` puts the arguments in a
-    different order from `Mathf.Clamp(value, min, max)`, which is the one a Unity reader
-    will read it against.
 14. `14-collaboration.md:213`: “has a common name, situation, task, action, result” never
     says the name. It is STAR, and interviewers use the word.

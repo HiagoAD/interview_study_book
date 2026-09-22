@@ -22,11 +22,10 @@ The wallet is worth writing out, because it shows how little code an invariant n
 ```csharp
 public sealed class Wallet
 {
-    // Invariant: Balance is never negative and never exceeds Maximum.
+    // Invariant: Balance is never negative.
     private long balance;
 
     public long Balance => balance;
-    public long Maximum { get; }
 
     public bool TrySpend(long amount)
     {
@@ -240,7 +239,7 @@ Use comments for reasoning that the code cannot make obvious: a save compatibili
 
 Refactor when an actual change reveals duplicated work or dependencies that make edits unsafe. State the benefit you expect, and keep refactoring steps that preserve behavior separate from feature changes where practical. A refactor justified only as “Cleaner” may still break saves or consume the release window without solving a demonstrated problem.
 
-Assembly definitions are worth their cost when they buy you one of two things: a dependency direction the compiler enforces, or a compile step that does not rebuild the whole project for a one-line change. The second benefit is the one most often assumed and least often measured. Splitting code into many small assemblies adds per-assembly overhead and can make a full build slower, while helping only the incremental case where your edits stay inside one of them.
+Assembly definitions are worth their cost when they buy you one of two things: a dependency direction the compiler enforces, or a compile step that does not rebuild the whole project for a one-line change. The second benefit is the one most often assumed and least often measured. Splitting code into many small assemblies adds per-assembly overhead and can make a full build slower, while helping only the incremental case, and even there an edit can rebuild every assembly that references the one you changed. The gain is largest in assemblies few others depend on; an edit to `Game.Domain` in the graph above can rebuild everything drawn below it.
 
 A practical test before adding an assembly: name the dependency you want to make impossible. “Gameplay rules must not reference the HUD” is a good answer, and an assembly definition turns a review comment into a compile error. “It feels tidier” is not, and a folder does that job for free.
 
