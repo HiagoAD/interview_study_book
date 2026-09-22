@@ -2,7 +2,7 @@
 
 - **Kind:** consistency
 - **Priority:** medium for the first item, low for the rest
-- **Where:** seven places, listed below
+- **Where:** six places, listed below
 - **Touches:** prose, and one glossary heading
 
 1. **A wrong pointer.** `08-testing-and-debugging.md:78`: “For the slingshot launch of the
@@ -10,11 +10,6 @@
    the `Launch` method and `ProjectileDefinition` catalog that follow it). Chapter 7, the
    previous one, is set in a level-based puzzle. It is almost certainly a leftover from
    the genre revision. Write “of chapter 6”.
-2. **Exercises in the middle of a section.** `02-power-up-design.md:208` and `:210`: in
-   `powerup-stacking`, the `Exercise:` and `Design exercise:` lines are followed by four
-   more paragraphs and the modifier-pipeline code block. It is the only section in the
-   book whose closing device does not close it; a script checked the other 79. Move both
-   lines to the end, before the first `??`.
 3. **A vague pointer.** `04-csharp-fundamentals.md:328`: “in the same way the later
    chapter treats newer collection APIs”. That is chapter 9, line 182; name it. (If
    [unity-api-names.md](unity-api-names.md) adds the `PriorityQueue` fact there, the

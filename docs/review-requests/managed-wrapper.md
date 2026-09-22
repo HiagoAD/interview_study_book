@@ -32,7 +32,7 @@ which is the other half of the same fact.
 
 Unity engineers often know this as “fake null”, but it is less universal than prefab or
 Inspector, and it is an interview question in its own right, so the vocabulary argument
-that closes [coroutine.md](coroutine.md) and [singleton.md](singleton.md) is weaker here.
+that closed the coroutine and singleton requests in Phase 11 is weaker here.
 
 ## Options
 

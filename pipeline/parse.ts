@@ -109,19 +109,19 @@ function clip(text: string, max = 60): string {
   return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed
 }
 
-interface Fence {
+export interface Fence {
   char: string
   len: number
 }
 
-function openFence(line: string | undefined): Fence | null {
+export function openFence(line: string | undefined): Fence | null {
   const match = line === undefined ? null : /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line)
   if (!match || (match[1][0] === '`' && match[2].includes('`'))) return null
   return { char: match[1][0], len: match[1].length }
 }
 
 /** Index of the line closing the fence opened at `from`, or -1 if it never closes. */
-function findFenceEnd(lines: string[], from: number, fence: Fence): number {
+export function findFenceEnd(lines: string[], from: number, fence: Fence): number {
   for (let i = from + 1; i < lines.length; i++) {
     const match = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(lines[i])
     if (match && match[1][0] === fence.char && match[1].length >= fence.len) return i

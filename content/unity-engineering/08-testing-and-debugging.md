@@ -173,9 +173,9 @@ Order the checks by what they cost, not by what feels most likely. Reading a val
 | The reference is null after a transition | Was it ever assigned, or was it assigned and then destroyed? |
 | The trigger does not fire | Is either object moving through physics, or is a transform being set directly? |
 | It hitches on first use only | Does a second use also hitch? |
-| It works in the Editor only | Does a development build also fail? |
+| It works in the Editor only | Does it still fail with managed stripping at Minimal? |
 
-The last two rows are worth noticing, because both replace a hypothesis with a single observation. If the second use also hitches, the problem is not first-use initialization and everything you were about to prewarm is irrelevant. If a development build fails too, stripping and optimization are ruled out and the difference is elsewhere, such as in the content or the filesystem.
+The last two rows are worth noticing, because both replace a hypothesis with a single observation. If the second use also hitches, the problem is not first-use initialization and everything you were about to prewarm is irrelevant. If the player build still fails at Minimal, which removes none of the game's own code, the game's types were not stripped, and the difference is elsewhere: stripping inside the engine or the .NET libraries, ahead-of-time compilation, the content, or the filesystem. Where the platform allows the Mono backend, a Mono build with stripping disabled removes the first two at once, so if that build works, the cause is one of them. A development build answers none of these questions, because it keeps the stripping level and the scripting backend of the release build; use it for the logs and the profiler once you know where to look.
 
 Write the answer down before running the next check. A debugging session that produces no record tends to revisit the same possibilities, particularly when it spans more than one day or more than one person.
 

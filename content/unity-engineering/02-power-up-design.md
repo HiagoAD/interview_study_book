@@ -205,10 +205,6 @@ Keep the base value and the active modifiers, then calculate the effective value
 
 A small enum and an explicit branch are enough when the available policies are few and known in advance. A [[strategy]] interface becomes useful when policies are complex enough to implement separately, or come from different modules. A configurable expression language needs much more support: validation, repeatable evaluation, debugging tools, and compatibility rules.
 
-Exercise: Write the stacking policy your design uses as one sentence, then state what a second pickup does at each of these moments: while active, one frame after expiry, and while the run is paused.
-
-Design exercise: Explain how a magnet and a double-score effect interact with death, revive, pause, and restart. Create a transition table before introducing an inheritance hierarchy.
-
 When effects combine, the order in which you apply their kinds is itself a rule, and leaving it unstated produces values that differ between systems. Fix one pipeline and document it:
 
 ```text
@@ -218,6 +214,10 @@ effective = clamp(min, max, (base + sum of additive) * product of multiplicative
 With a base speed of 10, one additive bonus of +2, one multiplicative bonus of 1.5, and a cap of 18, that pipeline gives `(10 + 2) * 1.5 = 18`. Applying the multiplier first instead gives `10 * 1.5 + 2 = 17`. Neither is wrong as a design; only one can be the implementation, and the HUD preview must use the same one as the gameplay rule.
 
 Decide separately what the cap limits. Clamping the effective value leaves the modifiers intact, so removing one still produces a sensible result. Clamping by discarding modifiers at the point of application is harder to undo, because the removal no longer knows what was dropped.
+
+Exercise: Write the stacking policy your design uses as one sentence, then state what a second pickup does at each of these moments: while active, one frame after expiry, and while the run is paused.
+
+Design exercise: Explain how a magnet and a double-score effect interact with death, revive, pause, and restart. Create a transition table before introducing an inheritance hierarchy.
 
 ?? powerup-extend-expired An effect expired at time 10. At time 100, a pickup extends it by 5 seconds. Which deadline matches the intended rule?
 * 105, using the later of now and the existing deadline as the starting point.

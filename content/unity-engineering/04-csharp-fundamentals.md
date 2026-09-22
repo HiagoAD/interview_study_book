@@ -51,13 +51,13 @@ for (int i = 0; i < cells.Count; i++)
 }
 ```
 
-The compiler error is the helpful case. The same mistake through a method is silent: if `Cell` has a `Weaken` method, `cells[i].Weaken()` on a `List<T>` does not compile, but the same expression on an *array* does compile and does work, because an array element is a storage location and a list indexer is a value-returning property. Two containers that look interchangeable behave differently, and neither behavior is a bug.
+The compiler error is the helpful case. The same mistake through a method is silent: if `Cell` has a `Weaken` method, `cells[i].Weaken()` compiles for a `List<T>` and for an array alike, and only the array keeps the change. An array element is a storage location, so the method changes it in place; a list indexer is a property that returns a copy, so the method changes a temporary that is thrown away at the end of the statement. Two containers that look interchangeable behave differently, and neither behavior is a bug.
 
 A related copy appears around `readonly`. Calling an ordinary instance method on a `readonly` field of a mutable struct type makes a defensive copy first, so any change the method makes is discarded. Where the project's language version supports it, marking such members `readonly` removes the copy and makes the intent explicit. This is the same mechanism behind the defensive copies mentioned above for `in` parameters.
 
 A practical rule falls out of all of this: make a struct immutable, or keep it in an array you index directly, but do not write a mutable struct and then store it where only copies can be reached. The third combination is where the surprising cases live.
 
-Exercise: Predict the result of the loop above for an array and for a list, then run both. Where your prediction and the result differ, you have found the rule worth memorizing.
+Exercise: Predict what `cells[i].Weaken()` leaves in element `i` for an array and for a list, then run both. Where your prediction and the result differ, you have found the rule worth memorizing.
 
 ?? csharp-shallow-copy A struct contains an integer and a `List<string>`. After copying the struct, what is shared?
 * The list object referenced by both copies.

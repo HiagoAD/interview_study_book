@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "check": "tsx pipeline/check.ts"
+    "check": "tsx pipeline/check.ts",
+    "guard": "tsx pipeline/guard.ts"
   },
   "dependencies": {
     "idb": "^8.0.3",

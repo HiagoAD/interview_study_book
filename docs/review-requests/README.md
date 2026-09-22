@@ -47,9 +47,6 @@ explicit decision, and the request says what it would cost the reader's review h
 
 | Request | Where | Priority |
 | --- | --- | --- |
-| [A struct method called through a list indexer](struct-method-on-list-element.md) | 04 `csharp-value-reference` | high |
-| [What a development build rules out](development-build-and-stripping.md) | 08 `debugging-unity-scenarios` | high |
-| [What the site's review queue does](review-queue-description.md) | 15 `interview-study-loop` | high |
 | [Double for time, integers for money](money-in-floating-point.md) | 02 `powerup-expiration` | medium |
 | [Where a Play Mode write to a ScriptableObject goes](scriptableobject-play-mode-writes.md) | 02 `powerup-data-model`, glossary | medium |
 | [Why an ID comparer is explicit](string-comparer-default.md) | 06 `unity-serialization`, 09 `structures-hash-collections` | medium |
@@ -75,7 +72,7 @@ explicit decision, and the request says what it would cost the reader's review h
 | --- | --- | --- |
 | [Name the Unity API where the book describes it](unity-api-names.md) | eleven places | medium |
 | [Documentation links and the reference version](links-and-versions.md) | 10 of 28 links | medium |
-| [Cross-references, placement, and naming](cross-references-and-placement.md) | seven places | medium to low |
+| [Cross-references, placement, and naming](cross-references-and-placement.md) | six places | medium to low |
 
 ### Forward references
 
@@ -83,10 +80,8 @@ explicit decision, and the request says what it would cost the reader's review h
 | --- | --- | --- | --- | --- |
 | [Object pool](object-pool.md) | 02 `powerup-collection` | 11 `performance-pooling` | 9 chapters | One clause in 02 |
 | [Managed wrapper](managed-wrapper.md) | 01 `architecture-dependencies` | 06 `unity-destruction` | 5 chapters, no entry | A new entry, linked in 01 |
-| [Coroutine](coroutine.md) | 01 `engineering-study-method` | 07 `async-models` | 6 chapters | Leave it |
 | [Frame budget](frame-budget.md) | 01 `architecture-requirements` | 11 `performance-frame-budget` | 10 chapters | The number in 01 |
 | [Scripting backend](scripting-backend.md) | 06 `unity-editor-vs-player` | 12 `mobile-build-integrations` | 6 chapters | Name both backends in 06 |
-| [Singleton](singleton.md) | 01 `architecture-tradeoffs` | 05 `patterns-selection` | 4 chapters | Leave it |
 | [Play Mode tests](play-mode-tests.md) | 02 `powerup-test-matrix` | 08 `testing-contracts` | 6 chapters | One clause in 02 |
 | [Idempotence](idempotence.md) | 01, in a question | 03 `missions-reward-claim` | 2 chapters | Name it in 02 |
 | [Spatial index](spatial-index.md) | 09 `structures-complexity` | 10 `algorithms-spatial` | 1 chapter | Name the grid in 09 |
@@ -155,3 +150,8 @@ overruled rather than repeated:
 - **`Awake`, `OnEnable`, `Start` and `LateUpdate`** (01 and 04, before 06
   `unity-initialization`). Unity vocabulary on the level of prefab and Inspector; chapter
   06 explains their guarantees, which is the part the book needs.
+- **Coroutine** (01 `engineering-study-method`, before 07 `async-models`) and
+  **singleton** (01 `architecture-tradeoffs`, before 05 `patterns-selection`). Words a
+  candidate preparing for a Unity interview has met. The chapter 01 sentences make their
+  point without the detail, and each word has an entry for a reader who has not met it.
+  Both requests were closed in Phase 11 with no change to the book.

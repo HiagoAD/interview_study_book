@@ -45,8 +45,7 @@ all three places use Unity's term.
 
 Option 2 and the terminology fix now, together: at chapter 06 line 294,
 “[[scripting backend]], since a player build normally uses IL2CPP rather than the Editor's
-Mono”, which also replaces “compilation backend”. Take option 3 in the same pass as
-[development-build-and-stripping.md](development-build-and-stripping.md): chapter 08's
-table is where the reader first acts on the backend, and the same table is wrong about
-what a development build rules out. Whichever chapter ends up holding the IL2CPP
+Mono”, which also replaces “compilation backend”. Consider option 3 beside chapter 08's
+table, which is where the reader first acts on the backend; Phase 11 corrected what that
+table says a development build rules out. Whichever chapter ends up holding the IL2CPP
 paragraph, point the entry at it.
