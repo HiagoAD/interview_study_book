@@ -789,3 +789,13 @@ Applied everything the phase lists; the strict check against `a8b89af` matches, 
 Deviations, each for accuracy: the breadth-first sentence keeps its `[[breadth-first search]]` link, which the request's wording dropped. The lazy-deletion sample gains a `Schedule` step, because a `pending` set that `Cancel` consults needs something that fills it. Precision note 6 asked to credit the flat board with simpler bounds checks, but a flat index is the riskier one: a column one past the edge lands on the next row instead of failing. So the paragraph argues for one index calculation and one array to copy, and warns about that wrap. The pool sentence is split in two, since the fix gave it two semicolons.
 
 Next phase: chapters 12 to 15, then the README restructure; its forward-reference table is already empty.
+
+### Phase 15: Chapters 12 to 15
+
+Applied everything the phase lists; the strict check against `a8b89af` matches, and `docs/review-requests/` holds only the three question-design requests and the README. The README's opening now names Phases 11 to 15, and its open requests are those three, with the phase that applies each.
+
+One correction to a request: on Android and iOS Unity ignores `vSyncCount` ("always ignored because mobile devices do not allow unsynchronized rendering"), so `Application.targetFrameRate` is the only control there, and the request's rule that a nonzero `vSyncCount` overrides the target is the desktop one. Chapter 12 states the mobile rule and gives the desktop one as the contrast. The material, `MaterialPropertyBlock` and lifecycle names were checked against the same 6.0 reference.
+
+Choices the requests left open: chapter 14's budget menu gains a combined row, about 3.2 ms measured together, and one sentence on why combined savings are measured rather than added; keeping the effect reads about 50 FPS, or 30 under strict vsync, since 16.67 - 1 + 4 is 19.67 ms. The tool payback keeps 2 days and states them as about 16 hours. Chapter 15 says "Eleven lines" rather than gaining a twelfth, which would have meant inventing example content. The migration fix carries a comment naming the index.
+
+Next phase: run `npm run guard -- questions --allow distractors --base` with this phase's commit.

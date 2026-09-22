@@ -24,7 +24,7 @@ Represent shared global boundaries as UTC instants, then display them in the pla
 
 Decide what happens when a run starts just before the event ends. Eligibility could depend on the start time, completion time, or event instance captured at the start. Choose a rule and test its exact boundary. Save the relevant revision so a resumed run does not silently switch rules.
 
-The cost of “ends at local midnight” is easier to accept once it is a number. Time zone offsets in use run from UTC minus 12 to UTC plus 14, so one calendar date spans 26 hours across the world. An event that ends at local midnight is therefore live somewhere for 26 hours after the first player loses access to it, and the leaderboard, the reward budget, and any “last chance” message all have to be written with that in mind.
+The cost of “ends at local midnight” is easier to accept once it is a number. Time zone offsets in use run from UTC minus 12 to UTC plus 14, so the local midnights that end one calendar date are spread over 26 hours, and the date itself exists somewhere in the world for 50. An event that ends at local midnight is therefore live somewhere for 26 hours after the first player loses access to it, and the leaderboard, the reward budget, and any “last chance” message all have to be written with that in mind.
 
 Compare the two policies directly:
 
@@ -35,7 +35,7 @@ Compare the two policies directly:
 
 Neither is wrong, and both are shipped. What cannot work is choosing one and implementing the other, which is what happens when a deadline is stored as a calendar date with no zone attached. Store the instant, and derive the display.
 
-Daylight-saving transitions add the cases that break naive implementations. In a zone that moves its clocks forward, a local time such as 02:30 does not exist on that date, and in a zone that moves them back it occurs twice. A deadline expressed as a local wall-clock time therefore has dates where it is undefined or ambiguous. Choosing a boundary such as 10:00 local avoids the common transition hours, and storing the instant avoids the problem entirely.
+Daylight-saving transitions add the cases that break naive implementations. In a zone that moves its clocks forward, a local time such as 02:30 does not exist on that date, and in a zone that moves them back it occurs twice. Some zones change their clocks at midnight, so on a transition day local midnight itself is skipped or happens twice, and that is the boundary “ends at local midnight” depends on. A deadline expressed as a local wall-clock time therefore has dates where it is undefined or ambiguous. Choosing a boundary such as 10:00 local avoids the common transition hours, and storing the instant avoids the problem entirely.
 
 Exercise: For an event you know, write the exact instant it ends in UTC, then the local times that corresponds to for your three largest markets. Check whether any of them falls during a school or work day.
 
@@ -103,7 +103,7 @@ migrations = [ v1_to_v2, v2_to_v3, v3_to_v4 ]
 Load(bytes):
     doc = Parse(bytes)
     while doc.version < CurrentVersion:
-        doc = migrations[doc.version].Apply(doc)
+        doc = migrations[doc.version - 1].Apply(doc)   // Version 1 uses v1_to_v2, at index 0.
         doc.version += 1
     Validate(doc)
     Commit(doc)

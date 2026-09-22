@@ -10,6 +10,11 @@ facts these requests assert against Unity's 6.0 manual and scripting reference, 
 requests quote Unity where they correct the book. The scratch programs it used are not
 kept in the repo.
 
+Phases 11 to 15 of [docs/PLAN.md](../PLAN.md) applied the second read: every accuracy,
+coverage, consistency and forward-reference request, each file deleted as it closed. What
+remains are the question-design requests, which change question blocks and so wait for
+Phases 16 and 17.
+
 ## Kinds of request
 
 | Kind | What it records | Does the glossary close it? |
@@ -43,34 +48,15 @@ explicit decision, and the request says what it would cost the reader's review h
 
 ## Open requests
 
-### Accuracy
-
-| Request | Where | Priority |
-| --- | --- | --- |
-| [Worked numbers that do not add up](worked-numbers.md) | 14 (twice), 15 | medium |
-| [Code samples that do not do what the prose says](code-samples.md) | 13 | medium |
-| [Precision notes](precision-notes.md) | four places | low |
-
-### Question design
+Phase 16 applies the first-use hitch request and the distractor half of the option sets,
+changing only `-` lines. Phase 17 applies the variants request, which adds concepts and
+moves variants, and the rest of the option sets, which adds variants and an accepted answer.
 
 | Request | Where | Priority |
 | --- | --- | --- |
 | [Variants that test a different concept](variants-that-test-another-concept.md) | nine concepts, chapters 01 to 09 | medium to high |
 | [The first check for a first-use hitch](first-use-hitch-contradiction.md) | 08 `debugging-unity-scenarios` | medium |
 | [Option sets that give the answer away or defend a wrong option](option-sets.md) | fourteen questions | medium to low |
-
-### Coverage and consistency
-
-| Request | Where | Priority |
-| --- | --- | --- |
-| [Name the Unity API where the book describes it](unity-api-names.md) | three places | medium |
-
-### Forward references
-
-| Concept | First used | Explained in | Distance | Recommended ending |
-| --- | --- | --- | --- | --- |
-
-Each forward-reference file ends with that recommendation and its reason.
 
 ## How to close one
 
@@ -93,7 +79,7 @@ deleting the entry. A term with an entry and a section that develops it is the n
 arrangement here: the entry is the short answer, the section is the long one.
 
 **Accuracy** requests close by correcting the text. Each lists the questions and glossary
-entries that repeat the claim; none of the current ones needs a question block changed.
+entries that repeat the claim.
 
 **Question design** requests close with a decision about the question block, taken with
 the cost to review history that the request states.

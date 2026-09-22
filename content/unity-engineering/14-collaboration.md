@@ -68,7 +68,7 @@ Editor tools need undo support and predictable saving. Decide who owns generated
 
 Evaluate a tool through iteration time and error rate. Fewer repeated requests for programmer help, clearer validation messages, and safer common edits are concrete production improvements.
 
-Tool work competes with feature work, so make the case in the same units. If adding one mission currently takes a designer 20 minutes and they add 12 per week, that is 4 hours weekly. A tool that reduces it to 5 minutes saves 3 hours weekly, so 2 days of engineering pays for itself in about three weeks and continues afterward.
+Tool work competes with feature work, so make the case in the same units. If adding one mission currently takes a designer 20 minutes and they add 12 per week, that is 4 hours weekly. A tool that reduces it to 5 minutes saves 3 hours weekly, so 2 days of engineering, about 16 hours, pays for itself in under six weeks and continues afterward.
 
 The error rate usually matters more than the minutes, and it is easier to forget. Count how often a content mistake reaches a build, and what each one costs: the designer's time, the engineer's time investigating, the build that had to be remade, and occasionally a hotfix. A validation message that catches the mistake at authoring time removes the whole chain, and the chain is where the real cost was.
 
@@ -115,7 +115,10 @@ A menu is the practical form of that:
 | Halve the particle count in the background layer | about 1.6 ms | Slightly thinner smoke at distance |
 | Reduce the smoke texture to a cheaper shader variant | about 1.2 ms | Softer edges, no lighting response |
 | Cut two of the six overlapping layers | about 2.4 ms | Noticeably less depth in the hazard |
-| Keep as authored | 0 ms | The hazard sequence drops to about 40 FPS |
+| Cut two layers and halve the background particles | about 3.2 ms, measured together | Less depth, thinner smoke at distance |
+| Keep as authored | 0 ms | The hazard sequence drops to about 50 FPS, or to 30 where the display holds vsync |
+
+Only the combined row sheds the 3 ms the effect is over budget, and its figure is measured rather than added, because two changes to the same pixels save less together than their separate savings suggest.
 
 The last row belongs in the table. Leaving it out turns the conversation into a demand; including it makes the tradeoff visible and lets the artist weigh it. Sometimes the answer is that the sequence matters enough to spend the frame time, and that is a legitimate outcome of a discussion you framed correctly.
 
@@ -210,7 +213,7 @@ If a difficult interaction involved changing requirements, explain why those req
 
 Prepare to explain what the other discipline needed, what you initially misunderstood, which compromise was hardest, and what you would change now. Those details show how collaboration affected your engineering decisions.
 
-The structure in that example has a common name, situation, task, action, result, and it is worth knowing because interviewers are often listening for its parts. Situation sets the constraints, task states what was yours to solve, action describes what you did, and result gives the outcome and the evidence. The order matters less than the completeness; most weak answers are missing the task, so the listener cannot tell what the speaker actually owned.
+The structure in that example has a common name, STAR, for situation, task, action, result, and it is worth knowing because interviewers use the word and are often listening for its parts. Situation sets the constraints, task states what was yours to solve, action describes what you did, and result gives the outcome and the evidence. The order matters less than the completeness; most weak answers are missing the task, so the listener cannot tell what the speaker actually owned.
 
 Budget the length. Two to three minutes is right for a behavioral answer, which is roughly four or five sentences per part. Longer answers tend to lose the task and the result, which are the parts being assessed, in favor of the situation, which is the part that is easiest to describe. Practise with a timer once; almost everyone's first attempt runs long.
 

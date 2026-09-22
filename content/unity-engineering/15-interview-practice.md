@@ -41,7 +41,7 @@ Result:        Shipped; two events since with no claim incidents
 Would change:  Reconciliation was manual; I would build it into the client
 ```
 
-Twelve lines, and most interview questions about that project land on one of them. Writing them in advance means you are recalling rather than composing, which is what makes the difference under pressure.
+Eleven lines, and most interview questions about that project land on one of them. Writing them in advance means you are recalling rather than composing, which is what makes the difference under pressure.
 
 The two lines people leave blank are the ones interviewers push on. “Alternative” blank means you have not examined your own decision, and “would change” blank reads as either inexperience or unwillingness to evaluate your work. Fill both, even if the answer is small.
 
