@@ -228,7 +228,7 @@ A structure that maps positions to buckets, most simply a uniform grid of cells,
 
 It is a trade, not a free improvement. Queries get cheaper and movement gets more expensive, because an entity that crosses a cell boundary has to change buckets. Dividing reads by writes over a representative second of play decides whether it pays, and a catalog queried thousands of times is a very different case from entities that move every frame.
 
-Cell size is the one parameter and it can be reasoned about rather than guessed. [[#algorithms-spatial]] starts it near the common query radius and gives the symptom of each mistake in either direction.
+Cell size is the one parameter and it can be reasoned about rather than guessed. [[#algorithms-spatial]] starts it near the common query's diameter and gives the symptom of each mistake in either direction.
 
 ## SRP Batcher {#srp-batcher}
 = SRP batching

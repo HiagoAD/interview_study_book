@@ -7,16 +7,6 @@
 Each item is right in spirit and imprecise in a way a careful interviewer could press on.
 None is urgent; they are listed together so one editing pass can take them.
 
-6. `09-data-structures.md:245`: the flat board “keeps each row contiguous”, but so does an
-   array of row arrays. The difference is one allocation with the rows back to back, and
-   no second indirection per row. A 9 by 9 board is also small enough that its layout will
-   not show in a profiler, which sits oddly beside line 24 (“A quadratic algorithm over
-   eight items is fine forever”); on a board, the flat array's better argument is simpler
-   indexing and bounds checks.
-7. `11-profiling-and-optimization.md:22-32`: the budget table is a main-thread budget. The
-   render thread, the job workers and the GPU each have their own 16.67 ms, as line 14
-   says; one sentence stops a reader adding rendering submission and GPU work into one
-   column.
 8. `12-mobile-production.md:22`: on a tile-based GPU, blending reads tile memory, which is
    on chip and cheap. The cost of transparency is the second half of the sentence: every
    layer is shaded, because hidden-surface removal cannot discard it.

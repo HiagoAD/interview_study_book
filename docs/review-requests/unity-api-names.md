@@ -2,7 +2,7 @@
 
 - **Kind:** coverage
 - **Priority:** medium
-- **Where:** five places in chapters 09, 10 and 12
+- **Where:** three places in chapter 12
 - **Touches:** prose only, a clause or a table column at a time
 
 ## The pattern
@@ -23,8 +23,6 @@ and the quoted phrases are Unity's.
 
 | Where | The book says | Name to add |
 | --- | --- | --- |
-| 09:182 | “check that it exists in the Unity project's compatibility profile” | `PriorityQueue<TElement, TPriority>` arrived in .NET 6 and is absent from Unity's class libraries (checked in the 6000.3 install's Mono libraries and its .NET Standard 2.1 reference), so a Unity project writes or imports its own heap. The hedge becomes an answer. Chapter 04 line 328 points here. |
-| 10:150 and 10:184 | separate random streams, and seeded replay | `UnityEngine.Random` is one static generator shared by every caller, packages included, which is exactly the problem line 150 describes. An instance of `System.Random`, or `Unity.Mathematics.Random` in jobs and Burst, gives each system its own stream. |
 | 12:16 | “Check whether material access creates new material instances” | Reading `Renderer.material` “automatically instantiates the materials”, and destroying them is “your responsibility”; `Renderer.sharedMaterial` does not copy. Per-instance values through a `MaterialPropertyBlock` avoid the copy, but take the renderer out of the SRP Batcher, which is how Unity's manual tells you to make one incompatible on purpose. |
 | 12:98 | frame pacing and a chosen target | `Application.targetFrameRate` and `QualitySettings.vSyncCount`. At the default of -1, with `vSyncCount` at 0, Android and iOS render “at a fixed 30 fps to conserve battery power”, and a nonzero `vSyncCount` makes Unity ignore `targetFrameRate`. |
 | 12:146 | “A focus or pause callback …” | `OnApplicationPause(bool)` and `OnApplicationFocus(bool)`. `OnApplicationQuit` is the unreliable one: iOS apps “suspend rather than quit, so `OnApplicationQuit` won't be called”, and Unity advises treating every loss of focus as the exit. |

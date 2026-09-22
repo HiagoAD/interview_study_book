@@ -47,11 +47,9 @@ explicit decision, and the request says what it would cost the reader's review h
 
 | Request | Where | Priority |
 | --- | --- | --- |
-| [Grid cell size and the cells a query touches](grid-cell-size.md) | 10 `algorithms-spatial`, glossary | medium |
-| [What an inflated A-star heuristic gives up](weighted-heuristic-bound.md) | 10 `algorithms-pathfinding` | medium |
-| [Worked numbers that do not add up](worked-numbers.md) | 11, 14 (twice), 15 | medium |
-| [Code samples that do not do what the prose says](code-samples.md) | 09, 10, 13 | medium to low |
-| [Precision notes](precision-notes.md) | six places | low |
+| [Worked numbers that do not add up](worked-numbers.md) | 14 (twice), 15 | medium |
+| [Code samples that do not do what the prose says](code-samples.md) | 13 | medium |
+| [Precision notes](precision-notes.md) | four places | low |
 
 ### Question design
 
@@ -65,16 +63,12 @@ explicit decision, and the request says what it would cost the reader's review h
 
 | Request | Where | Priority |
 | --- | --- | --- |
-| [Name the Unity API where the book describes it](unity-api-names.md) | five places | medium |
-| [Documentation links and the reference version](links-and-versions.md) | 4 of 28 links | medium |
-| [Cross-references, placement, and naming](cross-references-and-placement.md) | one place | low |
+| [Name the Unity API where the book describes it](unity-api-names.md) | three places | medium |
 
 ### Forward references
 
 | Concept | First used | Explained in | Distance | Recommended ending |
 | --- | --- | --- | --- | --- |
-| [Spatial index](spatial-index.md) | 09 `structures-complexity` | 10 `algorithms-spatial` | 1 chapter | Name the grid in 09 |
-| [Breadth-first search](breadth-first-search.md) | 09 `structures-specialized` | 10 `algorithms-pathfinding` | 1 chapter | Turn the sentence around |
 
 Each forward-reference file ends with that recommendation and its reason.
 

@@ -781,3 +781,11 @@ Deviations, each for accuracy: chapter 06's clause says "a mobile build normally
 Checked before writing: the comparer claims under `tr-TR` with .NET 8; the two cancellation tokens, the `Awaitable` members, `link.xml` placement and the package rule, and precision note 12's setting names, all in the 6.0 manual or reference; and `UnityEngine.Scripting.PreserveAttribute` in both installed Editors.
 
 Next phase: chapter 04's pointer already names `PriorityQueue<TElement, TPriority>`; Phase 14 adds the fact it points at.
+
+### Phase 14: Chapters 9 to 11
+
+Applied everything the phase lists; the strict check against `a8b89af` matches, and the four chapter 11 links return HTTP 200 with no redirect, which closes links-and-versions and cross-references-and-placement. Before stating the `PriorityQueue` fact, a scan of all 497 class-library files in the 6000.3 install found no `PriorityQueue` type, where the same scan finds `SortedSet` and `HashSet` hundreds of times.
+
+Deviations, each for accuracy: the breadth-first sentence keeps its `[[breadth-first search]]` link, which the request's wording dropped. The lazy-deletion sample gains a `Schedule` step, because a `pending` set that `Cancel` consults needs something that fills it. Precision note 6 asked to credit the flat board with simpler bounds checks, but a flat index is the riskier one: a column one past the edge lands on the next row instead of failing. So the paragraph argues for one index calculation and one array to copy, and warns about that wrap. The pool sentence is split in two, since the fix gave it two semicolons.
+
+Next phase: chapters 12 to 15, then the README restructure; its forward-reference table is already empty.

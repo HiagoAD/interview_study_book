@@ -17,7 +17,7 @@ Big-O leaves out constant costs, allocations, cache behavior, branch predictabil
 
 Account for memory as well as execution time. Caching every pairwise distance uses quadratic storage and needs updates when positions change. An index makes queries faster by spending memory and time on maintenance. Compare how often the data changes with how often it is queried.
 
-For an interview, narrate the baseline first: “I would start with a linear scan of the active set; if population or profiling makes it expensive, I would introduce a [[spatial index]].” Explain why the scan is correct before discussing its replacement.
+For an interview, narrate the baseline first: “I would start with a linear scan of the active set; if population or profiling makes it expensive, I would introduce a [[spatial index]], such as a uniform grid of cells.” Explain why the scan is correct before discussing its replacement.
 
 Because constants are omitted from the notation, it helps to carry one crossover figure as an anchor. A linear scan of a contiguous array reads memory in the order the hardware prefetches it, while a hash lookup computes a hash, jumps to a bucket, and follows a reference that may be anywhere. On typical hardware the scan often wins up to somewhere in the low tens of elements, and the dictionary pulls ahead beyond that. Treat the number as a reason to measure rather than as a rule: element size, key type, and access pattern all move it.
 
@@ -177,9 +177,9 @@ Exercise: Design a registry that supports constant expected-time lookup by spawn
 
 ## Queues, stacks, heaps, and linked lists {#structures-specialized}
 
-A queue processes the oldest waiting item first, which fits pending commands or [[breadth-first search]]. A stack processes the most recently added item first, which fits depth-first traversal or nested undo history. Both can use contiguous storage and support amortized constant-time operations.
+A queue processes the oldest waiting item first, which fits pending commands, and is how a [[breadth-first search]] visits nearer nodes before farther ones. A stack processes the most recently added item first, which fits nested undo history, and is how a depth-first traversal follows one branch to its end before backing up. Both can use contiguous storage and support amortized constant-time operations.
 
-A priority queue returns the item with the lowest or highest priority. A binary heap typically provides constant-time access to the next item, with logarithmic insertion and removal. This suits deadlines, pathfinding frontiers, and selecting the next task. A tower-defense wave schedule is the plainest game-shaped version: every spawn in the level is one entry keyed by its time, the level loop pops whatever has come due, and the structure is unchanged whether the level holds twenty spawns or two thousand. Before choosing a .NET API, check that it exists in the Unity project's compatibility profile.
+A priority queue returns the item with the lowest or highest priority. A binary heap typically provides constant-time access to the next item, with logarithmic insertion and removal. This suits deadlines, pathfinding frontiers, and selecting the next task. A tower-defense wave schedule is the plainest game-shaped version: every spawn in the level is one entry keyed by its time, the level loop pops whatever has come due, and the structure is unchanged whether the level holds twenty spawns or two thousand. Before choosing a .NET API, check that it exists in the Unity project's compatibility profile. The `PriorityQueue<TElement, TPriority>` that .NET 6 added is the case in point: Unity's class libraries do not include it, so a Unity project writes its own binary heap or imports one.
 
 Decide how a heap-based scheduler handles cancellation. Removing an arbitrary entry needs an index map or a different structure. A simpler option is to mark the entry as cancelled and discard it when it reaches the front. Those cancelled entries still occupy memory until removed, so compact them if that retained memory becomes significant.
 
@@ -192,19 +192,25 @@ A least-recently-used (LRU) cache often combines a dictionary for lookup with a 
 Lazy deletion is worth seeing concretely, because the bookkeeping is where it goes wrong. Cancelling means marking, and the discard happens at the front:
 
 ```text
+Schedule(entry):
+    heap.Push(entry)
+    pending.Add(entry.taskId)
+
 Cancel(taskId):
-    cancelled.Add(taskId)
+    if pending.Contains(taskId):
+        cancelled.Add(taskId)
 
 PopNext(now):
     while heap is not empty and heap.Peek().deadline <= now:
         entry = heap.Pop()
+        pending.Remove(entry.taskId)
         if cancelled.Remove(entry.taskId):
             continue          // Was cancelled; drop it and the marker together.
         return entry
     return none
 ```
 
-Removing the marker at the same moment the entry is dropped keeps the cancelled set from growing without limit, which is the part most implementations forget. Without that line, a game that cancels a thousand tasks an hour accumulates a thousand identifiers an hour, and nothing ever removes them.
+Removing the marker at the same moment the entry is dropped keeps the cancelled set from growing without limit, which is the part most implementations forget. Without that line, a game that cancels a thousand tasks an hour accumulates a thousand identifiers an hour, and nothing ever removes them. That removal covers a cancel that arrives while the task is still waiting. A cancel that arrives after the task has run would add a marker no entry will ever meet, which is why `Cancel` checks the pending set first: a late cancel is the stale callback of earlier chapters, arriving at the scheduler.
 
 The remaining weakness is a cancelled entry with a distant deadline: it sits in the heap until its time arrives, holding whatever it references. If a scheduler can accumulate many of these, add a compaction that rebuilds the heap without the cancelled entries when their proportion crosses a threshold. Choose the threshold from the retained memory, not from tidiness, and note that compaction is linear, so it belongs at a scene boundary rather than in a frame.
 
@@ -242,7 +248,7 @@ Decide how current each result must be. A cosmetic preview may tolerate a frame 
 
 For frequently executed loops, consider which fields each iteration reads. An array of structs keeps an entity's fields together. Separate arrays can let a position-only calculation read positions without unrelated state. An array of class references keeps the references together, but the objects themselves may be scattered in memory.
 
-A board makes that choice visible. Holding a match-3 grid as one flat array of cells, with the row and column folded into a single index, keeps each row contiguous and lets a match scan walk it in the order the hardware prefetches. Holding the same grid as an array of row arrays reads almost identically in source and gives up that property, because every row is a separate allocation that may sit anywhere.
+A board makes that choice visible. Holding a match-3 grid as one flat array of cells, with the row and column folded into a single index, puts the rows back to back in one allocation, so reaching a cell never follows a second reference. An array of row arrays keeps each row contiguous too, but every row is a separate allocation that may sit anywhere, and every access goes through the outer array first. A 9 by 9 board is too small for either difference to show in a profiler, though, so there the flat array's better argument is simpler code: one index calculation and one array to copy for a snapshot. Check the column before folding it into the index, because a column one past the edge lands on the next row's first cell instead of failing.
 
 Start with the data used by the slow loop. Change that representation where needed, then compare CPU time, memory use, and maintenance cost. One slow loop does not by itself justify reorganizing the whole game.
 

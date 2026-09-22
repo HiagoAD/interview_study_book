@@ -7,23 +7,6 @@
 Four worked examples, each in a section whose point is that the arithmetic can be trusted.
 Every figure below was recomputed from the section's own numbers.
 
-## 1. Pool capacity for the burst case
-
-`11-profiling-and-optimization.md:230`, section `performance-pooling`:
-
-> A weapon firing 10 bullets per second with a 2-second lifetime needs about 20 live
-> bullets in the steady state; add the burst case, such as a 3-second overlap of two
-> weapons, and a capacity near 60 covers it.
-
-By the rule the sentence opens with, live count is spawn rate times lifetime. Two weapons
-fire 20 bullets a second, so about 40 are alive once the overlap has lasted a full
-2-second lifetime, however long it continues. Sixty is 20 a second times the 3-second
-overlap, which multiplies by the wrong duration. The section's point is that sizing is
-arithmetic rather than guesswork, so the figure has to follow the rule.
-
-Fix: “add the burst case, two weapons firing together, and about 40 are alive; a capacity
-near 50 covers it with margin.”
-
 ## 2. Payback time for a tool
 
 `14-collaboration.md:71`, section `collaboration-tools`:

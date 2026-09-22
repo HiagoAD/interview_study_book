@@ -11,7 +11,7 @@ $$ \text{frame interval in ms} = \frac{1000}{\text{target FPS}} $$
 
 Your feature cannot use the entire frame interval. Simulation, rendering submission, UI, audio, integrations, engine work, and scheduling all share the device. Leave room for unusually busy content and for performance to fall as the device heats up.
 
-CPU and GPU work can overlap across frames, so adding their durations does not necessarily give total frame time. Throughput depends on the slowest stage and on where stages wait for one another. Queued work also affects how quickly input reaches the display. Unity's [Profiler Highlights guide](https://docs.unity.com/en-us/engine/6000.0/manual/analysis/profiler/visualizing-data/highlights) explains the separate CPU and GPU frame budgets.
+CPU and GPU work can overlap across frames, so adding their durations does not necessarily give total frame time. Throughput depends on the slowest stage and on where stages wait for one another. Queued work also affects how quickly input reaches the display. Unity's [Profiler Highlights guide](https://docs.unity3d.com/6000.0/Documentation/Manual/ProfilerHighlights.html) explains the separate CPU and GPU frame budgets.
 
 An average FPS value can hide occasional hitches. Record frame-time percentiles, along with how often long frames occur and how long they last. Under the chosen percentile definition, a p95 of 20 ms means about 95% of measured frames took no more than 20 ms. The worst frame may be much longer.
 
@@ -19,7 +19,7 @@ Make captures repeatable. Keep the device, build, quality level, camera path, en
 
 Report units and conditions. “p95 main-thread active time decreased from 12.8 to 9.4 ms in a five-minute capture of a fully built farm on device X” is much more informative than “30% faster.” Example numbers in this book are hypothetical, not measured results from a shipped project.
 
-A budget only becomes useful once it is divided. A hypothetical split of the 16.67 ms available at 60 FPS might look like this:
+A budget only becomes useful once it is divided. The render thread, the job workers, and the GPU each have 16.67 ms of their own at 60 FPS, so the split that matters for gameplay code is the main thread's. A hypothetical split of it might look like this:
 
 | Consumer | Allocation |
 | --- | --- |
@@ -63,7 +63,7 @@ Exercise: Write this table for your own project using measured numbers. Then sta
 
 Start with the CPU timeline and any available GPU timings. Determine where the frame is being held up: main-thread computation, render-thread submission, GPU work, synchronization, or a frame-rate limit. That tells you which kind of change is likely to help.
 
-Read a wait marker alongside the work happening on other threads. `Gfx.WaitForPresentOnGfxThread`, for example, can involve waiting for the GPU or for presentation timing. Compare render-thread activity and GPU measurements before concluding that the GPU is the bottleneck. [Unity's profiler marker reference](https://docs.unity.com/en-us/engine/6000.7/manual/analysis/profiler/markers) explains these distinctions.
+Read a wait marker alongside the work happening on other threads. `Gfx.WaitForPresentOnGfxThread`, for example, can involve waiting for the GPU or for presentation timing. Compare render-thread activity and GPU measurements before concluding that the GPU is the bottleneck. [Unity's profiler marker reference](https://docs.unity3d.com/6000.0/Documentation/Manual/profiler-markers.html) explains these distinctions.
 
 Use controlled experiments:
 
@@ -164,11 +164,11 @@ Exercise: Take a costly system you know and answer all four questions in order. 
 
 Distinguish how quickly memory is allocated from how much stays in use. Temporary strings can create many allocations and become unreachable soon afterward. A static collection may instead retain many objects while allocating almost nothing new. Investigate both patterns.
 
-Unity's garbage collector reclaims managed objects that are no longer reachable. Its exact behavior depends on the runtime and platform version. Incremental collection spreads some of the work across frames; allocation still has a cost, and the collector still needs to trace live objects. [Unity's incremental collection guide](https://docs.unity.cn/Manual/performance-incremental-garbage-collection.html) explains the tradeoff.
+Unity's garbage collector reclaims managed objects that are no longer reachable. Its exact behavior depends on the runtime and platform version. Incremental collection spreads some of the work across frames; allocation still has a cost, and the collector still needs to trace live objects. [Unity's incremental collection guide](https://docs.unity3d.com/6000.0/Documentation/Manual/performance-incremental-garbage-collection.html) explains the tradeoff.
 
 Use allocation call stacks to find frequently executed sources. Look for string formatting, captured variables, boxing, iterators, temporary collections, and APIs that return new arrays. Check their frequency and allocation size in a player build before choosing what to change.
 
-Reuse buffers owned by the caller where that fits the API. Reserve collection capacity before gameplay when a realistic bound is known. If a property returns a fresh array, avoid reading it repeatedly inside a loop: fetch it once, or use an API that fills a supplied collection. Unity's [array optimization guide](https://docs.unity.com/en-us/engine/6000.0/manual/scripting/optimization/performance-optimizing-code-managed-memory/arrays) discusses these copying costs.
+Reuse buffers owned by the caller where that fits the API. Reserve collection capacity before gameplay when a realistic bound is known. If a property returns a fresh array, avoid reading it repeatedly inside a loop: fetch it once, or use an API that fills a supplied collection. Unity's [array optimization guide](https://docs.unity3d.com/6000.0/Documentation/Manual/performance-optimizing-arrays.html) discusses these copying costs.
 
 A reused buffer can keep large objects reachable through old entries. Clear used elements according to the container's behavior when those references are no longer needed. A buffer that grows during a rare burst may also keep that capacity indefinitely. Decide when it is safe to trim retained storage.
 
@@ -227,7 +227,7 @@ As a hypothetical example, a reward celebration might create 200 identical objec
 
 A rarely opened screen that holds large resources may be better released between uses. Compare the work saved by keeping it with the memory and lifecycle complexity that reuse adds.
 
-Sizing a pool is arithmetic rather than guesswork. The number of objects alive at once settles around the spawn rate multiplied by the average lifetime. A weapon firing 10 bullets per second with a 2-second lifetime needs about 20 live bullets in the steady state; add the burst case, such as a 3-second overlap of two weapons, and a capacity near 60 covers it.
+Sizing a pool is arithmetic rather than guesswork. The number of objects alive at once settles around the spawn rate multiplied by the average lifetime. A weapon firing 10 bullets per second with a 2-second lifetime needs about 20 live bullets in the steady state. Add the burst case, two weapons firing together, and about 40 are alive; a capacity near 50 covers it with margin.
 
 That calculation gives you the two numbers a pool contract needs. Prewarm to the steady state, because those objects will exist within the first seconds anyway and creating them during a loading screen is free. Set maximum retained capacity near the burst figure, because that is what a rare moment requires and what you are willing to keep afterward. The gap between the two is the region where growth is allowed, and it should be a decision rather than an accident.
 

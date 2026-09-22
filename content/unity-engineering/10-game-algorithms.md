@@ -23,7 +23,7 @@ Cell size affects both query cost and maintenance. Small cells mean a radius que
 
 If the relevant objects already have colliders, Unity physics queries can find an initial set of nearby candidates. Filter by layer and choose an appropriate query API. For a nonallocating query with a fixed-size result buffer, handle the case where the buffer fills: more results may have been omitted unless the API guarantees otherwise. Grow and retry, use a fallback, or prove that the buffer covers the maximum possible population.
 
-Cell size is the one parameter of a uniform grid, and it can be reasoned about rather than guessed. Start at roughly the radius of the most common query. A radius query then touches a small, bounded block of cells, typically four in two dimensions when the radius and the cell size are similar, and the candidates it collects are mostly relevant.
+Cell size is the one parameter of a uniform grid, and it can be reasoned about rather than guessed. Start at roughly the diameter of the most common query. A radius query then touches at most a 2 by 2 block of cells in two dimensions, and the candidates it collects are mostly relevant. Cells the size of the radius touch a 3 by 3 block instead, which is still bounded, and may suit a game whose query radius varies.
 
 The two failure directions are easy to recognize once you know the shape. Cells much smaller than the query radius mean each query visits many cells and spends its time on bookkeeping; the symptom is cost that grows when you shrink cells further. Cells much larger than the radius mean each cell holds many objects the query will reject; the symptom is a high ratio of candidates examined to candidates accepted. Instrument that ratio, because it tells you which direction to move.
 
@@ -115,7 +115,7 @@ f(A)          = g(A) + h(A) = 1 + 5 = 6
 f(G, direct)  = g(G) + h(G) = 3 + 0 = 3
 ```
 
-A-star expands the smallest f first, so it takes G directly and returns the cost-3 path, having never looked past A. Nothing failed and no assertion fired; the search simply answered a different question. That is the whole practical content of admissibility, and it is why multiplying a heuristic to make search faster trades away the optimality guarantee rather than merely making the result approximate in some bounded way you can ignore.
+A-star expands the smallest f first, so it takes G directly and returns the cost-3 path, having never looked past A. Nothing failed and no assertion fired; the search simply answered a different question. That is the whole practical content of admissibility. An arbitrary overestimate like this one puts no limit on how much worse the answer can be. Multiplying an admissible heuristic by a weight $w$ is different: the search then returns a path costing at most $w$ times the optimum, a trade you can state in advance, and it is the form to reach for when search has to be faster.
 
 The other practical matter is what happens after the path is returned. A path is a plan made against a snapshot of the world, and the world moves. Recomputing every frame for every agent is the expensive answer; better ones are usually cheaper. Follow the path until the next segment is blocked and only then repath. Spread repaths across frames with a budget, so a hundred agents reacting to one closed door do not all search in the same frame. Check only the next segment or two for validity rather than the whole path, since the far end will be revised before the agent reaches it anyway.
 
@@ -147,7 +147,7 @@ Exercise: Work the three-node example again with h(A) equal to 1. Confirm that A
 
 ## Randomness should be testable and statistically appropriate {#algorithms-randomness}
 
-Treat randomness as an input to the rule. Pass a random source to selection code, so tests can supply known draws and replays can control their sequence. Separate random streams for unrelated systems can prevent a new particle effect from changing loot results simply by consuming an extra random number.
+Treat randomness as an input to the rule. Pass a random source to selection code, so tests can supply known draws and replays can control their sequence. Separate random streams for unrelated systems can prevent a new particle effect from changing loot results simply by consuming an extra random number. `UnityEngine.Random` is one static generator shared by every caller, packages included, so it is the stream such an effect disturbs. An instance of `System.Random`, or `Unity.Mathematics.Random` in jobs and Burst code, gives each system a stream of its own.
 
 For a uniform shuffle, such as the one a card game owes its deck at the start of every match, use Fisher–Yates:
 
@@ -181,7 +181,7 @@ For weighted selection, use nonnegative, finite weights with a positive, finite 
 
 Test draws exactly at the selection boundaries, as well as properties such as preserving every item in a shuffle. Statistical tests can reveal large bias. A small sample cannot prove perfect uniformity, though, and an overly strict statistical assertion can fail by chance.
 
-A fixed seed helps reproduce results within a controlled implementation. Do not assume `System.Random` will produce the same sequence across every runtime forever. If replays must survive runtime or game updates, specify and version both the generator and the order in which its numbers are consumed.
+A fixed seed helps reproduce results within a controlled implementation. A seed passed to `UnityEngine.Random.InitState` reproduces nothing on its own, because any other caller can draw from the same generator in between. Do not assume `System.Random` will produce the same sequence across every runtime forever. If replays must survive runtime or game updates, specify and version both the generator and the order in which its numbers are consumed.
 
 The claim that the naive shuffle is biased can be settled by counting rather than by testing. Take the version that swaps each position with a partner drawn from the whole list:
 
@@ -192,7 +192,7 @@ for i in 0 .. n-1:
 
 For n equal to 3 this makes three independent draws from three options, so there are 3 times 3 times 3, or 27, equally likely execution paths. Those paths produce 6 possible permutations. Since 27 is not divisible by 6, the permutations cannot all be equally likely, whatever the random source does. No amount of sampling is needed, and no better generator can repair it.
 
-Fisher-Yates avoids this by construction. Its draws have n, then n-1, and so on down to 1 option, giving n factorial paths for n factorial permutations, one path each. That exact correspondence is the reason the upper bound shrinks with each step, and it is why `random.Next(i + 1)` rather than `random.Next(items.Count)` is the line the whole algorithm rests on.
+Fisher–Yates avoids this by construction. Its draws have n, then n-1, and so on down to 1 option, giving n factorial paths for n factorial permutations, one path each. That exact correspondence is the reason the upper bound shrinks with each step, and it is why `random.Next(i + 1)` rather than `random.Next(items.Count)` is the line the whole algorithm rests on.
 
 This is a useful answer to have ready, because “shuffle a list” is a common coding prompt and the follow-up is usually “how do you know it is uniform?” A counting argument settles it in two sentences; a statistical argument requires a sample size and still cannot prove the case.
 
@@ -247,7 +247,7 @@ The four policies produce visibly different products:
 | Limit catch-up | Process 20, keep the rest queued for later frames | Work with per-item side effects |
 | Discard | Drop the missed ticks and resume from now | Cosmetic or ambient timers |
 
-Combining is usually right for anything that is really a function of elapsed time, and it is also the cheapest: the refill becomes `min(cap, stored + floor(elapsed / interval))` with no loop at all. Reserve replay for work whose individual occurrences matter, and then bound it, because an unbounded catch-up loop on resume is one of the more reliable ways to be killed by the operating system during startup.
+Combining is usually right for anything that is really a function of elapsed time, and it is also the cheapest: the refill becomes `min(cap, stored + floor(elapsed / interval))` with no loop at all. Keep the remainder too. Advance the stored refill time by the whole intervals granted instead of resetting it to now, and move it to now only when the cap is reached; otherwise every resume discards up to one interval of progress. Reserve replay for work whose individual occurrences matter, and then bound it, because an unbounded catch-up loop on resume is one of the more reliable ways to be killed by the operating system during startup.
 
 Note that all four policies need the elapsed time to come from a source the player cannot move backward, which is the monotonic and trusted-time distinction from the earlier chapters arriving in a concrete form.
 
