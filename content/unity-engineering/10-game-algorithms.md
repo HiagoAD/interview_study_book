@@ -5,7 +5,7 @@ chapter: 10: Algorithms used in gameplay systems
 
 ## Filter candidates before expensive tests {#algorithms-spatial}
 
-Start a nearby-coin query with a linear scan. For each active coin, compare its squared distance with the squared magnet radius. If you only need a threshold check, squaring both sides avoids calculating a square root. That saves some work per candidate; checking fewer candidates can save much more.
+Start a tower's in-range query with a linear scan. For each active enemy, compare its squared distance with the squared tower radius. If you only need a threshold check, squaring both sides avoids calculating a square root. That saves some work per candidate; checking fewer candidates can save much more.
 
 In two dimensions, the squared distance is:
 
@@ -27,7 +27,7 @@ Cell size is the one parameter of a uniform grid, and it can be reasoned about r
 
 The two failure directions are easy to recognize once you know the shape. Cells much smaller than the query radius mean each query visits many cells and spends its time on bookkeeping; the symptom is cost that grows when you shrink cells further. Cells much larger than the radius mean each cell holds many objects the query will reject; the symptom is a high ratio of candidates examined to candidates accepted. Instrument that ratio, because it tells you which direction to move.
 
-A grid also assumes roughly even distribution. A runner where every coin sits within a narrow lane puts most entities in a handful of cells no matter what size you choose, and the structure stops helping. Where the distribution is uneven, sort along the axis that actually varies, or use a structure that adapts, such as a tree that subdivides only where objects are dense. Measuring the occupancy of the busiest cell is the cheapest way to find out which situation you are in.
+A grid also assumes roughly even distribution. A tower-defense level where every enemy walks one narrow path puts most entities in a handful of cells no matter what size you choose, and the structure stops helping. Where the distribution is uneven, sort along the axis that actually varies, or use a structure that adapts, such as a tree that subdivides only where objects are dense. Measuring the occupancy of the busiest cell is the cheapest way to find out which situation you are in.
 
 Exercise: For a query in your game, write the typical radius, the chosen cell size, and the average number of candidates a query examines and accepts. The ratio between the last two numbers is your tuning signal.
 
@@ -72,7 +72,7 @@ keep current target unless:
 
 The margin makes switching require a real improvement, and the identifier comparison makes the remaining ties resolve the same way on every machine and in every replay. A margin of zero reduces the rule to plain nearest-target selection, which is a useful default to ship first and a useful baseline to compare against when design asks for steadier targeting.
 
-Exercise: Design a nearest-coin attraction query that respects a maximum count, avoids rewarding duplicates, and remains correct when coins despawn during processing. State whether you iterate a snapshot or defer mutations.
+Exercise: Design a tower's target query that respects a maximum count, avoids selecting the same enemy twice, and remains correct when enemies despawn during processing. State whether you iterate a snapshot or defer mutations.
 
 ?? algorithms-nearest-complexity What is the usual simplest algorithm for finding one nearest eligible target?
 * A single scan that tracks the best candidate.
@@ -99,6 +99,8 @@ Breadth-first search uses a queue. When all edges have the same cost, it finds a
 Dijkstra's algorithm next explores the node with the lowest known accumulated cost. It supports nonnegative edge weights. With a binary heap and appropriate priority updates, a common time bound is $O((V+E)\log V)$; details such as duplicate heap entries affect the exact bound. Negative edges break the assumption behind its greedy choice.
 
 A-star orders candidates by $f(n)=g(n)+h(n)$: the cost accumulated so far, plus an estimate of the remaining cost. That estimate is admissible if it never exceeds the true remaining cost. A consistent heuristic also follows the triangle inequality along each edge, which simplifies correct graph search with a closed set. With an admissible but inconsistent heuristic, finding an optimal path may require reopening a node that was already closed.
+
+A tower-defense build grid is the case where the graph is not a fixed input. Every tower the player places removes edges, so the path has to be recomputed, and a placement that would leave no path at all has to be rejected before it is committed rather than discovered by a search that returns nothing. Deciding which of those two the game does, block the placement or let the enemies break through, is a design rule and not a search detail, and it must be settled before the algorithm is chosen.
 
 Manhattan distance is an appropriate heuristic for a four-neighbor grid with unit-cost movement and no cheaper shortcuts. Reconsider it if the game adds diagonal movement or teleports. Multiplying a heuristic by more than one can favor faster search, but generally gives up the usual guarantee of an optimal path.
 
@@ -147,7 +149,7 @@ Exercise: Work the three-node example again with h(A) equal to 1. Confirm that A
 
 Treat randomness as an input to the rule. Pass a random source to selection code, so tests can supply known draws and replays can control their sequence. Separate random streams for unrelated systems can prevent a new particle effect from changing loot results simply by consuming an extra random number.
 
-For a uniform shuffle, use Fisher–Yates:
+For a uniform shuffle, such as the one a card game owes its deck at the start of every match, use Fisher–Yates:
 
 ```csharp
 using System;

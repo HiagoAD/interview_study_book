@@ -257,6 +257,14 @@ Answer these prompts aloud. Start with clarifying questions, then spend several 
 
 “What is difficult about working with artists or designers?” Use a real example of differing goals or missing shared expectations. Explain your actions and how tools, prototypes, or measured budgets helped the team reach a decision.
 
+“Design the resolution order for a played card.” Say what a card is made of, which of its effects resolve immediately and which are queued, and what happens when one effect removes the target of the next. Explain where the order is decided, how a test drives it, and what a replay needs in order to reach the same board.
+
+“A cascade sometimes stops one tile short.” Establish first whether the match scan or the refill is wrong, and say how you would tell them apart. Name the seed, the board state, and the step you would capture. Explain why mutating the grid during the scan that reads it produces exactly this symptom.
+
+“Players lose offline progress after changing time zone.” Separate what the client may compute from what an authority must confirm. State which clock the grant reads, what a clamp would bound, and how you would tell a genuine long absence from a manipulated one.
+
+The prompts deliberately cross genres. A power-up, a card, a board and an idle grant raise the same four questions about ownership, ordering, failure and evidence, and an answer that only works for the genre you practised is an answer built on the wrong thing.
+
 Score each answer from 0 to 2 for clear requirements, explicit ownership, failure handling, tradeoffs, and evidence. Give 0 when a dimension is absent, 1 when it is named, and 2 when it is explained with a concrete example. Use the result to choose your next practice topic. It is not a prediction of an interview outcome.
 
 Also practise small coding tasks: prevent duplicate collection, remove an entity and repair its index map, test an exact expiration boundary, or shuffle a collection. Explain the complexity and edge cases before optimizing.

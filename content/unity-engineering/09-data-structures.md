@@ -179,7 +179,7 @@ Exercise: Design a registry that supports constant expected-time lookup by spawn
 
 A queue processes the oldest waiting item first, which fits pending commands or [[breadth-first search]]. A stack processes the most recently added item first, which fits depth-first traversal or nested undo history. Both can use contiguous storage and support amortized constant-time operations.
 
-A priority queue returns the item with the lowest or highest priority. A binary heap typically provides constant-time access to the next item, with logarithmic insertion and removal. This suits deadlines, pathfinding frontiers, and selecting the next task. Before choosing a .NET API, check that it exists in the Unity project's compatibility profile.
+A priority queue returns the item with the lowest or highest priority. A binary heap typically provides constant-time access to the next item, with logarithmic insertion and removal. This suits deadlines, pathfinding frontiers, and selecting the next task. A tower-defense wave schedule is the plainest game-shaped version: every spawn in the level is one entry keyed by its time, the level loop pops whatever has come due, and the structure is unchanged whether the level holds twenty spawns or two thousand. Before choosing a .NET API, check that it exists in the Unity project's compatibility profile.
 
 Decide how a heap-based scheduler handles cancellation. Removing an arbitrary entry needs an index map or a different structure. A simpler option is to mark the entry as cancelled and discard it when it reaches the front. Those cancelled entries still occupy memory until removed, so compact them if that retained memory becomes significant.
 
@@ -241,6 +241,8 @@ Choose when to update derived data: immediately after a change, when it is next 
 Decide how current each result must be. A cosmetic preview may tolerate a frame of delay. A collision test or reward eligibility check may need the latest state.
 
 For frequently executed loops, consider which fields each iteration reads. An array of structs keeps an entity's fields together. Separate arrays can let a position-only calculation read positions without unrelated state. An array of class references keeps the references together, but the objects themselves may be scattered in memory.
+
+A board makes that choice visible. Holding a match-3 grid as one flat array of cells, with the row and column folded into a single index, keeps each row contiguous and lets a match scan walk it in the order the hardware prefetches. Holding the same grid as an array of row arrays reads almost identically in source and gives up that property, because every row is a separate allocation that may sit anywhere.
 
 Start with the data used by the slow loop. Change that representation where needed, then compare CPU time, memory use, and maintenance cost. One slow loop does not by itself justify reorganizing the whole game.
 

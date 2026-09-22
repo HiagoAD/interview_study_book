@@ -79,6 +79,8 @@ Handle missing, corrupt, valid older, and unsupported newer saves as different c
 
 Checksums help detect accidental corruption. They do not make client-owned data trustworthy against deliberate tampering. Encryption also does not give a client-owned economy the authority of a trusted server.
 
+An idle game states that problem in its purest form, because its core loop is a grant computed from elapsed time. If the save holds the timestamp of the last session and the client subtracts it from the device clock, then moving the clock forward is a cheat that needs no tools at all. Three answers are available: accept it and treat the economy as local, take the time from a trusted source and grant on the server, or clamp the offline grant to a bounded window so the worst case stays small. Each is defensible. What is not defensible is choosing none of them and describing the save as encrypted.
+
 Decide how to handle IDs missing from the current catalog. You might preserve their records for later recovery, map retired content through an explicit table, or compensate under a documented policy. Deleting unknown items on every load can turn a temporary catalog mismatch into permanent loss.
 
 The five outcomes of a load deserve to be distinguishable in code, because the correct response differs for each:

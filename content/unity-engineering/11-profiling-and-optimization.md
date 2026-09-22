@@ -17,7 +17,7 @@ An average FPS value can hide occasional hitches. Record frame-time percentiles,
 
 Make captures repeatable. Keep the device, build, quality level, camera path, entity count, and content the same, with a similar thermal state. Include sustained play, first use of effects, scene transitions, and resume. An empty scene on a cold device does not represent a busy session after several minutes.
 
-Report units and conditions. “p95 main-thread active time decreased from 12.8 to 9.4 ms in a five-minute crowded-run capture on device X” is much more informative than “30% faster.” Example numbers in this book are hypothetical, not measured results from a shipped project.
+Report units and conditions. “p95 main-thread active time decreased from 12.8 to 9.4 ms in a five-minute capture of a fully built farm on device X” is much more informative than “30% faster.” Example numbers in this book are hypothetical, not measured results from a shipped project.
 
 A budget only becomes useful once it is divided. A hypothetical split of the 16.67 ms available at 60 FPS might look like this:
 
@@ -117,7 +117,7 @@ Exercise: Add three markers to a feature you own, at the phase level rather than
 
 ## Reduce repeated work before micro-optimizing instructions {#performance-cpu-work}
 
-First look for repeated work that is unnecessary. Update a score label when the displayed value changes. Recalculate a path when relevant state changes. For a mission event, evaluate only the mission types that could respond to it.
+First look for repeated work that is unnecessary. Update a score label when the displayed value changes. Recalculate a path when relevant state changes. For a mission event, evaluate only the mission types that could respond to it. A farm builder with four hundred plots is the shape this rule exists for: every plot holds a growth timer, but only the few whose timers expired this frame have anything to report, so the frame's cost should follow the expiries and not the population.
 
 Multiply the cost by how often the operation runs. An operation taking 0.02 ms seems small, but 1,000 serial executions take 20 ms if the cost scales linearly. In contrast, replacing a readable operation that runs once at startup may produce no visible benefit.
 

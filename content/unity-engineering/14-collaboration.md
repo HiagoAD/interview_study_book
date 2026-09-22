@@ -54,13 +54,15 @@ Exercise: Build this table for a feature currently in development, and take it t
 
 Authoring tools are part of the feature's production cost. If adding one mission needs a programmer to edit three source files, improving that workflow may matter more than refining an already adequate runtime design.
 
-Give designers the controls they need, with units, valid ranges, defaults, and explanations. “Attraction acceleration, meters per second squared” is clearer than “strength.” Expose meaningful choices; showing every internal variable can make invalid combinations easier to create.
+Give designers the controls they need, with units, valid ranges, defaults, and explanations. “Refill fall speed, tiles per second” is clearer than “speed.” Expose meaningful choices; showing every internal variable can make invalid combinations easier to create.
 
 A validation error should identify the asset, field, invalid value, and a way to fix it. “Mission winter-07 has target 0; use a positive target or select an objective type that has no count” tells the author what to change. “Invalid config” leaves them to find both the problem and its remedy.
 
 Let designers work with readable assets and previews, then convert those assets into validated runtime definitions. Batch validation should catch missing references, duplicate IDs, impossible prerequisites, and unsupported combinations before the content reaches players.
 
 A preview should reproduce the relevant game behavior. If it ignores pause rules, device limits, or event availability, it may make invalid content look ready to ship. Show the constraints the author needs for the current decision.
+
+Authoring a puzzle level is where that earns its keep. A designer building level 312 needs to know whether it can be solved at all, how many moves the solution takes, and whether its special tiles interact the way the level intends. A preview that lays the board out correctly but resolves cascades by different rules than the game will approve a level nobody can finish, and that mistake is then found by players rather than by the team.
 
 Editor tools need undo support and predictable saving. Decide who owns generated assets and which files are authored versus generated. Silently modifying shared assets can surprise other team members and create source-control conflicts.
 
