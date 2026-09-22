@@ -915,6 +915,66 @@ progress::-moz-progress-bar {
   list-style: none;
 }
 
+/* The preview card. It is drawn into the body and positioned in page coordinates, so it travels with the
+   page as it scrolls. It is aria-hidden: everything in it is one Enter away on a page of its own. */
+.preview-card {
+  position: absolute;
+  z-index: 10;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+  font-size: 0.95rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .preview-card {
+    animation: preview-in 120ms ease-out;
+  }
+}
+
+@keyframes preview-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.preview-kind {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.preview-title {
+  margin: 0.15rem 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.preview-text {
+  margin: 0;
+}
+
+/* A section's opening paragraph has no length limit, so it is cut off rather than allowed to fill the
+   window, and the last line fades so the cut reads as "there is more" instead of as a finished sentence.
+   A term's summary is capped at 400 characters by `npm run check` precisely so it never needs this. */
+.preview-text-cut {
+  max-height: 9.5em;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 7.5em, transparent);
+}
+
+.preview-locked {
+  color: var(--muted);
+}
+
 /* The Data page */
 
 .field {

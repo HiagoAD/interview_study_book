@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { PreviewProvider } from './components/Preview'
 import { StorageBanner } from './components/StorageBanner'
 import { useRoute } from './router'
 import { BookPage } from './pages/Book'
@@ -15,8 +16,10 @@ import { ProgressProvider } from './storage/ProgressProvider'
 export function App() {
   return (
     <ProgressProvider>
-      <StorageBanner />
-      <Pages />
+      <PreviewProvider>
+        <StorageBanner />
+        <Pages />
+      </PreviewProvider>
     </ProgressProvider>
   )
 }

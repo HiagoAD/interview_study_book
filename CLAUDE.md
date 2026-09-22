@@ -33,16 +33,17 @@ src/
   types/        content model types, and the declaration of the virtual:content module
   engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list, preparing a question or a whole review (variant + options). Takes today, now and an rng as parameters; never reads the clock or Math.random
   storage/      progress: IndexedDB layer, the in-memory store written through to it, export/import, ProgressProvider and its hooks. Opening the database is given up on after 3 seconds and progress stays in memory (`persistent` is false)
-  components/   QuestionCard (study and review), Html (rendered content; handles in-page links), StorageBanner (shown while progress isn't being saved), and the small pieces they use
-  pages/        Home, Book, Chapter, Section, Review, Data and Not found; they read the books from virtual:content and progress from useProgress
+  components/   QuestionCard (study and review), Html (rendered content; handles in-page links and previews), Preview (the one hover card, drawn into the body), StorageBanner (shown while progress isn't being saved), and the small pieces they use
+  pages/        Home, Book, Chapter, Section, Glossary, Term, Review, Data and Not found; they read the books from virtual:content and progress from useProgress
   router.ts     hash router (#/...)
   styles.css
 scripts/verify-dist.mjs   checks dist/ has only index.html, no external references and none of the dev-only UI
 ```
 
-The site was built in six phases, all done. Phases 7 to 10, the glossary and its preview cards, are planned but not built. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
+The site was built in six phases, all done. Phases 7 to 9 added the glossary and its preview cards; Phase 10, writing the entries for the Unity book, is the one still open. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
 
 ## Notes
 
 - **Simulate today** is a date field on the Data page that sets the date every due date and the due count use, so review can be tried without waiting. It exists only under `npm run dev`: `import.meta.env.DEV` guards it, and `verify-dist` fails the build if any of it reaches `dist/`.
 - Review works from a queue captured when it starts: answering removes a concept from the due list, so the page never walks the live list.
+- **The glossary** holds terms the book uses without defining them. A file with `kind: glossary` in its front matter holds the entries, `[[term]]` and `[[#section-id]]` link to them from anywhere, and hovering one shows a preview card. Entries carry no progress, so nothing about them touches `src/storage/`.

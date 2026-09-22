@@ -583,3 +583,15 @@ Rules the plan left open: the filter reuses the Data page's `.field` and `.text-
 Both doc examples are now addressed by heading (`docExample` in `pipeline/test-helpers.ts`) and parsed by a test, because `content-format.md` holds two and the first-match regex silently switched to the new one. That test earned its place immediately: the glossary example it was written for had `= write through` under `{#write-through}`, which is the entry's own id written a second way, and a `->` pointing at a section id.
 
 Next phase: nothing previews anything yet. Every `.ref` link carries its route in the href, so `previewTarget` can read it back with `parseRoute`, and `Html` is the single place every block of rendered content passes through.
+
+### Phase 9: Preview cards
+
+Built `PreviewProvider` (one card for the page, drawn into `document.body` with `createPortal` and positioned in page coordinates, so it travels with the page and needs no scroll listener), the card, the handlers `Html` now spreads over every block of rendered content, the two pure modules `previewTarget.ts` (an href to what it would show, plus `sectionLead`) and `previewPlacement.ts` (`placePreview`), and the card styles. 15 new tests, 611 in all.
+
+Rules the plan left open: the pure module is `previewTarget.ts` rather than `preview.ts`, because macOS cannot hold that beside `Preview.tsx`; a term summary is never clamped, since `check` caps it at 400 characters precisely so a card can show it whole, and only a section lead gets the cut and its fade; the card renders its own content under a context of no-op handlers, which is what stops a card from opening a card.
+
+Verified in headless Chrome over CDP against `dist/index.html` from `file://`, adding no dependency, since Node has a global WebSocket. 24 checks: nothing opens before the delay, hovering opens a card naming the term, the pointer can travel into it, leaving closes it, focus opens it and Escape closes it, a link with no room below flips the card above and it stays inside the window, a locked section previews its locked notice instead of its text, an unlocked one previews its opening paragraph, and the page makes no network request. Two checks failed first time and both were the driver's fault: it had unlocked the very section it then expected to find locked, and it tried to make room by scrolling a link to the bottom of a page that had already run out of scroll. Screenshots also caught a real one: a complete term summary was fading as though it had been cut off, which is what moved the clamp onto section leads alone. The driver and the screenshot scripts stay outside the repo.
+
+Left for the user: Firefox, which needs WebDriver BiDi rather than CDP, and how the timings feel in the hand.
+
+Next phase: the machinery is finished and Phase 10 is content. `content/unity-engineering/glossary.md` holds Strategy, State and Observer as the pattern the rest should follow.

@@ -14,8 +14,8 @@ Three problems are worth naming before an interviewer names them. Order: listene
 
 Announce facts that have already happened, rather than requests. “Reward granted” can be handled by any number of listeners in any order. “Grant reward” cannot, because two listeners would grant it twice.
 
-## State {#state-pattern}
-= state | state object
+## State {#state}
+= state object | run phase
 
 One object per phase of a run, each holding the behavior for that phase and the moves out of it. It replaces a growing switch when the phases have substantial behavior of their own.
 
@@ -27,7 +27,7 @@ Draw the transitions before choosing, as [[#patterns-selection]] suggests: ready
 
 ## Strategy {#strategy}
 = strategy pattern | strategies
--> state-pattern
+-> state
 
 One interchangeable rule behind a small interface, so a caller can run the rule without knowing which one it holds. Aim selection, reward selection, and difficulty curves are the usual gameplay cases.
 
