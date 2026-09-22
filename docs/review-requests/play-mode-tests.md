@@ -31,3 +31,13 @@ either half without knowing what entering play mode costs.
 3. **Move the Test Framework paragraph** from chapter 08 to chapter 02, where the first
    tests in the book are written. This would leave chapter 08 to open with the contract
    argument, which is arguably its stronger opening anyway.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 2. Chapter 02 argues that rules free of engine types can be tested without entering
+play mode, and the reader can weigh that only if the other kind of test is named where it
+first appears. The clause the option proposes is enough; moving the Test Framework
+paragraph (option 3) is worth doing only if chapter 08 is reworked for another reason.
+
+See also [cross-references-and-placement.md](cross-references-and-placement.md), item 7,
+which widens the entry's heading to cover both kinds of test.

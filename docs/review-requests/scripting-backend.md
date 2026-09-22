@@ -1,6 +1,6 @@
 # Review request: scripting backend
 
-- **First used:** `content/unity-engineering/06-unity-lifecycle.md:292`, section `unity-editor-vs-player`, as "compilation backend"
+- **First used:** `content/unity-engineering/06-unity-lifecycle.md:294`, section `unity-editor-vs-player`, as "compilation backend"
 - **Used again:** `content/unity-engineering/08-testing-and-debugging.md:162` and `:204`, as "scripting backend"
 - **Explained in:** `content/unity-engineering/12-mobile-production.md:174`, section `mobile-build-integrations`
 - **Now covered by:** the `scripting-backend` entry, linked at three mentions
@@ -40,3 +40,13 @@ The term also drifts: chapter 06 says "compilation backend", chapters 08 and 12 
 
 Worth fixing regardless of which option wins: make chapter 06 say "scripting backend", so
 all three places use Unity's term.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 2 and the terminology fix now, together: at chapter 06 line 294,
+“[[scripting backend]], since a player build normally uses IL2CPP rather than the Editor's
+Mono”, which also replaces “compilation backend”. Take option 3 in the same pass as
+[development-build-and-stripping.md](development-build-and-stripping.md): chapter 08's
+table is where the reader first acts on the backend, and the same table is wrong about
+what a development build rules out. Whichever chapter ends up holding the IL2CPP
+paragraph, point the entry at it.

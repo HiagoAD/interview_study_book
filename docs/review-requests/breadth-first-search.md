@@ -32,3 +32,16 @@ halves of the sentence should be treated together.
    sentence then teaches instead of assuming, and it costs no more words.
 3. **Add a depth-first entry** as well, so both halves resolve. Worth doing if option 1 is
    chosen, since the asymmetry is otherwise arbitrary.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 2, treating both halves together, which also removes the asymmetry option 3 was
+written for:
+
+> A queue processes the oldest waiting item first, which fits pending commands, and is how
+> a breadth-first search visits nearer nodes before farther ones. A stack processes the
+> most recently added item first, which fits nested undo history, and is how a depth-first
+> traversal follows one branch to its end before backing up.
+
+The sentence then teaches both searches in words it already uses, and depth-first needs no
+entry, because the book never uses it again.

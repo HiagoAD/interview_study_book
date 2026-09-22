@@ -37,3 +37,15 @@ in chapter 02 would mean teaching that measurement there too.
 3. **Move the mechanism forward.** A short subsection in chapter 02 on reuse and identity,
    with chapter 11 keeping the sizing and the memory argument. The most work, and it would
    leave chapter 11 explaining a concept the reader already has.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 2. Pooling is the premise of the chapter's hardest test and of the book's recurring
+defect, and a reader should not need a hover to follow chapter 02's own argument. One
+clause teaches the mechanism without the measurement chapter 11 owns:
+
+> A [[object pool|pooled]] GameObject, one that is disabled and handed out again instead
+> of being destroyed, may represent several different coins during one run, so its object
+> identity alone is not enough.
+
+Keep the entry: it is the short answer for the six chapters in between.

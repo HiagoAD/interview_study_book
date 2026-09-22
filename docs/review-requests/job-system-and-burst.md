@@ -34,3 +34,11 @@ somewhere the reader can simply skip ahead to.
 3. **Say it in the prose under the table.** The paragraph after it discusses `async void`;
    a sentence before that, noting that the last section of the chapter covers jobs, would
    set expectations without moving anything.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 3. The table is a decision aid, and the site locks the section that explains two of
+its rows, so the reader cannot follow a pointer ahead. One sentence before the paragraph
+on `async void`, such as “The last section of this chapter covers the Job System and
+Burst, including when their scheduling cost is repaid.”, sets the expectation. The hover
+cards stay the right size of answer for the row itself.

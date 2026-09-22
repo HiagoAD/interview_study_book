@@ -36,3 +36,10 @@ weaker device changes.
 3. **Leave chapter 01 and adjust chapter 11**, opening it by noting that the budget has
    been assumed since chapter 01. Weakest option; it signposts backwards, which helps a
    reader who already got through.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 2. The sentence is the book's own example of a requirement you can check, and the
+number is what makes it checkable. The clause the option proposes is accurate and fits the
+book's style. Chapter 11's table then confirms a figure the reader has already met, which
+is the better order of the two.

@@ -41,3 +41,16 @@ at it.
 
 Option 1 is the one this request was written for. It is the only change that reaches the
 reader at the point of confusion without touching a question block.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 1, as this request argues. In `powerup-collection`, after the sentence about the
+duplicate request's result, a sentence such as
+
+> The operation is then [[idempotence|idempotent]]: repeating the same logical request has
+> no further effect.
+
+names the property the heading promises, where the behavior is described, and gives
+chapter 02 its first link to the entry. Chapter 03's definition then reads as a reminder.
+The section's own question already uses the word (“Idempotency is defined by logical
+identity.”, 02:308), so the prose would be catching up with the question.

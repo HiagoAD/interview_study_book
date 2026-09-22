@@ -34,3 +34,10 @@ only that it is a per-object piece of work with its own lifetime.
 3. **Accept it as vocabulary.** A Unity engineer preparing for interviews arguably knows
    the word already, and the book assumes similar knowledge elsewhere, such as prefabs and
    the Inspector. If that is the position, this request closes with no change.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 3, closed together with [singleton.md](singleton.md). A candidate preparing for a
+Unity interview has written a coroutine, the model answer's point survives without the
+reader knowing how one resumes, and the entry already answers a reader who has not met the
+word. Delete this file when the decision is taken, and keep the entry.

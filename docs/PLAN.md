@@ -512,6 +512,148 @@ Done when: `npm run check`, `npm test` and `npm run build` pass, and every patte
 
 After this, the glossary grows as reading finds gaps: an entry and its links are a two-line change, and `npm run check` catches a link to a term that does not exist yet.
 
+## Feature: second-read editing pass
+
+`docs/review-requests/` holds 30 requests from a teacher's read of the Unity book on 2026-09-22. Each quotes the text it would change, gives the evidence, and proposes the fix. This section orders them into Phases 11 to 17, under the same rules as **How to run a phase** at the top of this file. It adds no product behavior: every phase edits `content/` and the requests, except that Phase 11 adds the guard the others rely on and Phase 17 extends it.
+
+Two things hold in every phase:
+
+- **Question blocks are progress.** Phases 11 to 15 change none of them, Phase 16 changes only `-` lines, and Phase 17 changes only what its changes file lists. The guard checks this in every phase, because a byte-identical rule kept by care alone is broken sooner or later.
+- **The requests are the specification.** Apply the proposed wording in each request, adjusting only what the surrounding sentence needs. If a fix no longer fits because an earlier phase changed its paragraph, write to the request's intent and say so in the phase log. When a request is fully applied, delete its file and remove its row from that folder's README; when a grouped request is partly applied, delete the items done.
+
+### Decisions: defaults the phases assume
+
+Several requests leave a choice open. The phases assume the defaults below; changing one changes only the phase it names.
+
+| Decision | Default | Alternative | Phase |
+| --- | --- | --- | --- |
+| Chapter 15's description of the review queue | Describe the queue as it is, the request's option 1 | Change the scheduler to match the paragraph: a product change, outside this feature | 11 |
+| Forward-reference endings | The "Recommended ending" column of the requests' README; coroutine and singleton close with no change | Any other option a request lists | 11 to 14 |
+| Managed wrapper | A new glossary entry, linked at chapter 1's first mention | One clause in chapter 1 | 12 |
+| Scripting backend, option 3: moving the IL2CPP paragraph into chapter 8 | Decide in Phase 13, after reading chapter 8 with the Phase 11 fix in place. Move it only if the table cannot be acted on with the glossary preview alone | Always move it | 13 |
+| "Pixel 6a" in chapter 8 | Replace it with "a mid-range Android device" | Keep it | 13 |
+| Variants that test another concept | Split seven into new concepts and move two, as the request lists | Leave them, recorded under "Considered and left out"; or rewrite the odd variant | 17 |
+| Arithmetic-only questions and the `16.67` answer | One new `?+` variant on each of the three concepts, asking what the figure does not establish; accept `16.67ms` as well | Leave them | 17 |
+| Unity reference version | Stay on 6.0, with every link pinned to it | Move the book to a later release: a content decision of its own, not part of this feature | none |
+
+### Decisions: the guard
+
+`pipeline/guard.ts`, run as `npm run guard -- <command>`, with its logic tested in `pipeline/guard.test.ts` like the rest of the pipeline. It is built on `parseContentFile`, so it reads question blocks exactly as the site does, and it adds no dependency.
+
+- `questions [--base <rev>]` parses every chapter file at a git revision (read with `git show`; the default is `HEAD`) and in the working tree, matches sections by id, and compares each section's concepts and variants while ignoring line numbers. Every difference is printed as `file:line: message`, and the exit status is 1. Section ids and their order may not change.
+- `questions --allow distractors` also accepts `-` options that were changed, added or removed, and nothing else.
+- `style` reads the prose of the chapter and glossary files, outside code fences, code spans and quotation marks, and reports em dashes, contractions, straight double quotes, and a chapter section whose last content paragraph is not its closing exercise.
+
+The guard does not search for the names the no-brand rule protects. That search stays one run by hand, so the names never appear in a tracked file.
+
+Phase 17 adds a third mode, described there.
+
+### Decisions: working rules
+
+- Find each edit by its quoted text, not its line number. The requests cite lines of commit `cfe2bff`, and every edit above a line moves it.
+- Keep the book's style in every new sentence: no em dashes, no contractions, curly quotes in prose and straight ones in code, American spelling except the verb "practise", mechanics and genres rather than products, and the closing exercise last in its section. The requests quote Unity's documentation, contractions included; those quotations are evidence for the editor, never text for the book.
+- Leave the three pinned examples as they are: the magnet in `collaboration-discovery`, the mission message in `collaboration-tools`, and the coin in `debugging-method`.
+- A new glossary summary stays within 400 characters, and a new `=` name must not collide with any id or name in the book. `npm run check` reports both.
+- Checking a link needs the network, and the site still does not: a documentation link is an anchor the reader chooses to follow, never a load, so the offline rule in CLAUDE.md is unaffected.
+
+**Every phase's Done when includes:** `npm run check`, `npm test` and `npm run build` pass; `npm run guard -- style` passes; the phase's question check passes; the no-brand search stays empty; and the requests the phase closes are gone from `docs/review-requests/` and its README.
+
+### Phase 11: The guard, and the three high-priority fixes
+
+Build:
+
+- Commit `docs/review-requests/` first, if it is not already committed, and record that commit in the phase log as the feature's base. Phases 12 to 15 also run the strict question check against it.
+- The guard's `questions` and `style` commands, per the guard decisions above, with tests beside them, and `"guard": "tsx pipeline/guard.ts"` in `package.json`.
+- Apply [struct-method-on-list-element](review-requests/struct-method-on-list-element.md) (chapter 4), [development-build-and-stripping](review-requests/development-build-and-stripping.md) (chapter 8) and [review-queue-description](review-requests/review-queue-description.md) (chapter 15, option 1).
+- Apply item 2 of [cross-references-and-placement](review-requests/cross-references-and-placement.md), moving the two exercises in `powerup-stacking` to the end of the section, which the new `style` check requires.
+- Close [coroutine](review-requests/coroutine.md) and [singleton](review-requests/singleton.md) with no change to the book.
+- CLAUDE.md: list `npm run guard` with the other commands, and say that Phases 11 to 17 apply the review requests.
+
+Done when: the checks common to every phase pass, and the guard is shown to bite. Breaking a `*` line, a `>` line and an `=` line each fails `questions`; breaking a `-` line fails `questions` and passes `questions --allow distractors`; an em dash in prose fails `style`. Revert every mutation afterwards.
+
+Manual check (user): read the three corrected sections in `npm run dev`.
+
+### Phase 12: Chapters 1 to 5
+
+Apply, in chapter order:
+
+- Chapter 1: [frame-budget](review-requests/frame-budget.md); [managed-wrapper](review-requests/managed-wrapper.md), which is a new entry in `glossary.md` and its link at the first mention.
+- Chapter 2: [scriptableobject-play-mode-writes](review-requests/scriptableobject-play-mode-writes.md), with its glossary sentence; [money-in-floating-point](review-requests/money-in-floating-point.md), together with the chapter 2 row of [unity-api-names](review-requests/unity-api-names.md), because both rewrite one sentence; [object-pool](review-requests/object-pool.md); [idempotence](review-requests/idempotence.md); [play-mode-tests](review-requests/play-mode-tests.md), together with item 7 of cross-references-and-placement, the entry's heading; item 6 of [code-samples](review-requests/code-samples.md); item 13 of [precision-notes](review-requests/precision-notes.md).
+- Chapter 3: item 4 of cross-references-and-placement.
+- Chapter 4: items 1, 2 and 3 of precision-notes; item 3 of cross-references-and-placement.
+- Chapter 5: item 3 of code-samples, dropping the `Maximum` half of the invariant unless a grant method is added with it; item 4 of precision-notes.
+
+Done when: the common checks pass, with the strict question check against the feature's base, and `npm run check` reports 26 terms and no unlinked entry.
+
+Manual check (user): hover the new link in chapter 1 and read its card.
+
+### Phase 13: Chapters 6 to 8
+
+Apply:
+
+- Chapter 6: [physics-replay-determinism](review-requests/physics-replay-determinism.md); [string-comparer-default](review-requests/string-comparer-default.md), both halves, including its chapter 9 sentence, so that it closes in one phase; [scripting-backend](review-requests/scripting-backend.md), option 2 and the terminology fix, with option 3 per the decisions above (if the paragraph moves, the entry's last paragraph points at its new section); the time-domain row of unity-api-names, as a column in the existing table; the chapter 6 links of [links-and-versions](review-requests/links-and-versions.md) (06:10 and 06:88); item 4 of code-samples; items 11 and 12 of precision-notes.
+- Chapter 7: [job-system-and-burst](review-requests/job-system-and-burst.md); [addressables-summary](review-requests/addressables-summary.md), in the glossary; the two chapter 7 rows of unity-api-names; the chapter 7 links and link texts of links-and-versions (07:12, 07:155 and 07:157); item 7 of code-samples; item 5 of precision-notes.
+- Chapter 8: items 1 and 6 of cross-references-and-placement, item 6 per the decisions above; the two chapter 8 rows of unity-api-names; the chapter 8 link of links-and-versions (08:162).
+
+Done when: the common checks pass, with the strict question check against the feature's base, and every link this phase introduces returns HTTP 200.
+
+Manual check (user): the chapter 6 time-domain table at phone width, where it should scroll sideways rather than widen the page; the Addressables preview card.
+
+### Phase 14: Chapters 9 to 11
+
+Apply:
+
+- Chapter 9: [spatial-index](review-requests/spatial-index.md); [breadth-first-search](review-requests/breadth-first-search.md); the chapter 9 row of unity-api-names, the `PriorityQueue` fact that chapter 4's pointer from Phase 12 now names; item 2 of code-samples; item 6 of precision-notes.
+- Chapter 10: [grid-cell-size](review-requests/grid-cell-size.md), with the last paragraph of the `spatial-index` entry; [weighted-heuristic-bound](review-requests/weighted-heuristic-bound.md); the chapter 10 row of unity-api-names; item 5 of cross-references-and-placement, which closes it; item 5 of code-samples.
+- Chapter 11: the chapter 11 links of links-and-versions (11:14, 11:66, 11:167 and 11:171), which closes it; item 1 of [worked-numbers](review-requests/worked-numbers.md); item 7 of precision-notes.
+
+Done when: the common checks pass, with the strict question check against the feature's base, and every link this phase introduces returns HTTP 200.
+
+### Phase 15: Chapters 12 to 15
+
+Apply:
+
+- Chapter 12: the three chapter 12 rows of unity-api-names, which closes it; item 8 of precision-notes.
+- Chapter 13: item 1 of code-samples, which closes it; items 9 and 10 of precision-notes.
+- Chapter 14: items 2 and 3 of worked-numbers, leaving the mission message in `collaboration-tools` as it is; item 14 of precision-notes, which closes it.
+- Chapter 15: item 4 of worked-numbers, which closes it.
+
+Then update the requests' README: its accuracy, coverage, consistency and forward-reference tables are now empty, and its opening paragraph should say which phases applied the second read.
+
+Done when: the common checks pass, with the strict question check against the feature's base, and the only requests left in the folder are the question-design ones.
+
+### Phase 16: Distractors
+
+A questions pass: only `-` lines change, held to the book's distractor standard.
+
+- [first-use-hitch-contradiction](review-requests/first-use-hitch-contradiction.md), option 1: replace one distractor.
+- [option-sets](review-requests/option-sets.md), its sections on Yes and No and on defensible options: add a "No" option with a wrong reason to each of the three yes-or-no sets, and replace the seven defensible distractors.
+
+Every new option is wrong on its own section's terms, avoids the standard's word list (always, never, every, automatically, only, guarantees, cannot, forbids), and sits near the book's median length for a wrong option.
+
+Done when: the common checks pass; `npm run guard -- questions --allow distractors` passes against the phase's starting commit; and the word-list heuristic, run again over the whole book, still gains nothing, with the new figures recorded in the phase log.
+
+### Phase 17: Question structure
+
+Runs only as far as the two question decisions above allow. Before starting, export progress from the Data page as a backup.
+
+Build the guard's third mode first: `questions --allow structure --changes <file>`. The changes file lists each new concept id with the variant it takes, each moved variant with its old and new concept, each variant added to an existing concept, and each accepted answer added. The check fails unless every old concept id survives, every old variant appears exactly once and unchanged, in its place or where the file moves it, and nothing the file does not list has changed. Commit the file with the phase as `docs/review-requests/structure-changes.json` and keep it there: it is the record of which concept each moved question came from.
+
+Then apply [variants-that-test-another-concept](review-requests/variants-that-test-another-concept.md), option 1: seven `?+` lines become `??` lines with the ids the request suggests, and two variants move to the concepts it names. Apply the rest of option-sets: one `?+` variant on each arithmetic-only concept, written to the distractor standard, and `16.67ms` among the accepted answers of `performance-60-budget`.
+
+Done when: the common checks pass; the structure check passes against the phase's starting commit; with both defaults taken, `npm run check` reports 160 concepts and 190 variants; `docs/review-requests/` holds only its README and the changes file; and the phase log names the sections to practise again, because a new concept starts with no history and nothing on screen prompts for it.
+
+Manual check (user): practise one section with a split concept and one with a moved variant; the chapter pages still show every other concept's progress.
+
+### After Phase 17
+
+The requests surfaced two product changes, deliberately left out of this feature:
+
+- Queue every first answer, or let the reader mark a right answer as a guess, so that the review queue does what chapter 15 first described.
+- On a completed section, show how many of its concepts have never been answered. Phase 17 would then announce itself, and so would any question added later.
+
+Each changes PROJECT.md and needs a plan of its own.
+
 ## Phase log
 
 ### Phase 1: Scaffold and single-file build

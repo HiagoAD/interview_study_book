@@ -33,3 +33,10 @@ the reader to believe they should already recognise it.
 3. **Do nothing and accept the vocabulary**, as with coroutine. The two requests should
    probably be closed the same way, since both are words an interview candidate is assumed
    to have met.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 3, closed together with [coroutine.md](coroutine.md), as this request suggests. The
+sentence is about how to phrase a tradeoff, a candidate preparing for a Unity interview
+has met the word, and the entry gives the three-part separation at once. Delete this file
+when the decision is taken, and keep the entry.

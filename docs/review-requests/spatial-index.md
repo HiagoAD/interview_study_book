@@ -30,3 +30,10 @@ is "what kind of index?".
    cells.
 3. **Reorder.** Not worth it; the two chapters are correctly ordered, since structures
    belong before the algorithms that use them.
+
+## Recommendation (second read, 2026-09-22)
+
+Option 2: “a spatial index, such as a uniform grid of cells”. Three words, and line 231's
+“between cells” stops being the first mention of cells. Take it in the same pass as
+[grid-cell-size.md](grid-cell-size.md), which corrects the starting cell size in chapter
+10 and in this entry's last paragraph.
