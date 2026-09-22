@@ -5,9 +5,9 @@ chapter: 12: Mobile graphics, memory, and platform constraints
 
 ## Optimize rendering according to CPU and GPU evidence {#mobile-rendering}
 
-Rendering can be limited by CPU submission, vertex processing, pixel shading, bandwidth, memory, or synchronization. The number of draw calls describes only one part of that work.
+Rendering can be limited by CPU submission, vertex processing, pixel shading, bandwidth, memory, or synchronization. The number of [[draw call|draw calls]] describes only one part of that work.
 
-If submitting rendering work is expensive on the CPU, inspect material and state changes, batching compatibility, culling, and unnecessary renderers. The SRP Batcher reduces setup work for compatible shaders and materials; it does not combine every object into one draw. GPU instancing can draw compatible mesh instances together. Both depend on the render pipeline and shader setup. See [Unity's SRP Batcher guide](https://docs.unity3d.com/6000.0/Documentation/Manual/SRPBatcher.html) and [GPU instancing guide](https://docs.unity3d.com/6000.0/Documentation/Manual/GPUInstancing.html) for those mechanisms.
+If submitting rendering work is expensive on the CPU, inspect material and state changes, batching compatibility, culling, and unnecessary renderers. The [[SRP Batcher]] reduces setup work for compatible shaders and materials; it does not combine every object into one draw. GPU instancing can draw compatible mesh instances together. Both depend on the render pipeline and shader setup. See [Unity's SRP Batcher guide](https://docs.unity3d.com/6000.0/Documentation/Manual/SRPBatcher.html) and [GPU instancing guide](https://docs.unity3d.com/6000.0/Documentation/Manual/GPUInstancing.html) for those mechanisms.
 
 For GPU cost, examine expensive passes, resolution, shadows, lighting, post-processing, geometry, and transparency. A large transparent particle can shade many pixels even when it looks faint. Overlapping transparent layers shade some pixels repeatedly, increasing overdraw.
 

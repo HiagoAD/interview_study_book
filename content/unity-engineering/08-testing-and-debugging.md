@@ -65,7 +65,7 @@ Use a compact matrix:
 | Persistence | Old schema, truncated file, failed write, recovery |
 | Content | Missing ID, duplicate ID, unknown revision, invalid reference |
 
-You do not need to test every possible combination in the matrix. Choose combinations whose behaviors can affect each other, along with cases for known bugs. For example, combine a late asynchronous result with pool reuse: the same object can now represent a different item.
+You do not need to test every possible combination in the matrix. Choose combinations whose behaviors can affect each other, along with cases for known bugs. For example, combine a late asynchronous result with [[object pool|pool]] reuse: the same object can now represent a different item.
 
 Property-style tests generate many inputs and check a rule that should hold for all of them. Examples include a wallet never becoming negative, a shuffle preserving each element exactly once, or a capped mission count never exceeding its target. Use reproducible seeds and report the inputs that failed.
 
@@ -121,7 +121,7 @@ Choose the tool that can answer the current question. A debugger shows control f
 
 Write a regression test before or alongside the fix. Where practical, show that it reproduces the old failure and passes with the correction. Also test nearby valid cases, such as normal completion and cancellation. Discarding every result would stop a stale-result bug, but also stop valid requests from working.
 
-State the cause as a sequence the reader can follow: a callback from the previous run kept a pool slot, the slot was reused, and the callback applied its result without checking the generation. That explanation makes the reason for the fix clear.
+State the cause as a sequence the reader can follow: a callback from the previous run kept a [[object pool|pool]] slot, the slot was reused, and the callback applied its result without checking the generation. That explanation makes the reason for the fix clear.
 
 When you cannot form a hypothesis, bisect instead. The question changes from “what is wrong” to “on which side of this line is the problem”, and each answer halves the remaining space. A known-good commit and a known-bad one give you a version bisection, and twenty commits are resolved by about five builds. The same technique works on content, by halving the set of loaded definitions, and on a scene, by disabling half the objects. Bisection is slower to start and far more reliable than inspection, and it does not require understanding the system first.
 
@@ -159,7 +159,7 @@ If a collision or trigger does not fire, first confirm whether the objects use 2
 
 If an effect hitches on first use, add markers around asset loading, prefab creation, shader or pipeline preparation, animation initialization, and managed allocations. Identify the expensive step before prewarming it. Then measure the effect of that prewarming on startup time and memory.
 
-If a feature works in the Editor but fails in a player build, compare the scripting backend, stripping, platform symbols, included assets, filesystem assumptions, native plugins, and content versions. Managed stripping can remove code that is accessed dynamically. Preserve the required types or members, then retest, rather than disabling every optimization. [Unity's stripping manual](https://docs.unity3d.com/6000.0/Documentation/Manual/ManagedCodeStripping.html) explains the mechanism.
+If a feature works in the Editor but fails in a player build, compare the [[scripting backend]], stripping, platform symbols, included assets, filesystem assumptions, native plugins, and content versions. Managed stripping can remove code that is accessed dynamically. Preserve the required types or members, then retest, rather than disabling every optimization. [Unity's stripping manual](https://docs.unity3d.com/6000.0/Documentation/Manual/ManagedCodeStripping.html) explains the mechanism.
 
 A mobile crash may leave no managed exception. Check native crash reports, memory pressure, platform lifecycle events, graphics drivers, and SDK integrations. The absence of a C# exception does not establish that the game was healthy.
 
@@ -201,7 +201,7 @@ Exercise: For a bug you are currently carrying, write the one question that woul
 
 First confirm that the intended tests actually ran. Then inspect their failures, skipped tests, and saved results. For Unity batch runs, check both the process exit status and the generated test report. A compilation or startup failure may prevent the suite from running at all.
 
-Record enough information to repeat the validation: commit or build identity, Editor and relevant package versions, target platform, scripting backend, content revision, and test selection. Explain what the run covers. Editor tests alone do not establish device performance or correct native integration.
+Record enough information to repeat the validation: commit or build identity, Editor and relevant package versions, target platform, [[scripting backend]], content revision, and test selection. Explain what the run covers. Editor tests alone do not establish device performance or correct native integration.
 
 Match the checks to what changed. A content edit may need parsing, rendering, link or image checks, and a production build. Gameplay rules need tests with controlled inputs. Lifecycle changes need engine checks, and optimizations need repeatable measurements on target devices.
 

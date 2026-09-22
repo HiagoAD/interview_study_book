@@ -103,7 +103,7 @@ Microsoft's [GetHashCode contract](https://learn.microsoft.com/en-us/dotnet/api/
 
 While an object is a key in a dictionary or set, keep the fields used for equality and hashing unchanged. If those fields change, a lookup may calculate a different bucket from the one used at insertion. The collection can then fail to find or remove a key that it still contains.
 
-A pooled entity key can combine its slot and generation:
+A [[object pool|pooled]] entity key can combine its slot and generation:
 
 ```csharp
 using System;
@@ -195,7 +195,7 @@ Allocations can also come from captured variables in closures, new arrays, strin
 
 Suppose 500 active objects each allocate 128 bytes per frame at 60 frames per second. That produces 3,840,000 bytes of allocations per second, or about 3.84 MB/s in decimal units. It does not necessarily add 3.84 MB to retained memory every second: the garbage collector may reclaim those objects.
 
-Apply the same reasoning to queries. A LINQ query used during occasional setup may cost little enough to keep. The same query in every object's `Update` needs measurement. Pooling is another tradeoff: use it when the saved work justifies the extra rules for ownership and cleanup.
+Apply the same reasoning to queries. A LINQ query used during occasional setup may cost little enough to keep. The same query in every object's `Update` needs measurement. [[object pool|Pooling]] is another tradeoff: use it when the saved work justifies the extra rules for ownership and cleanup.
 
 Because the answer depends on the generated code, the useful skill is checking rather than predicting. Three methods, in increasing order of effort: read the allocation column of a Profiler capture in a player build with deep profiling on the suspect call; inspect the compiled IL for the method and look for `box` instructions; or write a short benchmark that runs the call many times and measures allocated bytes. The first is usually enough to decide whether the question matters at all.
 

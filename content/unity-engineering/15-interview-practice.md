@@ -132,7 +132,7 @@ Reconsider a choice when its constraints change. A single controller may work we
 
 Keep the size of the change proportional to the requirement. A second local player may only need another owner for player state, plus separate input and presentation bindings. Check the consumers of that state before deciding that the wider architecture needs replacement.
 
-When uncertain, say how you would resolve it. “I would check the installed Addressables contract and reproduce the handle lifetime in a small target build” is a useful answer. Guessing an API guarantee confidently is not.
+When uncertain, say how you would resolve it. “I would check the installed [[Addressables]] contract and reproduce the handle lifetime in a small target build” is a useful answer. Guessing an API guarantee confidently is not.
 
 Name a cost of the revised design. Offline operations, for example, need storage, expiration rules, and reconciliation. Adding an interface may organize those responsibilities, but does not implement them.
 

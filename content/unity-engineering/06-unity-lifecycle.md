@@ -245,7 +245,7 @@ Use `OnDisable` to end a subscription or binding when it should last only while 
 
 `Destroy` schedules destruction; it does not tear down the object immediately at that line of code. Later code in the same operation must still recognize that the object is logically finished. Mark its owner or operation inactive before notifying callbacks that could call back into it.
 
-Returning an object to a pool usually disables it for reuse, without destroying it. Clean up when that use of the object ends: reset gameplay state, subscriptions, pending work, transforms, trails, and any other feature data. `OnDestroy` alone cannot provide that cleanup.
+Returning an object to a [[object pool|pool]] usually disables it for reuse, without destroying it. Clean up when that use of the object ends: reset gameplay state, subscriptions, pending work, transforms, trails, and any other feature data. `OnDestroy` alone cannot provide that cleanup.
 
 Cleanup should be safe to repeat. If an explicit unbind is followed by `OnDisable`, the second call must not release an asset again or remove another owner's registration. Track which resources and registrations this owner still holds; a non-null reference alone is not enough.
 
@@ -289,7 +289,7 @@ Fast Enter Play Mode can disable domain reload. With that option enabled, static
 
 Test repeated Play Mode sessions with the reload settings the project intends to use. A runtime initialization hook can reset static application state during startup. Give that job to the state's owner. Clearing globals wherever a duplicate appears can hide the fact that several objects are trying to own the same state.
 
-A player build can differ from the Editor in available assets, compilation backend, filesystem behavior, code stripping, and performance overhead. Reflection may work in the Editor but fail in a player where the required types were stripped. Native integrations may only run in a build for the target platform.
+A player build can differ from the Editor in available assets, [[scripting backend|compilation backend]], filesystem behavior, code stripping, and performance overhead. Reflection may work in the Editor but fail in a player where the required types were stripped. Native integrations may only run in a build for the target platform.
 
 Treat “works in Editor” as one part of validation. Also test on the target platform with the intended scripting backend, content build, and settings close to release. Record the build identity, so bug reports can be traced to the exact code and content.
 
@@ -308,7 +308,7 @@ private static void ResetStatics()
 
 `SubsystemRegistration` runs early enough to be useful, before the first scene loads. Put the method on the type that owns the state, next to the fields it clears, so the reset is maintained by whoever adds the next static field. A single global reset routine that reaches into other types drifts out of date the first time someone adds a field and does not know the routine exists.
 
-The deeper point is that this hook is a repair, not a design. Each static field it has to clear is a piece of state with no owner and no lifetime. Where the state can instead live on an object the composition root creates at startup, the problem disappears: a new session constructs a new object, and there is nothing to reset. Reach for the attribute for the statics you cannot remove, and treat a growing reset method as a signal about ownership.
+The deeper point is that this hook is a repair, not a design. Each static field it has to clear is a piece of state with no owner and no lifetime. Where the state can instead live on an object the [[#architecture-dependencies|composition root]] creates at startup, the problem disappears: a new session constructs a new object, and there is nothing to reset. Reach for the attribute for the statics you cannot remove, and treat a growing reset method as a signal about ownership.
 
 Exercise: Turn off domain reload in a project you know, enter and exit play mode three times, and note the first thing that behaves differently on the second run. That behavior names your unowned state.
 

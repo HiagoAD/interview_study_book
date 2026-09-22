@@ -42,7 +42,7 @@ The seven questions also give you a way to grade your own practice. Take one pro
 | --- | --- |
 | Naming | “A timer on the power-up component.” |
 | Mechanism | “The run owns a deadline. Each tick compares the current simulation time with it.” |
-| Decision | “The run owns a deadline measured on the simulation clock, so pause holds the remaining time. The caller supplies that time, so a test can assert the exact boundary. I rejected one coroutine per effect, because pause and cancellation rules would then live in several places.” |
+| Decision | “The run owns a deadline measured on the simulation clock, so pause holds the remaining time. The caller supplies that time, so a test can assert the exact boundary. I rejected one [[coroutine]] per effect, because pause and cancellation rules would then live in several places.” |
 
 Only the third answer states a requirement, an ownership decision, a mechanism, and a rejected alternative. Move your own answers up this table rather than adding vocabulary to them.
 
@@ -66,7 +66,7 @@ Exercise: Pick a feature you have shipped. Write one sentence for each of the se
 
 “Add a coin magnet” leaves most engineering decisions unresolved. Does it attract coins through walls? Does it stack with another magnet? Does the duration pause during menus? Does death end it? Can a designer change its range without a code build? Can an attraction already in progress finish after the effect expires?
 
-Start with a short description of what the player should experience. Then write down the behavior they can observe. Separate functional rules from quality requirements. “Coins inside the radius move toward the player” describes what the feature does. “The feature fits the remaining frame budget on the minimum supported device” limits how much work it can do. “Designers can preview the radius in a test scene” describes what the authoring tools must support.
+Start with a short description of what the player should experience. Then write down the behavior they can observe. Separate functional rules from quality requirements. “Coins inside the radius move toward the player” describes what the feature does. “The feature fits the remaining [[frame budget]] on the minimum supported device” limits how much work it can do. “Designers can preview the radius in a test scene” describes what the authoring tools must support.
 
 Record the behavior for each edge case:
 
@@ -112,7 +112,7 @@ Exercise: Mark each row of the table above as design-changing or value-changing.
 
 ## Assign responsibilities and identify sources of truth {#architecture-responsibilities}
 
-A responsibility describes a kind of work that may need to change. The magnet's duration rule changes when designers change stacking; the sound player changes when audio integration changes. The save adapter has a different job again: it handles changes to storage. Putting all of them together makes a small balance change riskier, because the same code also handles unrelated behavior.
+A responsibility describes a kind of work that may need to change. The magnet's duration rule changes when designers change stacking; the sound player changes when audio integration changes. The save [[adapter]] has a different job again: it handles changes to storage. Putting all of them together makes a small balance change riskier, because the same code also handles unrelated behavior.
 
 A practical decomposition for the runner is:
 
@@ -181,7 +181,7 @@ Exercise: Choose a value in a project you know that appears in both gameplay and
 
 A dependency is anything a unit needs to do its job: another object, global state, a clock, a random source, a scene, or even an initialization convention. Constructor parameters make dependencies visible. Global lookups and static access hide them.
 
-Give ordinary C# objects what they need when you construct them, so they start in a valid state. For example, a mission evaluator can receive immutable definitions and a progress store. Unity components can use serialized references for connections made in the Inspector. A composition root then creates the ordinary objects and connects them to those components. This is simply the place where the objects are assembled; it does not require a dependency-injection framework.
+Give ordinary C# objects what they need when you construct them, so they start in a valid state. For example, a mission evaluator can receive immutable definitions and a progress store. Unity components can use serialized references for connections made in the Inspector. A composition root then creates the ordinary objects and connects them to those components. This is simply the place where the objects are assembled; it does not require a [[dependency injection|dependency-injection]] framework.
 
 Match object lifetimes explicitly:
 
@@ -197,7 +197,7 @@ Check any service that keeps a reference to an object with a shorter lifetime. A
 
 Use an interface when callers should depend on an operation without knowing its implementation. Examples include a clock, a storage operation, a reward service, or a selection policy that can be replaced. An immutable definition can remain a concrete type: if callers only need its data, an interface may add little.
 
-Each way of connecting dependencies has costs. Inspector references work well for stable relationships in a scene, but some objects and connections only exist at runtime. Explicit factories can create those objects; the design still needs to say who owns and cleans them up. A dependency-injection (DI) container can manage a large set of objects and their lifetimes, but introduces registration errors and another layer to debug. A service locator makes objects easy to find, while hiding which dependencies each caller needs.
+Each way of connecting dependencies has costs. Inspector references work well for stable relationships in a scene, but some objects and connections only exist at runtime. Explicit [[factory|factories]] can create those objects; the design still needs to say who owns and cleans them up. A dependency-injection (DI) container can manage a large set of objects and their lifetimes, but introduces registration errors and another layer to debug. A [[service locator]] makes objects easy to find, while hiding which dependencies each caller needs.
 
 A composition root is smaller than its name suggests. It is the place that creates the objects, connects them, and hands out the few references the scene needs:
 
@@ -334,7 +334,7 @@ Resource management involves similar tradeoffs. Preloading reduces waiting durin
 
 Choose the smallest design that meets today's requirements and the changes you reasonably expect soon. Make decisions that are difficult to reverse easy to find: saved identifiers, content formats, public APIs, and which modules depend on which. Internal class arrangements are usually easier to change later.
 
-In an interview, articulate one rejected alternative and a condition under which it would become reasonable. “I rejected a global manager because runs require independent state; an application-wide catalog would still be shared” shows judgment more clearly than “singletons are bad.”
+In an interview, articulate one rejected alternative and a condition under which it would become reasonable. “I rejected a global manager because runs require independent state; an application-wide catalog would still be shared” shows judgment more clearly than “[[singleton|singletons]] are bad.”
 
 Under interview conditions you will not weigh six goals against each other. The faster technique is to find the one requirement that decides, and say so. For the magnet, “designers tune duration weekly without a code build” decides that duration lives in content rather than in a constant; much of the rest follows from it or is negotiable. Naming the deciding requirement aloud also invites the interviewer to change it, which is often what they wanted to test.
 

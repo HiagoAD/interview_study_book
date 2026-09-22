@@ -181,8 +181,8 @@ The difference is not only speed. Ahead-of-time compilation means code has to ex
 
 Because of that, “works in the Editor” is a statement about the Editor. [[#mobile-build-integrations]] covers what to verify in the build you actually ship.
 
-## ScriptableObject {#scriptable-object}
-= scriptable objects
+## ScriptableObject {#scriptableobject}
+= scriptable object | scriptable objects
 
 A Unity asset that holds serialized data without belonging to a GameObject, used for configuration that several objects share and that designers author in the Editor.
 

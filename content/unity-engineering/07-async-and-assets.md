@@ -17,7 +17,7 @@ Choose according to the operation:
 | --- | --- |
 | Sequence a short scene animation across frames | Coroutine or Unity Awaitable |
 | Coordinate existing task-returning I/O | Task-based async flow |
-| Process many independent numeric items | Job System, possibly Burst |
+| Process many independent numeric items | [[Job System]], possibly [[Burst]] |
 | Evaluate a small deterministic rule | Ordinary synchronous method |
 
 Give callers a way to observe failure. They cannot await an `async void` method or inspect a normal task result from it. Use `async void` only where an event-handler API requires it, catch failures at that entry point, and put reusable work in an asynchronous method whose result callers can observe.
@@ -152,7 +152,7 @@ Exercise: Find a `CancellationTokenSource` in your code and answer three questio
 
 An asset reference, an instantiated object, and a load operation are different resources. For each API, check what it returns, who owns that result, and how it must be released.
 
-Addressables tracks acquired loads through reference counts. Pair each acquisition with the appropriate release. Releasing a handle may not free all associated memory immediately, because other references, dependencies, or bundles can keep it loaded. The [Addressables 1.21 memory guide](https://docs.unity3d.com/Packages/com.unity.addressables@1.21/manual/MemoryManagement.html) provides a versioned example; check the installed package's documentation for exact API behavior.
+[[Addressables]] tracks acquired loads through reference counts. Pair each acquisition with the appropriate release. Releasing a handle may not free all associated memory immediately, because other references, dependencies, or bundles can keep it loaded. The [Addressables 1.21 memory guide](https://docs.unity3d.com/Packages/com.unity.addressables@1.21/manual/MemoryManagement.html) provides a versioned example; check the installed package's documentation for exact API behavior.
 
 Loading a prefab through Addressables and cloning it with ordinary `Object.Instantiate` are separate operations. The clone does not automatically acquire another Addressables load reference, so retain the required assets for as long as the clones need them. If you instantiate through Addressables instead, use the release method documented for that operation. The [Addressables operation-handle guide](https://docs.unity3d.com/Packages/com.unity.addressables@1.21/manual/AddressableAssetsAsyncOperationHandle.html) describes these lifetimes.
 
@@ -211,7 +211,7 @@ If the transition's peak memory is too high, consider releasing the old scene ea
 
 Bundle contents affect what can be released together. A small icon used frequently might keep an entire bundle loaded, including a large environment. Putting every asset in its own bundle also has costs: more overhead and potentially repeated dependency loads. Group assets by when they are used and released, then measure the build and runtime behavior.
 
-Create a bounded set of pooled objects and expensive visual variants before the phase that needs them. Loading everything “to prevent hitches” can exhaust memory, while loading everything on demand can cause stalls at first use. Measure both first-use delay and retained memory on target devices to decide what to preload.
+Create a bounded set of [[object pool|pooled]] objects and expensive visual variants before the phase that needs them. Loading everything “to prevent hitches” can exhaust memory, while loading everything on demand can cause stalls at first use. Measure both first-use delay and retained memory on target devices to decide what to preload.
 
 A live game also needs compatibility between its content catalog and installed binary. A downloaded asset may require scripts or shaders that an older binary does not contain. Check that the client can use the content, as well as whether it downloaded successfully.
 

@@ -17,7 +17,7 @@ Big-O leaves out constant costs, allocations, cache behavior, branch predictabil
 
 Account for memory as well as execution time. Caching every pairwise distance uses quadratic storage and needs updates when positions change. An index makes queries faster by spending memory and time on maintenance. Compare how often the data changes with how often it is queried.
 
-For an interview, narrate the baseline first: “I would start with a linear scan of the active set; if population or profiling makes it expensive, I would introduce a spatial index.” Explain why the scan is correct before discussing its replacement.
+For an interview, narrate the baseline first: “I would start with a linear scan of the active set; if population or profiling makes it expensive, I would introduce a [[spatial index]].” Explain why the scan is correct before discussing its replacement.
 
 Because constants are omitted from the notation, it helps to carry one crossover figure as an anchor. A linear scan of a contiguous array reads memory in the order the hardware prefetches it, while a hash lookup computes a hash, jumps to a bucket, and follows a reference that may be anywhere. On typical hardware the scan often wins up to somewhere in the low tens of elements, and the dictionary pulls ahead beyond that. Treat the number as a reason to measure rather than as a rule: element size, key type, and access pattern all move it.
 
@@ -177,7 +177,7 @@ Exercise: Design a registry that supports constant expected-time lookup by spawn
 
 ## Queues, stacks, heaps, and linked lists {#structures-specialized}
 
-A queue processes the oldest waiting item first, which fits pending commands or breadth-first search. A stack processes the most recently added item first, which fits depth-first traversal or nested undo history. Both can use contiguous storage and support amortized constant-time operations.
+A queue processes the oldest waiting item first, which fits pending commands or [[breadth-first search]]. A stack processes the most recently added item first, which fits depth-first traversal or nested undo history. Both can use contiguous storage and support amortized constant-time operations.
 
 A priority queue returns the item with the lowest or highest priority. A binary heap typically provides constant-time access to the next item, with logarithmic insertion and removal. This suits deadlines, pathfinding frontiers, and selecting the next task. Before choosing a .NET API, check that it exists in the Unity project's compatibility profile.
 
@@ -228,7 +228,7 @@ Exercise: For a scheduler you know, work out how many cancelled entries can exis
 
 ## Caches, indices, and memory layout {#structures-caches-layout}
 
-Storing derived information adds a rule you must maintain. A cached effective speed becomes stale when base speed or active modifiers change. A spatial index needs updating when an entity moves between cells. An ID-to-index map must change when list elements move.
+Storing derived information adds a rule you must maintain. A cached effective speed becomes stale when base speed or active modifiers change. A [[spatial index]] needs updating when an entity moves between cells. An ID-to-index map must change when list elements move.
 
 Choose when to update derived data: immediately after a change, when it is next read, or during a scheduled rebuild:
 

@@ -148,7 +148,7 @@ Client retries claim K
 Service returns the recorded result for K
 ```
 
-Repeated requests produce one reward because the service recognizes the same claim. This is an idempotent effect: retrying the operation does not apply the reward again. The messages themselves may still be delivered more than once.
+Repeated requests produce one reward because the service recognizes the same claim. This is an [[idempotence|idempotent]] effect: retrying the operation does not apply the reward again. The messages themselves may still be delivered more than once.
 
 ![A claim commits but its response is lost; retrying the same identity returns the recorded result without granting another reward](images/reward-retry.svg)
 

@@ -7,7 +7,7 @@ chapter: 02: Worked design of a power-up system
 
 Separate a power-up's definition from its runtime state and presentation. The definition contains reusable design choices: a stable ID, duration, radius, icon, and stacking rule. Runtime state describes one activation in one run, including when it started, when it expires, and which entities it affects. Presentation controls what the player sees and hears.
 
-In Unity, a ScriptableObject is a convenient asset for authoring the definition. Treat it as shared configuration: changing a field on the shared asset can affect every object that uses it. Keep changing values in a model owned by the run, or create a separate runtime instance and assign an owner to it. Editing a ScriptableObject in a deployed build does not provide a way to save player progress. [Unity's ScriptableObject manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-ScriptableObject.html) describes their shared asset role and persistence limitations.
+In Unity, a [[ScriptableObject]] is a convenient asset for authoring the definition. Treat it as shared configuration: changing a field on the shared asset can affect every object that uses it. Keep changing values in a model owned by the run, or create a separate runtime instance and assign an owner to it. Editing a ScriptableObject in a deployed build does not provide a way to save player progress. [Unity's ScriptableObject manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-ScriptableObject.html) describes their shared asset role and persistence limitations.
 
 The rule layer can use this plain C# definition:
 
@@ -203,7 +203,7 @@ When combining effect strengths, define the arithmetic. Two 20% bonuses give 1.4
 
 Keep the base value and the active modifiers, then calculate the effective value from them. Multiplying a shared speed property on activation and dividing it on removal is easy to get wrong: rounding, a changed base speed, or duplicate cleanup can prevent the value from being restored. Calculating from the current base and modifiers avoids relying on perfectly reversed arithmetic.
 
-A small enum and an explicit branch are enough when the available policies are few and known in advance. A strategy interface becomes useful when policies are complex enough to implement separately, or come from different modules. A configurable expression language needs much more support: validation, repeatable evaluation, debugging tools, and compatibility rules.
+A small enum and an explicit branch are enough when the available policies are few and known in advance. A [[strategy]] interface becomes useful when policies are complex enough to implement separately, or come from different modules. A configurable expression language needs much more support: validation, repeatable evaluation, debugging tools, and compatibility rules.
 
 Exercise: Write the stacking policy your design uses as one sentence, then state what a second pickup does at each of these moments: while active, one frame after expiry, and while the run is paused.
 
@@ -247,7 +247,7 @@ Decide separately what the cap limits. Clamping the effective value leaves the m
 
 A coin can be detected by a trigger, a proximity query, and an attraction animation in the same frame. The collection owner must recognize that these refer to one logical coin.
 
-Give each spawned coin an identity that lasts for that spawn. A pooled GameObject may represent several different coins during one run, so its object identity alone is not enough. Combine a pool slot with a generation number, or assign a new spawn ID each time the object is taken from the pool.
+Give each spawned coin an identity that lasts for that spawn. A [[object pool|pooled]] GameObject may represent several different coins during one run, so its object identity alone is not enough. Combine a pool slot with a generation number, or assign a new spawn ID each time the object is taken from the pool.
 
 A coin can follow these transitions:
 
@@ -340,11 +340,11 @@ public sealed class RefreshingEffectTests
 
 These examples require the earlier model and a test assembly with NUnit available. They demonstrate rule tests, not a complete Unity test setup.
 
-Also test reset, invalid durations, and a clock that stops during pause. For collection, cover duplicate callbacks, a callback from an old spawn after pool reuse, overflow rejection, and a run restart. Check failures both before and after the reward is committed. Use Play Mode tests for the Unity adapter, where you can verify subscriptions during enable and disable, along with prefab behavior.
+Also test reset, invalid durations, and a clock that stops during pause. For collection, cover duplicate callbacks, a callback from an old spawn after [[object pool|pool]] reuse, overflow rejection, and a run restart. Check failures both before and after the reward is committed. Use [[Play Mode tests]] for the Unity adapter, where you can verify subscriptions during enable and disable, along with prefab behavior.
 
 After checking correctness, measure the implementation on a target device with the largest expected number of active coins. Rule tests cannot tell you whether proximity queries, animation, or pool growth fit within the time available for a frame.
 
-Be ready to explain why you rejected other approaches. One coroutine per power-up is simple for a single effect, but can spread pause and cancellation rules across several places. One controller owned by the run makes the order of those operations easier to see. A generic buff framework may help with dozens of interacting effects; for three independent power-ups, its extra complexity may bring little benefit.
+Be ready to explain why you rejected other approaches. One [[coroutine]] per power-up is simple for a single effect, but can spread pause and cancellation rules across several places. One controller owned by the run makes the order of those operations easier to see. A generic buff framework may help with dozens of interacting effects; for three independent power-ups, its extra complexity may bring little benefit.
 
 Explain the model's limits as well. It does not save effects across app termination or synchronize them over a network. It also leaves the choice of a trusted time source to the caller. Supporting those requirements would need more state and integration code.
 

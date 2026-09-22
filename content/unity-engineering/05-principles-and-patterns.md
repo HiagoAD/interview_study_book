@@ -128,15 +128,15 @@ Use the five SOLID principles to check responsibilities and dependency contracts
 | --- | --- | --- |
 | Single responsibility | Which independent reasons make this unit change? | A class for every line of logic |
 | Open/closed | Can a likely variation be added at a stable boundary? | A plugin framework for imaginary extensions |
-| Liskov substitution | Do implementations honor the same observable contract? | Inheritance based only on similar names |
+| [[Liskov substitution]] | Do implementations honor the same observable contract? | Inheritance based only on similar names |
 | Interface segregation | Does each consumer depend only on operations it needs? | Hundreds of meaningless one-method interfaces |
-| Dependency inversion | Do high-level rules depend on appropriate contracts? | Hiding a service locator behind an interface |
+| Dependency inversion | Do high-level rules depend on appropriate contracts? | Hiding a [[service locator]] behind an interface |
 
 A mission evaluator should not need to know the file format used to save progress. It can use a persistence contract, or return the next state for an application layer to save. That contract must still express which changes belong together. If rewards and claim records must be saved atomically, splitting them into unrelated interfaces can hide the requirement that both succeed or fail together.
 
 The open/closed principle encourages extension points for variations you expect. It does not require existing code to remain untouched forever. When a new requirement shows that the original boundary was wrong, revise it; adding more adapters around the mistake can make it harder to fix.
 
-Dependency inversion asks which layer needs to know about the other. Gameplay rules should not need a concrete scene controller to decide eligibility. The outer integration layer can depend on those rules and supply the infrastructure they need. A dependency-injection framework is optional.
+Dependency inversion asks which layer needs to know about the other. Gameplay rules should not need a concrete scene controller to decide eligibility. The outer integration layer can depend on those rules and supply the infrastructure they need. A [[dependency injection|dependency-injection]] framework is optional.
 
 Judge the result by cohesion and coupling. Cohesion asks whether the work inside a unit belongs together. Coupling asks how a change in one unit affects other units. A claim operation, for example, needs to understand the wallet's transaction rules. It should not need to know the current animation state of the reward screen.
 
@@ -177,11 +177,11 @@ A design pattern describes an arrangement of responsibilities and its tradeoffs.
 | [[Strategy]] | Swap an aim or reward-selection policy | Indirection for a trivial fixed rule |
 | [[State]] | Encapsulate behavior for run phases | Many classes for three simple transitions |
 | [[Observer]] | Notify UI and audio of committed facts | Hidden order, retention, and reentrancy |
-| Command | Represent a player intent for queuing or replay | Assuming every command can be undone |
-| Factory | Create a valid object graph or pool lease | A global factory that knows every subsystem |
-| Adapter | Translate a platform SDK to a game-owned contract | Leaking SDK types through the boundary |
-| Decorator | Add tracing or rate limits around an operation | Deep chains that obscure errors |
-| Object pool | Reuse costly short-lived objects | Stale state and retained memory |
+| [[Command]] | Represent a player intent for queuing or replay | Assuming every command can be undone |
+| [[Factory]] | Create a valid object graph or pool lease | A global factory that knows every subsystem |
+| [[Adapter]] | Translate a platform SDK to a game-owned contract | Leaking SDK types through the boundary |
+| [[Decorator]] | Add tracing or rate limits around an operation | Deep chains that obscure errors |
+| [[Object pool]] | Reuse costly short-lived objects | Stale state and retained memory |
 
 Before choosing an implementation for a run state machine, draw the allowed transitions: ready to running, running to paused, paused to running, running to dead, and dead to revived or finished. A switch may be enough. Separate state objects become useful when each state has substantial behavior and the rules for moving between states remain clear.
 
@@ -191,7 +191,7 @@ A singleton answers “one instance is accessible here.” You still need to dec
 
 When discussing a pattern, explain when its cost outweighs its benefit. For instance, a state hierarchy may add more navigation than it saves for three short transitions.
 
-Pattern questions are usually testing something other than the definition. When an interviewer asks whether singletons are bad, a strong answer separates the three things the word is carrying: one instance, global access, and lazy self-creation. Most of the pain comes from the second and third. A single wallet owned by the composition root and passed to the objects that need it has the one-instance property without the global reach, without ambiguity about when it is created, and without the test isolation problem. Say that, and the question is answered without a verdict.
+Pattern questions are usually testing something other than the definition. When an interviewer asks whether singletons are bad, a strong answer separates the three things the word is carrying: one instance, global access, and lazy self-creation. Most of the pain comes from the second and third. A single wallet owned by the [[#architecture-dependencies|composition root]] and passed to the objects that need it has the one-instance property without the global reach, without ambiguity about when it is created, and without the test isolation problem. Say that, and the question is answered without a verdict.
 
 It also helps to remember that patterns were named after the fact. They are descriptions of arrangements engineers kept arriving at, not a parts catalog to select from before the problem is understood. That is why “I would use a strategy here” is a weaker sentence than “reward selection already varies by event type and I want to test those rules separately, which is a strategy.” The second sentence names the force that produced the shape. If you cannot name the force, the pattern is probably premature.
 
