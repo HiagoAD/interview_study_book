@@ -799,3 +799,11 @@ One correction to a request: on Android and iOS Unity ignores `vSyncCount` ("alw
 Choices the requests left open: chapter 14's budget menu gains a combined row, about 3.2 ms measured together, and one sentence on why combined savings are measured rather than added; keeping the effect reads about 50 FPS, or 30 under strict vsync, since 16.67 - 1 + 4 is 19.67 ms. The tool payback keeps 2 days and states them as about 16 hours. Chapter 15 says "Eleven lines" rather than gaining a twelfth, which would have meant inventing example content. The migration fix carries a comment naming the index.
 
 Next phase: run `npm run guard -- questions --allow distractors --base` with this phase's commit.
+
+### Phase 16: Distractors
+
+Replaced eight `-` lines and added four; `npm run guard -- questions --allow distractors --base c72f0b6` reports 12 new and 8 gone, and nothing else changed. The first-use hitch distractor is the request's own wording. The three yes-or-no sets gained a "No" with a wrong reason, written "No;" like their correct answers so punctuation gives nothing away; the clock-offset set, which had none, gained two, as its request suggests. The seven defensible options became mistakes the sections themselves name or rule out: faster per-frame formatting, which chapter 11 calls step four; a failed storage write, the I/O error chapter 04 separates from rejection; fixing timers before measuring a freeze; a remembered percentage; a false claim that properties cannot be overridden; making the old evaluator agree with the new; and a tooltip in place of validation. Before the phase the word-list heuristic rejected 7.2% of the 181 correct options and 3.4% of the 702 wrong ones, and afterwards 7.2% and 3.4% of 706, with medians still 73 and 65 characters: no new option uses a listed word, so the heuristic still costs more than it wins. The new options run from 63 to 83 characters, each within the range of its own set.
+
+Rejected while writing: a negative price as a caller bug, since the book's own `TrySpend` rejects negative amounts by returning false, which would make that option defensible.
+
+Next phase: export progress from the Data page first, as the plan says.

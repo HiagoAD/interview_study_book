@@ -234,7 +234,7 @@ Interview exercise: Three separate scene scripts update the same mission counter
 ?+ The old and new evaluators produce different results during shadow evaluation. How should you handle the difference?
 * Keep the same implementation in charge of updating player state, and investigate why the results differ.
 - Switch to the new evaluator, since it was written against the current requirements.
-- Record the difference and continue, since shadow results do not reach players.
+- Change the old evaluator to produce the new one's results, so the two agree.
 - Take the larger of the two results, so no player is under-rewarded.
 - Turn off shadow evaluation until the new evaluator has more test coverage.
 > A difference in results gives you something to investigate. While you do that, keep only one implementation responsible for updating player state; allowing both to grant rewards could duplicate a reward.

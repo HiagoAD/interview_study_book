@@ -105,7 +105,7 @@ Exercise: Design three enemy variants with independent movement and attack behav
 
 ?+ A composed enemy has movement and attack policies, but designers can omit either required reference. Which addition addresses the actual weakness?
 * Check required references during construction and show designers which references are missing.
-- Give both fields a default policy that does nothing, so the enemy still runs.
+- Add a tooltip to both fields saying the policy must be assigned.
 - Log a warning the first time a missing policy is used.
 - Search the prefab at startup for any component implementing the interface.
 - Make the fields nullable and check them at each call site.

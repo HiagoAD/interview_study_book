@@ -192,7 +192,7 @@ Exercise: For a bug you are currently carrying, write the one question that woul
 ?? debugging-first-use Which first step best investigates a one-time effect hitch?
 * Measure loading, creation, shader preparation, and allocation phases separately.
 - Warm the effect during the loading screen and check whether the hitch moves.
-- Trigger the effect twice at startup and measure the second occurrence.
+- Profile the effect's first use in the Editor, where the capture is easiest to take.
 - Force a garbage collection before the effect is first used.
 - Compare the hitch against a capture taken from a previous build.
 > Separate candidate costs before choosing a mitigation. First-use stalls can come from several unrelated systems.

@@ -90,6 +90,7 @@ Exercise: Time yourself performing the most repetitive content task in your proj
 - Yes, but grouped into a foldout so the Inspector stays readable.
 - Yes; hiding fields forces authors to request programmer changes.
 - No; authors should edit a text file rather than the Inspector.
+- No; exposing a field makes it part of the save data that players can edit.
 > Give authors controls for intentional content decisions, and help them avoid invalid values. They do not need access to every implementation detail.
 
 ## Negotiate visual and performance budgets together {#collaboration-art-budgets}

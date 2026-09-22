@@ -48,15 +48,15 @@ explicit decision, and the request says what it would cost the reader's review h
 
 ## Open requests
 
-Phase 16 applies the first-use hitch request and the distractor half of the option sets,
-changing only `-` lines. Phase 17 applies the variants request, which adds concepts and
-moves variants, and the rest of the option sets, which adds variants and an accepted answer.
+Phase 16 applied the first-use hitch request and the distractor half of the option sets,
+changing only `-` lines. Phase 17 applies the two that remain: the variants request, which
+adds concepts and moves variants, and the rest of the option sets, which adds variants and
+an accepted answer.
 
 | Request | Where | Priority |
 | --- | --- | --- |
 | [Variants that test a different concept](variants-that-test-another-concept.md) | nine concepts, chapters 01 to 09 | medium to high |
-| [The first check for a first-use hitch](first-use-hitch-contradiction.md) | 08 `debugging-unity-scenarios` | medium |
-| [Option sets that give the answer away or defend a wrong option](option-sets.md) | fourteen questions | medium to low |
+| [Questions that test arithmetic, and one accepted-answer list](option-sets.md) | four concepts | low |
 
 ## How to close one
 

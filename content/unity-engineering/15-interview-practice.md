@@ -57,7 +57,7 @@ Exercise: Fill this form for one project without looking at the code. The lines 
 
 ?? interview-metric-honesty You remember an improvement but have no reliable timing capture. What should you say?
 * Describe the observed change and verification without inventing a numerical performance claim.
-- Give a conservative estimate, noting that it is approximate.
+- State the percentage you remember, since it was close to the real figure.
 - Say the improvement was significant, without giving a figure.
 - Describe the optimization technique instead of its result.
 - Offer to send the measurements after the interview.
@@ -289,7 +289,7 @@ Exercise: Record yourself answering one prompt, then score the recording rather 
 * Reproduce on the device, capture timing and allocations, and test hypotheses before choosing a fix.
 - Check the allocation call stacks first, since periodic freezes suggest collection.
 - Reduce the physics timestep, since periodic freezes often come from the solver.
-- Ask what changed in the most recent release, then inspect that code.
+- Search the code for timers matching the freeze interval, and fix those first.
 - Collect crash and error logs from the players reporting the freeze.
 > Several systems can cause periodic freezes. Use measurements to identify the cause before choosing a fix.
 

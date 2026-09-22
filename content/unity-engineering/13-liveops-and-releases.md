@@ -53,6 +53,8 @@ Exercise: For an event you know, write the exact instant it ends in UTC, then th
 - Yes, if the client also records elapsed monotonic time since launch.
 - Yes, if the offset is signed with a key shipped inside the build.
 - Yes, if the offset is stored in encrypted form on the device.
+- No; the offset drifts too far to stay useful for more than a day.
+- No; the offset has to be measured again at each launch of the game.
 > Changing how time is stored does not make it trusted. Decide what an offline client may do and how the authority will validate or reconcile it later.
 
 ## Version saves and migrate without losing player state {#liveops-save-migration}

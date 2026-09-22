@@ -171,7 +171,7 @@ Exercise: Choose a value in a project you know that appears in both gameplay and
 
 ?? architecture-encapsulation Why prefer `TryCollect(id)` over a publicly settable `Collected` property?
 * The operation can check eligibility, prevent repeat collection, and update the balance together.
-- Callers read the intent from a verb more easily than from an assignment.
+- A subclass can override a method but has no way to override a property.
 - A method call appears in stack traces and profiler captures, which helps when debugging.
 - A method can take the coin id as an argument, while a setter receives one value.
 - Keeping the flag private holds it out of the Inspector and the serialized save data.

@@ -154,7 +154,7 @@ Exercise: Take a costly system you know and answer all four questions in order. 
 
 ?? performance-ui-updates What is a useful first optimization for a score label rebuilt every frame despite an unchanged displayed score?
 * Update it only when the displayed value changes.
-- Cache the formatted string and reassign it each frame.
+- Format the score faster each frame, reusing a character buffer.
 - Move the label onto its own Canvas so its rebuild is isolated.
 - Update the label every other frame, halving the rebuild cost.
 - Replace the text component with one that renders to a texture.

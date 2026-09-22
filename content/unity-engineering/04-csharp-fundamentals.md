@@ -397,5 +397,5 @@ Exercise: Find the arithmetic in your code that changes a player's balance. Writ
 - The wallet reference was not assigned when the screen was constructed.
 - The content schema for the reward table could not be parsed.
 - An internal assertion about the sign of the balance was violated.
-- The platform billing SDK had not finished initializing before the call.
+- Writing the new balance to local storage failed with an I/O error.
 > Insufficient funds is ordinary product behavior. A clear result lets the caller show the intended response without treating routine rejection as an exceptional crash.
