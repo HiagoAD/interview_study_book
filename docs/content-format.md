@@ -116,7 +116,7 @@ The body continues here, with as many paragraphs, fences, tables and images as t
 | `[[#cache-eviction \| evicting]]` | that section | evicting |
 
 - A target is found by its letters, so `[[Object Pool]]`, `[[object pool]]` and `[[object-pool]]` all reach the same entry.
-- What is shown is the text written before the `|`, or the whole target when there is no `|`. A section target with no `|` shows the section's title instead, since an id is not a phrase.
+- What is shown is the text written after the `|`, or the whole target when there is no `|`. A section target with no `|` shows the section's title instead, since an id is not a phrase.
 - The words shown are plain text: no code spans, emphasis or math inside `[[...]]`.
 - A link opens and closes on one line and cannot contain `]`.
 - Errors: an unknown term or section id, a link to the entry or section it is written in, an empty target, a `|` with nothing after it, a `[[` that never closes, and a `[[...]]` inside a Markdown link.
