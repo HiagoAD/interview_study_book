@@ -771,3 +771,13 @@ Deviations, each to fit a request's intent: the entry's summary says the wrapper
 Also: chapter 04 no longer mentions deep profiling, so its bullet under "Considered and left out" is gone. Chapter 04's pointer names `PriorityQueue<TElement, TPriority>`, which chapter 09 states explicitly from Phase 14.
 
 Next phase: decide scripting-backend option 3 after reading chapter 08 as Phase 11 left it.
+
+### Phase 13: Chapters 6 to 8
+
+Applied everything the phase lists. The strict check against `a8b89af` matches, and every link in the phase's diff returns HTTP 200 with no redirect. Scripting-backend option 3 was not taken. Chapter 08's table, as Phase 11 left it, explains Minimal stripping, ahead-of-time compilation and the Mono build in its own paragraph, and the `scripting backend` preview supplies Mono against IL2CPP, so the IL2CPP paragraph stays in chapter 12 and the entry still points at `mobile-build-integrations`.
+
+Deviations, each for accuracy: chapter 06's clause says "a mobile build normally uses IL2CPP", because desktop players default to Mono. The physics-replay sentences close their paragraph and open "Even with its inputs recorded", so the sentence about positions keeps its place. Chapter 07 says "a job's scheduling cost" where the request wrote "their", since Burst schedules nothing, and its memory-guide link adds that 2.10 is the version released for Unity 6.0. Chapter 08 writes "Android smoke on a mid-range device", because the line already names Android. The new time-domain column is headed "Read it from". Precision note 11 is a cut, since nothing says which profiler entries were meant.
+
+Checked before writing: the comparer claims under `tr-TR` with .NET 8; the two cancellation tokens, the `Awaitable` members, `link.xml` placement and the package rule, and precision note 12's setting names, all in the 6.0 manual or reference; and `UnityEngine.Scripting.PreserveAttribute` in both installed Editors.
+
+Next phase: chapter 04's pointer already names `PriorityQueue<TElement, TPriority>`; Phase 14 adds the fact it points at.

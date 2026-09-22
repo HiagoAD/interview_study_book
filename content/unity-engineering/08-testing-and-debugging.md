@@ -75,7 +75,7 @@ Control asynchronous completion with a fake loader, so the test can decide which
 
 Choosing combinations has a method, and it is cheaper than it sounds. Take the dimensions in the table and pair only those whose mechanisms actually touch. Timing and delivery interact, because a duplicate that arrives after a deadline is a different case from one that arrives before. Lifetime and timing interact, because a result arriving after the owner is gone is this book's recurring defect. Numeric boundary and content do not interact for a launched projectile, because an invalid ID is rejected before any arithmetic runs.
 
-For the slingshot launch of the previous chapter, that yields a short and high-value list:
+For the slingshot launch of chapter 6, that yields a short and high-value list:
 
 | Combination | Case worth a test |
 | --- | --- |
@@ -155,11 +155,11 @@ If an event fires twice, check for repeated subscriptions, duplicate persistent 
 
 If a reference appears null after a scene transition, find out whether it was never assigned, its engine object was destroyed, or a persistent object kept an old scene reference. Check the variable's declared type too, because it affects whether Unity's special null comparison is used.
 
-If a collision or trigger does not fire, first confirm whether the objects use 2D or 3D physics. Check colliders, Rigidbody configuration, enabled state, layer filtering, trigger settings, and how the objects move. Teleporting a transform can behave differently from simulated Rigidbody movement. Consult the versioned physics API before treating the symptom as an engine bug.
+If a collision or trigger does not fire, first confirm whether the objects use 2D or 3D physics. Check colliders, Rigidbody configuration, enabled state, layer filtering, trigger settings, and how the objects move. In 3D physics, trigger messages need a `Rigidbody` on at least one of the two objects, and collision messages need one of the colliders to have a non-kinematic `Rigidbody` attached. Teleporting a transform can behave differently from simulated Rigidbody movement. Consult the versioned physics API before treating the symptom as an engine bug.
 
 If an effect hitches on first use, add markers around asset loading, prefab creation, shader or pipeline preparation, animation initialization, and managed allocations. Identify the expensive step before prewarming it. Then measure the effect of that prewarming on startup time and memory.
 
-If a feature works in the Editor but fails in a player build, compare the [[scripting backend]], stripping, platform symbols, included assets, filesystem assumptions, native plugins, and content versions. Managed stripping can remove code that is accessed dynamically. Preserve the required types or members, then retest, rather than disabling every optimization. [Unity's stripping manual](https://docs.unity3d.com/6000.0/Documentation/Manual/ManagedCodeStripping.html) explains the mechanism.
+If a feature works in the Editor but fails in a player build, compare the [[scripting backend]], stripping, platform symbols, included assets, filesystem assumptions, native plugins, and content versions. Managed stripping can remove code that is accessed dynamically. Preserve the required types or members, then retest, rather than disabling every optimization. List them in a `link.xml` file under `Assets`, which may name a package's assemblies but cannot live inside a package, or mark them in code with the `[Preserve]` attribute from `UnityEngine.Scripting`. [Unity's stripping manual](https://docs.unity3d.com/6000.0/Documentation/Manual/managed-code-stripping.html) explains the mechanism.
 
 A mobile crash may leave no managed exception. Check native crash reports, memory pressure, platform lifecycle events, graphics drivers, and SDK integrations. The absence of a C# exception does not establish that the game was healthy.
 
@@ -217,7 +217,7 @@ A written example makes the shape of an evidence statement concrete:
 Change:   Claim retry uses a durable pending record.
 Build:    9f3c21a, content revision 184, Unity 6000.0.28f1.
 Ran:      412 Edit Mode tests, 28 Play Mode tests. All passed.
-          Android smoke on Pixel 6a: startup, full run, claim, background, resume.
+          Android smoke on a mid-range device: startup, full run, claim, background, resume.
 Covers:   Retry after process kill, duplicate response, rejected claim.
 Does not: iOS purchase integration, low-memory termination, real server latency.
 Open:     The reconciliation path is exercised with a fake authority only.

@@ -7,9 +7,6 @@
 Each item is right in spirit and imprecise in a way a careful interviewer could press on.
 None is urgent; they are listed together so one editing pass can take them.
 
-5. `07-async-and-assets.md:36`: “The continuation resumes on a thread-pool thread.” It
-   can; an operation that completes synchronously continues on the calling thread. “can
-   resume” is exact.
 6. `09-data-structures.md:245`: the flat board “keeps each row contiguous”, but so does an
    array of row arrays. The difference is one allocation with the rows back to back, and
    no second indirection per row. A 9 by 9 board is also small enough that its layout will
@@ -30,10 +27,5 @@ None is urgent; they are listed together so one editing pass can take them.
     transition day local midnight itself is skipped or repeated. That is the case that
     breaks the section's own example, “ends at local midnight”, and it deserves a clause
     beside 02:30.
-11. `06-unity-lifecycle.md:260`: “Both appear in the same profiler entries” is unclear;
-    cut it, or say which entries.
-12. `06-unity-lifecycle.md:290`: “Fast Enter Play Mode” is an informal name that the
-    Editor never shows. The installed 6000.3 Editor labels the setting Enter Play Mode
-    Settings, with a “When entering Play Mode” choice such as Reload Domain and Scene.
 14. `14-collaboration.md:213`: “has a common name, situation, task, action, result” never
     says the name. It is STAR, and interviewers use the word.

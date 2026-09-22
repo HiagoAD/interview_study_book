@@ -151,7 +151,7 @@ Specify iteration order if gameplay, presentation, or replay depends on it. Sort
 
 Hash collections use more memory than a compact array and may access memory less predictably. A linear scan may be enough for a tiny, fixed catalog. For a large immutable catalog, build the index once and keep it. For frequently changing state, plan for the frames when the collection grows.
 
-Choose the string comparer for technical IDs explicitly. Changing the device language should not change whether an item ID is found. Searching display names can follow a separate rule suited to the user's language.
+Choose the string comparer for technical IDs explicitly, and do not normalize them with `ToLower` or `ToUpper`, which follow the device's language: changing it can then change whether an item ID is found. Searching display names can follow a separate rule suited to the user's language.
 
 Two behaviors of the standard dictionary are worth knowing before you depend on them. Its enumeration order is not part of its contract, and removals in particular can change the order in which later insertions appear, because a freed slot may be reused. Code that happened to enumerate in insertion order during development can therefore change behavior after an unrelated removal is added, which is the hidden gameplay rule this section warns against.
 

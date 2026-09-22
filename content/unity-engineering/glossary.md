@@ -18,7 +18,7 @@ An adapter also translates between two systems inside one codebase. Connecting a
 ## Addressables {#addressables}
 = addressable assets
 
-Unity's package for loading assets by address rather than through a direct reference, returning handles it reference counts. Each acquisition has a matching release, and the memory is freed when nothing holds the asset any more.
+Unity's package for loading assets by address rather than through a direct reference, returning handles it reference counts. Each acquisition needs a matching release, and releasing the last handle does not by itself free an asset whose bundle is still loaded.
 
 It answers two separate questions: where content comes from, which may be the build or a remote catalog, and when it is in memory. A project that only needs the second can use it entirely locally. Direct serialized references remain simpler for small assets that are always resident, because the engine already manages their lifetime.
 

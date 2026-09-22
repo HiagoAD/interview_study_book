@@ -2,7 +2,7 @@
 
 - **Kind:** coverage
 - **Priority:** medium
-- **Where:** ten places in chapters 06, 07, 08, 09, 10 and 12
+- **Where:** five places in chapters 09, 10 and 12
 - **Touches:** prose only, a clause or a table column at a time
 
 ## The pattern
@@ -23,11 +23,6 @@ and the quoted phrases are Unity's.
 
 | Where | The book says | Name to add |
 | --- | --- | --- |
-| 06:98-105 | four time domains, in a table | Scaled: `Time.time`, `Time.deltaTime`. Unscaled: `Time.unscaledTime`, `Time.unscaledDeltaTime`. Monotonic: `Time.realtimeSinceStartupAsDouble` or a `Stopwatch`. UTC: `DateTime.UtcNow`, with a server's time as the trusted source. A column in the existing table. |
-| 07:41 | “return to the main thread before you do” | `await Awaitable.MainThreadAsync()`, and `Awaitable.BackgroundThreadAsync()` for the move off it: with the first, “continuation happens on the main thread”, and with the second, “on a background thread”. The chapter introduces `Awaitable` and never shows one of its members. |
-| 07:101-123 | a cancellation source owned by the binding | `MonoBehaviour.destroyCancellationToken` and `Application.exitCancellationToken`, the lifetimes Unity already provides. Linking the binding's source to one of them is the “more than one reason” case line 123 describes. |
-| 08:158 | “Check colliders, Rigidbody configuration …” | Trigger messages need a `Rigidbody` on at least one of the two objects, and collision messages need a non-kinematic one: “Collision events are only sent if one of the colliders also has a non-kinematic rigidbody attached.” It is the most common answer to this question in an interview. |
-| 08:162 | “Preserve the required types or members” | `link.xml`, placed under `Assets` (a package cannot contain one), or the `[Preserve]` attribute from `UnityEngine.Scripting`. |
 | 09:182 | “check that it exists in the Unity project's compatibility profile” | `PriorityQueue<TElement, TPriority>` arrived in .NET 6 and is absent from Unity's class libraries (checked in the 6000.3 install's Mono libraries and its .NET Standard 2.1 reference), so a Unity project writes or imports its own heap. The hedge becomes an answer. Chapter 04 line 328 points here. |
 | 10:150 and 10:184 | separate random streams, and seeded replay | `UnityEngine.Random` is one static generator shared by every caller, packages included, which is exactly the problem line 150 describes. An instance of `System.Random`, or `Unity.Mathematics.Random` in jobs and Burst, gives each system its own stream. |
 | 12:16 | “Check whether material access creates new material instances” | Reading `Renderer.material` “automatically instantiates the materials”, and destroying them is “your responsibility”; `Renderer.sharedMaterial` does not copy. Per-instance values through a `MaterialPropertyBlock` avoid the copy, but take the renderer out of the SRP Batcher, which is how Unity's manual tells you to make one incompatible on purpose. |

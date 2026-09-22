@@ -7,7 +7,7 @@ chapter: 06: Unity lifecycle, scenes, prefabs, and serialization
 
 Unity controls when component lifecycle methods run. Construct ordinary C# models with `new`, but create MonoBehaviours through GameObjects and Unity's component APIs. A component constructor should not depend on serialized scene values or call engine APIs.
 
-On an active GameObject, `Awake` initializes the script instance and can run even if that component is disabled. If the GameObject starts inactive, `Awake` waits until activation. `OnEnable` runs when the component is enabled and its GameObject is active. `Start` runs once, before the component's first update while enabled. Do not assume another object's `Awake` has already run when yours begins. [Unity's Awake reference](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/monobehaviour/awake) details these conditions.
+On an active GameObject, `Awake` initializes the script instance and can run even if that component is disabled. If the GameObject starts inactive, `Awake` waits until activation. `OnEnable` runs when the component is enabled and its GameObject is active. `Start` runs once, before the component's first update while enabled. Do not assume another object's `Awake` has already run when yours begins. [Unity's Awake reference](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.Awake.html) details these conditions.
 
 Use `Awake` for setup the component can complete on its own. If setup depends on other objects being ready, connect and initialize those objects explicitly. `Start` can help with ordinary scene startup, but it does not mean every possible dependency is ready: some objects may still be inactive, created later, or waiting for asynchronous work.
 
@@ -39,7 +39,7 @@ public Projectile Launch(ProjectileDefinition definition, IImpactListener impact
     var projectile = instance.GetComponent<Projectile>();
     projectile.Initialize(definition, impacts, generation: nextGeneration++);
 
-    instance.SetActive(true);   // Awake, then OnEnable, then Start run from here.
+    instance.SetActive(true);   // Awake and OnEnable run inside this call; Start runs before the first Update.
     return projectile;
 }
 ```
@@ -85,24 +85,24 @@ Exercise: For one prefab you spawn at runtime, write which of the four rows its 
 
 ## Update, fixed simulation, and time domains {#unity-update-time}
 
-`Update` runs with rendered frames; `FixedUpdate` runs with fixed simulation steps. One rendered frame may contain zero, one, or several fixed updates. A higher rendering rate does not make physics run once per frame, and a slow frame can require extra simulation steps to catch up. [Unity's fixed-update explanation](https://docs.unity.com/en-us/engine/6000.6/manual/scripting/managing-time-and-frame-rate/fixed-updates) describes this scheduling.
+`Update` runs with rendered frames; `FixedUpdate` runs with fixed simulation steps. One rendered frame may contain zero, one, or several fixed updates. A higher rendering rate does not make physics run once per frame, and a slow frame can require extra simulation steps to catch up. [Unity's fixed-update explanation](https://docs.unity3d.com/6000.0/Documentation/Manual/fixed-updates.html) describes this scheduling.
 
 Capture input when the selected input system processes it, then pass the command to the simulation at a defined point. A button press that is visible for only one frame can be missed or mishandled if you read it only in a fixed loop running on a different schedule. Check the Input System's update mode and action configuration when choosing where to read it.
 
 For simple motion outside physics, displacement is velocity multiplied by elapsed simulation time. For an object controlled by physics, use the appropriate Rigidbody API at the appropriate simulation step. Arbitrary transform changes can conflict with the solver. Rigidbody interpolation smooths the displayed motion between simulation states; it does not make the physics more accurate.
 
-A physics slingshot makes the distinction concrete and unforgiving. The launch is one impulse applied on a fixed step, and everything after it belongs to the solver. If a replay of the same shot has to land in the same place, the shot must be described by what was fed into that step, the impulse and the step it was applied on, rather than by the positions observed afterward. Positions are an output of the simulation, and they diverge as soon as the number of steps does.
+A physics slingshot makes the distinction concrete and unforgiving. The launch is one impulse applied on a fixed step, and everything after it belongs to the solver. If a replay of the same shot has to land in the same place, the shot must be described by what was fed into that step, the impulse and the step it was applied on, rather than by the positions observed afterward. Positions are an output of the simulation, and they diverge as soon as the number of steps does. Even with its inputs recorded, the built-in physics repeats a shot only on the same build and platform, with the scene assembled in the same order. The Enable Enhanced Determinism option in the Physics settings keeps a shot from depending on unrelated bodies in the scene, at some cost in performance, but a replay that must match across devices either records outcomes as well or runs a simulation designed to be deterministic.
 
 Use `LateUpdate` for work that should follow ordinary frame updates, such as a camera following a character moved through its transform. Multiple scripts using `LateUpdate` still need an explicit ordering rule if one depends on another.
 
 Separate time domains:
 
-| Domain | Suitable use | Important limitation |
-| --- | --- | --- |
-| Scaled gameplay time | Effects and gameplay animation affected by pause | Stops or slows with the game's time policy |
-| Unscaled elapsed time | Pause-menu animation and local timeout display | Not a trusted online deadline |
-| Monotonic elapsed time | Measuring durations | Not a calendar date |
-| UTC instant | Event availability and persisted timestamps | Device wall time can change or be manipulated |
+| Domain | Read it from | Suitable use | Important limitation |
+| --- | --- | --- | --- |
+| Scaled gameplay time | `Time.time`, `Time.deltaTime` | Effects and gameplay animation affected by pause | Stops or slows with the game's time policy |
+| Unscaled elapsed time | `Time.unscaledTime`, `Time.unscaledDeltaTime` | Pause-menu animation and local timeout display | Not a trusted online deadline |
+| Monotonic elapsed time | `Time.realtimeSinceStartupAsDouble`, or a `Stopwatch` | Measuring durations | Not a calendar date |
+| UTC instant | `DateTime.UtcNow`, with a server's time as the trusted source | Event availability and persisted timestamps | Device wall time can change or be manipulated |
 
 Setting `timeScale` to zero stops only the work that follows scaled time. Tasks, network callbacks, and unscaled animation may continue. Define what pause means for input, simulation, UI, and audio, then test each part.
 
@@ -215,7 +215,7 @@ public Dictionary<string, ProjectileDefinition> BuildCatalog(IReadOnlyList<Entry
 }
 ```
 
-Using `catalog[entry.Id] = ...` instead of the check and `Add` would make a duplicate ID silently keep the last entry. The author would see one of their two projectiles quietly stop existing, with nothing in the log to explain it. The explicit comparer matters for the same reason as in the equality section: an ID lookup must not depend on the device's language settings.
+Using `catalog[entry.Id] = ...` instead of the check and `Add` would make a duplicate ID silently keep the last entry. The author would see one of their two projectiles quietly stop existing, with nothing in the log to explain it. The explicit comparer does not change the result, since a dictionary compares strings ordinally by default; it records the rule, so that a later switch to a case-insensitive or culture-aware comparer is a visible decision rather than a quiet one. The device's language enters through those comparers, and through normalizing IDs with `ToLower`, which under a Turkish locale does not map `I` to `i`.
 
 Run this conversion where a failure is cheap. An import step or a build-time validation reports the problem to the author with the asset name attached. The same exception thrown during a player's run reports it to nobody useful.
 
@@ -257,7 +257,7 @@ Two details about destruction timing complete the picture.
 
 `DestroyImmediate` removes the object at that line, and Unity's guidance is to treat it as editor tooling rather than a runtime shortcut. In play mode it can destroy an object while the engine or another script is still iterating the structure that contains it. If a runtime path seems to need it, the real requirement is usually that some other object should stop referring to the target now, which is a question about ownership and unsubscription rather than about destruction timing.
 
-Note that destroying a GameObject destroys its components and children, while destroying a component leaves the GameObject and its other components in place. Both appear in the same profiler entries and both produce a wrapper that compares equal to null, so state which one you intended when describing a cleanup path.
+Note that destroying a GameObject destroys its components and children, while destroying a component leaves the GameObject and its other components in place. Both produce a wrapper that compares equal to null, so state which one you intended when describing a cleanup path.
 
 Exercise: In a system you have written, find a `Destroy` call and name every object that still holds a reference to the target at the moment the call returns.
 
@@ -287,11 +287,11 @@ Exercise: In a system you have written, find a `Destroy` call and name every obj
 
 ## Editor conveniences can hide production bugs {#unity-editor-vs-player}
 
-Fast Enter Play Mode can disable domain reload. With that option enabled, static fields and static event subscriptions can survive between Play Mode sessions unless the code resets them. If a feature only works after restarting the Editor, investigate its initialization and cleanup. [Unity's domain reload guidance](https://docs.unity3d.com/6000.0/Documentation/Manual/domain-reloading.html) explains the reset responsibility.
+The Enter Play Mode Settings can disable domain reload, for example when their When entering Play Mode option is set to Reload Scene only. With domain reload disabled, static fields and static event subscriptions can survive between Play Mode sessions unless the code resets them. If a feature only works after restarting the Editor, investigate its initialization and cleanup. [Unity's domain reload guidance](https://docs.unity3d.com/6000.0/Documentation/Manual/domain-reloading.html) explains the reset responsibility.
 
 Test repeated Play Mode sessions with the reload settings the project intends to use. A runtime initialization hook can reset static application state during startup. Give that job to the state's owner. Clearing globals wherever a duplicate appears can hide the fact that several objects are trying to own the same state.
 
-A player build can differ from the Editor in available assets, [[scripting backend|compilation backend]], filesystem behavior, code stripping, and performance overhead. Reflection may work in the Editor but fail in a player where the required types were stripped. Native integrations may only run in a build for the target platform.
+A player build can differ from the Editor in available assets, [[scripting backend]] (a mobile build normally uses IL2CPP rather than the Editor's Mono), filesystem behavior, code stripping, and performance overhead. Reflection may work in the Editor but fail in a player where the required types were stripped. Native integrations may only run in a build for the target platform.
 
 Treat “works in Editor” as one part of validation. Also test on the target platform with the intended scripting backend, content build, and settings close to release. Record the build identity, so bug reports can be traced to the exact code and content.
 

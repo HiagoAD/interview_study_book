@@ -9,7 +9,7 @@ A coroutine lets Unity pause an iterator and resume it later. It does not move e
 
 A `Task` represents work that will eventually succeed, fail, or be cancelled. Adding `async` to a method does not automatically run it in parallel. The method starts synchronously and gives up control when it awaits an operation that has not finished. `Task.Run` can schedule work on a thread-pool thread where supported, but most Unity object APIs cannot be used there.
 
-Unity's `Awaitable` supports asynchronous operations integrated with the engine. Its instances are pooled, so the same instance should not be awaited multiple times. Its continuation runs synchronously when completion is triggered; this makes the thread that completes the operation significant. [Unity's asynchronous programming reference](https://docs.unity.cn/6000.0/Documentation/Manual/AwaitSupport.html) explains the differences from `Task`.
+Unity's `Awaitable` supports asynchronous operations integrated with the engine. Its instances are pooled, so the same instance should not be awaited multiple times. Its continuation runs synchronously when completion is triggered; this makes the thread that completes the operation significant. [Unity's asynchronous programming reference](https://docs.unity3d.com/6000.0/Documentation/Manual/async-awaitable-introduction.html) explains the differences from `Task`.
 
 Choose according to the operation:
 
@@ -19,6 +19,8 @@ Choose according to the operation:
 | Coordinate existing task-returning I/O | Task-based async flow |
 | Process many independent numeric items | [[Job System]], possibly [[Burst]] |
 | Evaluate a small deterministic rule | Ordinary synchronous method |
+
+The last section of this chapter covers the Job System and Burst, including when a job's scheduling cost is repaid.
 
 Give callers a way to observe failure. They cannot await an `async void` method or inspect a normal task result from it. Use `async void` only where an event-handler API requires it, catch failures at that entry point, and put reusable work in an asynchronous method whose result callers can observe.
 
@@ -33,12 +35,12 @@ The question that follows all of this in an interview is where an `await` resume
 var bytes = await ReadFileAsync(path);
 transform.position = Parse(bytes);         // Legal.
 
-// The continuation resumes on a thread-pool thread.
+// The continuation can resume on a thread-pool thread.
 var other = await ReadFileAsync(path).ConfigureAwait(false);
 transform.position = Parse(other);         // Not legal from another thread.
 ```
 
-Library advice to use `ConfigureAwait(false)` everywhere comes from server code, where there is no thread affinity to preserve and avoiding the post is a real saving. In gameplay code it removes the guarantee you rely on. Use it only for a section that touches no engine API, and return to the main thread before you do.
+Library advice to use `ConfigureAwait(false)` everywhere comes from server code, where there is no thread affinity to preserve and avoiding the post is a real saving. In gameplay code it removes the guarantee you rely on. Use it only for a section that touches no engine API, and return to the main thread before you do. In Unity 6 that return has a name: `await Awaitable.MainThreadAsync()` resumes on the main thread, and `await Awaitable.BackgroundThreadAsync()` makes the opposite move, onto a thread-pool thread.
 
 The same reasoning explains why `Task.Run` is narrower than it looks in Unity. It moves work to a thread-pool thread, where most `UnityEngine` APIs are unavailable. It fits pure computation over data you have already copied out; it does not fit anything that reads a transform or instantiates an object.
 
@@ -106,6 +108,7 @@ public void Bind(ItemId item)
     Unbind();                                        // Cancel and dispose the previous one.
     cts = new CancellationTokenSource();
     generation++;
+    // LoadArtworkAsync catches and logs its own failures.
     _ = LoadArtworkAsync(item, generation, cts.Token);
 }
 
@@ -120,7 +123,7 @@ public void Unbind()
 
 Three rules make this reliable. Create the source where the work begins, so its lifetime matches the work. Dispose it after cancelling, because a source holds registrations that the callbacks are attached to. And never reuse a source after it has been cancelled: a cancelled source stays cancelled, so the next request would start already cancelled.
 
-Where a request should stop for more than one reason, such as the view unbinding or the whole scene shutting down, a linked source combines them, and the same ownership rule applies to the linked source it creates. Register the token with a long-lived source only if you also remove the registration. A token from an application-lifetime source that accumulates one registration per view binding is a leak whose symptom is slow growth rather than a visible failure.
+Where a request should stop for more than one reason, such as the view unbinding or the whole scene shutting down, a linked source combines them, and the same ownership rule applies to the linked source it creates. Unity already exposes two such lifetimes as tokens: a MonoBehaviour's `destroyCancellationToken`, cancelled when the component is destroyed, and `Application.exitCancellationToken`, cancelled when the application quits or the Editor leaves Play Mode. A binding's source linked to one of them stops its request for either reason. Register the token with a long-lived source only if you also remove the registration. A token from an application-lifetime source that accumulates one registration per view binding is a leak whose symptom is slow growth rather than a visible failure.
 
 Exercise: Find a `CancellationTokenSource` in your code and answer three questions about it: who creates it, who disposes it, and what happens on the second request after the first was cancelled.
 
@@ -152,9 +155,9 @@ Exercise: Find a `CancellationTokenSource` in your code and answer three questio
 
 An asset reference, an instantiated object, and a load operation are different resources. For each API, check what it returns, who owns that result, and how it must be released.
 
-[[Addressables]] tracks acquired loads through reference counts. Pair each acquisition with the appropriate release. Releasing a handle may not free all associated memory immediately, because other references, dependencies, or bundles can keep it loaded. The [Addressables 1.21 memory guide](https://docs.unity3d.com/Packages/com.unity.addressables@1.21/manual/MemoryManagement.html) provides a versioned example; check the installed package's documentation for exact API behavior.
+[[Addressables]] tracks acquired loads through reference counts. Pair each acquisition with the appropriate release. Releasing a handle may not free all associated memory immediately, because other references, dependencies, or bundles can keep it loaded. The [Addressables 2.10 guide to managing asset memory](https://docs.unity3d.com/Packages/com.unity.addressables@2.10/manual/memory-assets.html), the version released for Unity 6.0, provides a versioned example; check the installed package's documentation for exact API behavior.
 
-Loading a prefab through Addressables and cloning it with ordinary `Object.Instantiate` are separate operations. The clone does not automatically acquire another Addressables load reference, so retain the required assets for as long as the clones need them. If you instantiate through Addressables instead, use the release method documented for that operation. The [Addressables operation-handle guide](https://docs.unity3d.com/Packages/com.unity.addressables@1.21/manual/AddressableAssetsAsyncOperationHandle.html) describes these lifetimes.
+Loading a prefab through Addressables and cloning it with ordinary `Object.Instantiate` are separate operations. The clone does not automatically acquire another Addressables load reference, so retain the required assets for as long as the clones need them. If you instantiate through Addressables instead, use the release method documented for that operation. The [Addressables `InstantiateAsync` reference](https://docs.unity3d.com/Packages/com.unity.addressables@2.10/api/UnityEngine.AddressableAssets.Addressables.InstantiateAsync.html) describes that lifetime: a tracked instance keeps a reference to its load until `ReleaseInstance` releases it.
 
 A game-owned adapter can represent an acquired asset as a lease: an object that provides the result and one way to release it. Decide who holds that lease. A cache might retain it while views borrow access, or each view might acquire and release its own load. Make borrowed and owned references distinguishable, so callers know which ones they must release.
 

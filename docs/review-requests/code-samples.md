@@ -32,28 +32,9 @@ scheduler. `Cancel` needs to ignore an id that is no longer pending, through a s
 pending ids or a state on the task, and the sentence should say which case the marker
 removal covers.
 
-## 4. `Start` does not run inside `SetActive` (low)
-
-`06-unity-lifecycle.md:42`:
-
-```csharp
-instance.SetActive(true);   // Awake, then OnEnable, then Start run from here.
-```
-
-`Awake` and `OnEnable` run inside that call; `Start` runs later, before the component's
-first `Update`. The table at line 56 has it right. Suggested comment:
-`// Awake and OnEnable run inside this call; Start runs before the first Update.`
-
 ## 5. The energy refill drops partial progress (low)
 
 `10-game-algorithms.md:250`: `min(cap, stored + floor(elapsed / interval))` is right for
 the count, but a reader implementing it will reset the refill timestamp to now and lose up
 to one interval on every resume. Add that the stored timestamp advances by the whole
 intervals granted, and moves to now only when the cap is reached.
-
-## 7. A discarded task in the cancellation example (low)
-
-`07-async-and-assets.md:109`: `_ = LoadArtworkAsync(item, generation, cts.Token);`
-discards the task, the pattern line 23 of the same chapter warns against (“Give callers a
-way to observe failure”). One comment makes it deliberate:
-`// LoadArtworkAsync catches and logs its own failures.`

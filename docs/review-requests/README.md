@@ -47,14 +47,11 @@ explicit decision, and the request says what it would cost the reader's review h
 
 | Request | Where | Priority |
 | --- | --- | --- |
-| [Why an ID comparer is explicit](string-comparer-default.md) | 06 `unity-serialization`, 09 `structures-hash-collections` | medium |
 | [Grid cell size and the cells a query touches](grid-cell-size.md) | 10 `algorithms-spatial`, glossary | medium |
 | [What an inflated A-star heuristic gives up](weighted-heuristic-bound.md) | 10 `algorithms-pathfinding` | medium |
-| [What a physics replay needs besides its inputs](physics-replay-determinism.md) | 06 `unity-update-time` | medium |
-| [The Addressables summary promises too much](addressables-summary.md) | glossary | medium |
 | [Worked numbers that do not add up](worked-numbers.md) | 11, 14 (twice), 15 | medium |
-| [Code samples that do not do what the prose says](code-samples.md) | 06, 07, 09, 10, 13 | medium to low |
-| [Precision notes](precision-notes.md) | nine places | low |
+| [Code samples that do not do what the prose says](code-samples.md) | 09, 10, 13 | medium to low |
+| [Precision notes](precision-notes.md) | six places | low |
 
 ### Question design
 
@@ -68,18 +65,16 @@ explicit decision, and the request says what it would cost the reader's review h
 
 | Request | Where | Priority |
 | --- | --- | --- |
-| [Name the Unity API where the book describes it](unity-api-names.md) | ten places | medium |
-| [Documentation links and the reference version](links-and-versions.md) | 10 of 28 links | medium |
-| [Cross-references, placement, and naming](cross-references-and-placement.md) | three places | medium to low |
+| [Name the Unity API where the book describes it](unity-api-names.md) | five places | medium |
+| [Documentation links and the reference version](links-and-versions.md) | 4 of 28 links | medium |
+| [Cross-references, placement, and naming](cross-references-and-placement.md) | one place | low |
 
 ### Forward references
 
 | Concept | First used | Explained in | Distance | Recommended ending |
 | --- | --- | --- | --- | --- |
-| [Scripting backend](scripting-backend.md) | 06 `unity-editor-vs-player` | 12 `mobile-build-integrations` | 6 chapters | Name both backends in 06 |
 | [Spatial index](spatial-index.md) | 09 `structures-complexity` | 10 `algorithms-spatial` | 1 chapter | Name the grid in 09 |
 | [Breadth-first search](breadth-first-search.md) | 09 `structures-specialized` | 10 `algorithms-pathfinding` | 1 chapter | Turn the sentence around |
-| [Job System and Burst](job-system-and-burst.md) | 07 `async-models` | 07 `async-jobs-burst` | same chapter | One sentence under the table |
 
 Each forward-reference file ends with that recommendation and its reason.
 
