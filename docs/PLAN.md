@@ -654,6 +654,132 @@ The requests surfaced two product changes, deliberately left out of this feature
 
 Each changes PROJECT.md and needs a plan of its own.
 
+## Feature: second book, Unity Mobile Platform Engineering
+
+The site can hold several books, and this feature writes the second. It covers the layer between a Unity game and the platforms it ships on: native bridges on Android and iOS, the operating system's features, third-party SDKs, both build pipelines, backend clients, CI with Jenkins, and debugging across all of them. It prepares for interviews for Unity mobile platform roles, where native integration and SDK work carry the most weight. [mobile-platform-outline.md](mobile-platform-outline.md) is the specification: every chapter, section and concept, and what each chapter's claims are checked against.
+
+It continues the numbering under the same rules as **How to run a phase**. Phase 18 prepares the tools, Phases 19 to 31 write one chapter each, and Phase 32 reads the finished book as a teacher. Everything in **Decisions** still holds.
+
+Three things it leaves alone. **The product:** Home lists books by title, Review and the due count span books, and Data resets one book at a time, so a second book needs no change in `src/`. **PROJECT.md**, including its non-goal of links between books. **The Unity book:** every phase checks that its question blocks still match, and no phase edits its prose.
+
+### Decisions: the book
+
+| Decision | Default | Alternative |
+| --- | --- | --- |
+| Title, which fixes the book id and with it the book's progress | Unity Mobile Platform Engineering, id `unity-mobile-platform-engineering` | Another title, chosen before Phase 19 commits; renaming later loses progress |
+| Folder | `content/mobile-platform/`: `01-…md` to `13-…md`, and `glossary.md` | None |
+| Reference version | Unity 6.3 LTS (6000.3), the installed Editor that has both platform modules; Unity links pinned to `/6000.3/` | 6.0, the Unity book's version, which is not installed with iOS support, so its iOS claims could not be checked here |
+| The Unity book | The new book stands alone. It recaps what it needs from the first in a paragraph at most, naming the chapter in plain text | Links between books: a product change that amends PROJECT.md's non-goals |
+| Names | Platforms, their stores, services and first-party tools, Unity and its packages, Jenkins, EDM4U and open standards by name; third-party SDK vendors by category (“an analytics SDK”); never a game, studio or publisher | Naming vendors |
+| Native snippets | Java, compiled with the Editor's JDK; Objective-C, Objective-C++ and Swift, compiled with Xcode | Kotlin, which needs a compiler this machine does not have |
+| Phase order | Reading order, as below | The order under **If time runs short** |
+| Glossary | Written with each chapter | One pass after the book, as the Unity book had; that pass had to rediscover the terms the text assumed |
+| Diagrams | At most one per chapter, only where the structure is the point: SVG with `title` and `desc`, drawn like the Unity book's two | None |
+
+### Decisions: writing rules
+
+The Unity book's conventions hold from the first draft, and `npm run guard -- style` checks several of them:
+
+- No em dashes, no contractions, curly quotes in prose and straight ones in code, and American spelling except the verb “practise”.
+- Every section ends with its exercise: `Exercise:` to reflect on a project, `Lab exercise:` to build something, `Interview exercise:` to answer aloud, `Debugging exercise:` to investigate.
+- A section reads in a few minutes, as the Unity book's do: roughly 500 to 900 words of content, two concepts and at most three, and `?+` variants where a scenario tests the same idea from another side.
+- The distractor standard from the start. Each `-` is a mistake an engineer makes. The word-list heuristic (always, never, every, automatically, only, guarantees, cannot, forbids) gains nothing. Correct and wrong options have similar median lengths; the Unity book's are 73 and 65 characters. A yes-or-no set includes a “No” with a wrong reason. Each variant tests its own concept, and each explanation stands alone.
+- **Questions outlive facts.** Version numbers, API levels, dates, fees, quotas and limits may appear in prose, with the version or date they were checked against, but never as a correct answer. The review queue repeats a concept for a month and more, and would go on reinforcing a figure after it changed.
+- `[[term]]` at a term's first mention in a section, and `[[#id]]` back to an earlier section of this book; never inside a heading or a code span, or in a question block that has been committed. An external link is documentation the reader chooses to open, and returns HTTP 200 with no redirect when it is written.
+- Code fences: `csharp`, `java`, `objective-c`, `objective-cpp`, `swift`, `groovy` for `build.gradle` files and Jenkinsfiles, `kotlin` for `.kts` files, `xml` for manifests, property lists and entitlements, `ruby` for Podfiles, `properties`, `bash`, `json` and `http`. Shiki has no `gradle` or `plist`.
+- Every new sentence passes the avoid-ai-writing skill's detector.
+- Quotations from Unity's, Android's or Apple's documentation are evidence for the writer, contractions included, and never text for the book.
+
+### Decisions: evidence
+
+The Unity book was checked after it was written, and that read found thirty problems. This book checks its claims while it is written. A claim that cannot be checked is narrowed to what can be, or cut, and the phase log says which.
+
+| Claim | Evidence |
+| --- | --- |
+| A Unity API exists, with this signature | The 6000.3 Editor's assemblies, under `Unity.app/Contents/Resources/Scripting/Managed/` and `PlaybackEngines/*/`, searched with Node |
+| Unity's documentation says so | The 6000.3 page fetched with `curl` and quoted exactly. A missing page returns a real 404, so a 200 means the page exists |
+| Unity generates this | `PlaybackEngines/AndroidPlayer/Apk/`, `…/Tools/GradleTemplates/` and `PlaybackEngines/iOSSupport/Trampoline/` in the Editor, and the probe project's exports |
+| C# behaves this way | A .NET 8 probe |
+| IL2CPP marshals or strips this way | The C++ that IL2CPP generates for the probe project |
+| This Java compiles | `AndroidPlayer/OpenJDK` (17) against `SDK/platforms/android-36/android.jar` and a `classes.jar` under `Variations/il2cpp/` |
+| This Objective-C or Swift compiles | Xcode, for the iOS SDK |
+| Android, Google Play, Apple or Jenkins says so | The vendor's page, fetched and quoted. Apple's pages render in JavaScript, so read their JSON under `developer.apple.com/tutorials/data/documentation/` |
+| HTTP or OAuth works this way | The RFC |
+| A device behaves this way | No device is assumed. State what the documentation says, and what a device check would show |
+
+**The probe project** is one Unity 6000.3 project outside the repo, created in Phase 20 and reused by the phases after it. It is never committed, and the Phase 20 log records its path. Other scratch programs stay outside the repo too.
+
+**Before Phase 18,** accept the Xcode license once: `sudo xcodebuild -license accept`. Until then `/usr/bin/git`, `python3` and every Xcode tool exit with status 69, so `npm run guard -- questions` cannot read a revision and no Objective-C or Swift compiles. Putting `/Library/Developer/CommandLineTools/usr/bin` first on `PATH` restores `git`, and nothing else.
+
+### Decisions: tools
+
+- `npm run guard -- questions --allow new-chapters` accepts the sections and concepts of every chapter none of whose sections exists at the base revision, and says how many it accepted. Everything else stays strict: a new book passes, while a new section in an existing chapter fails, and so does any change to a committed question block. A chapter is recognized by its sections, because its title may change.
+- `npm run check` prints each book's totals after the sums, so a phase can compare the new book with the outline.
+- `npm run guard -- style` already reads every content file, so it needs no change.
+
+### Phase 18: Tools for a second book
+
+Build:
+
+- `--allow new-chapters` in `pipeline/guard.ts`, with tests in `guard.test.ts`: a new chapter in an existing book passes, a new book passes, and a new section in an existing chapter, a new concept in an existing section and a changed `*` line in an existing chapter each fail.
+- Per-book totals in `pipeline/check.ts`, built on `summarize`, with a test.
+- CLAUDE.md: `content/mobile-platform/` in the layout, the new option beside `npm run guard`, and a note that Phases 18 to 32 write the second book from `docs/mobile-platform-outline.md`.
+
+Done when: `npm test`, `npm run typecheck`, `npm run check` and `npm run build` pass, `npm run guard -- style` and `npm run guard -- questions` pass, and the new option is shown to bite on the real content. A scratch file `content/mobile-platform/99-scratch.md` holding one section passes with `--allow new-chapters` and fails without it; a new section in an existing Unity chapter fails with it; a changed `*` line in the Unity book fails with it. Revert every mutation afterwards.
+
+### Phases 19 to 31: one chapter each
+
+| Phase | Chapter | Sections | Concepts | Also |
+| --- | --- | --- | --- | --- |
+| 19 | 01: The platform layer and the call path | 6 | 12 | Creates `glossary.md`; the pilot |
+| 20 | 02: Calling Android from C# and back | 6 | 12 | Creates the probe project and shows it exporting both a Gradle project and an Xcode project |
+| 21 | 03: Calling iOS from C# and back | 6 | 12 | |
+| 22 | 04: Lifecycle, permissions, links, notifications, and sign-in | 5 | 10 | |
+| 23 | 05: Android builds: Gradle, manifests, and dependencies | 5 | 11 | Builds the probe's Gradle export with the Editor's Gradle |
+| 24 | 06: iOS builds: Xcode, signing, and CocoaPods | 4 | 8 | Archives the probe's Xcode project |
+| 25 | 07: Integrating third-party SDKs | 6 | 12 | |
+| 26 | 08: Backend clients: HTTP, sessions, and data contracts | 5 | 10 | |
+| 27 | 09: Reliable requests on unreliable networks | 5 | 10 | |
+| 28 | 10: Build variants, environments, and releases | 5 | 10 | |
+| 29 | 11: CI/CD and Jenkins for Unity mobile builds | 6 | 12 | |
+| 30 | 12: Debugging across boundaries | 5 | 10 | |
+| 31 | 13: Interview practice for platform roles | 4 | 7 | The link pass |
+
+Each phase, in order:
+
+1. Read the outline's opening sections and its chapter, the chapters it builds on, and `glossary.md`.
+2. Check the chapter's claims before writing, per **Decisions: evidence**, with probes outside the repo.
+3. Write the chapter file. Add glossary entries for the terms it uses without defining them, and link their first mentions.
+4. Read it back as a teacher: each claim against its evidence, each question against the standard, with the word-list heuristic and the option lengths measured.
+5. Run the avoid-ai-writing detector over the new prose and fix what it reports.
+
+**Every chapter phase's Done when:**
+
+- `npm run check`, `npm test` and `npm run build` pass, and so does `npm run guard -- style`.
+- `npm run guard -- questions --allow new-chapters --base <the phase's starting commit>` passes and accepts this chapter and nothing else.
+- `npm run check`'s line for the book matches the outline's figures for the chapters written so far, and reports no entry that nothing links to.
+- Every external link the phase adds returns HTTP 200 with no redirect.
+- The no-brand search stays empty.
+- The phase log says what was checked and against what, where the outline was wrong, the heuristic's figures, and the terms added.
+
+Manual check (user): read the chapter in `npm run dev` and answer its questions.
+
+**A committed chapter is progress.** The reader may start it at once, so later phases change its question blocks only the way the Unity book's editing passes did: `-` lines under `--allow distractors`, and anything else through a changes file under `--allow structure`, with the cost to the reader's review history stated.
+
+**Phase 19 is a pilot.** The user reads chapter 1 before Phase 20 starts. A change to depth, length or tone goes into this section first, so the other twelve chapters are written to it rather than rewritten.
+
+**Phase 31's link pass.** Earlier chapters mention later ones in plain text. Where a link helps the reader, the mention becomes a `[[#id]]` in prose, never in a question block.
+
+### If time runs short
+
+If an interview comes before the book is done, run the phases in the order of what the interview weighs most: 19 to 22 (the boundary and native integration), 25 (SDKs) and 30 (debugging across boundaries), then 23, 24, 26 to 29, and 31. The book's order stays as it is, because the file names fix it. A chapter written early explains in place the little it needs from an unwritten one, names that chapter in plain text, and Phase 31's link pass connects them.
+
+### Phase 32: A teacher's read
+
+Read the whole book in order, as the Unity book's second read did: every claim, code sample, worked number and question, testing the doubtful ones against **Decisions: evidence**. Write one file per problem in `docs/review-requests/`, with the kinds and priorities its README defines. A later section of this plan orders them into phases, as Phases 11 to 17 did.
+
+Done when: every chapter has been read in order, each problem has its file and its row in the README, and the phase log counts the requests by kind and priority.
+
 ## Phase log
 
 ### Phase 1: Scaffold and single-file build
