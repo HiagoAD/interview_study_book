@@ -6,8 +6,21 @@ import type { RawBook, Source } from './load.ts'
 import { ID_PATTERN, findFenceEnd, formatError, openFence, parseContentFile } from './parse.ts'
 import type { ContentError, RawConcept, RawSection, RawVariant, Text } from './parse.ts'
 
-/** What `questions` accepts besides moved lines: nothing, or wrong options changed, added and removed. */
-export type Allow = 'distractors' | null
+/**
+ * What `questions` accepts besides moved lines: nothing; wrong options changed, added and removed; or
+ * whole chapters none of whose sections is at the base revision.
+ */
+export type Allow = 'distractors' | 'new-chapters' | null
+
+/** A chapter that `--allow new-chapters` let through, and what it holds. */
+export interface NewChapter {
+  book: string
+  title: string
+  file: string
+  sections: number
+  concepts: number
+  variants: number
+}
 
 export interface QuestionReport {
   errors: ContentError[]
@@ -16,6 +29,8 @@ export interface QuestionReport {
   variants: number
   /** Wrong options that `--allow distractors` let through, counted as texts that appeared and disappeared. */
   distractors: { added: number; removed: number }
+  /** In the order the site shows them. */
+  newChapters: NewChapter[]
 }
 
 interface SectionAt {
@@ -32,25 +47,59 @@ interface ConceptAt {
   concept: RawConcept
 }
 
+interface ChapterAt {
+  book: string
+  title: string
+  file: string
+  /** Keyed `book/section`. */
+  sections: string[]
+}
+
 interface Index {
   /** Keyed `book/section`, in the order the site shows them. */
   sections: Map<string, SectionAt>
   /** Keyed `book/concept`: concept ids are unique within a book, so a concept is found wherever it moved. */
   concepts: Map<string, ConceptAt>
+  /** In the order the site shows them. */
+  chapters: ChapterAt[]
 }
+
+const bookOf = (key: string) => key.slice(0, key.indexOf('/'))
+const idOf = (key: string) => key.slice(key.indexOf('/') + 1)
 
 function index(books: RawBook[]): Index {
   const sections = new Map<string, SectionAt>()
   const concepts = new Map<string, ConceptAt>()
+  const chapters: ChapterAt[] = []
   for (const book of books) {
     for (const chapter of book.chapters) {
+      const keys: string[] = []
       for (const section of chapter.sections) {
+        keys.push(`${book.id}/${section.id}`)
         sections.set(`${book.id}/${section.id}`, { id: section.id, file: chapter.file, line: section.line, concepts: section.concepts.map((c) => c.id) })
         for (const concept of section.concepts) concepts.set(`${book.id}/${concept.id}`, { section: section.id, file: chapter.file, concept })
       }
+      chapters.push({ book: book.id, title: chapter.title, file: chapter.file, sections: keys })
     }
   }
-  return { sections, concepts }
+  return { sections, concepts, chapters }
+}
+
+/**
+ * The chapters of `now` none of whose sections is in `old`, and the keys of their sections. A chapter is
+ * recognized by its sections rather than its title, because a title may change and a section id may not.
+ */
+function findNewChapters(old: Index, now: Index): { sections: Set<string>; chapters: NewChapter[] } {
+  const sections = new Set<string>()
+  const chapters: NewChapter[] = []
+  for (const chapter of now.chapters) {
+    if (chapter.sections.some((key) => old.sections.has(key))) continue
+    const concepts = chapter.sections.flatMap((key) => now.sections.get(key)!.concepts)
+    const variants = concepts.reduce((sum, id) => sum + now.concepts.get(`${chapter.book}/${id}`)!.concept.variants.length, 0)
+    for (const key of chapter.sections) sections.add(key)
+    chapters.push({ book: chapter.book, title: chapter.title, file: chapter.file, sections: chapter.sections.length, concepts: concepts.length, variants })
+  }
+  return { sections, chapters }
 }
 
 function clip(text: string, max = 60): string {
@@ -80,7 +129,9 @@ function moved(before: string[], after: string[]): { key: string; was: string | 
  * Compares the question blocks of two versions of the content, `base` at revision `rev` and `work`
  * now, ignoring line numbers. Sections are matched by id and concepts by id within their book, so
  * prose added above a question block moves nothing. With `allow: 'distractors'`, `-` options may
- * change, appear or disappear; everything else, and every section id and its place, must be the same.
+ * change, appear or disappear. With `allow: 'new-chapters'`, a chapter none of whose sections is at
+ * `rev` may be new, sections, concepts and all. Everything else, and every section id and its place,
+ * must be the same.
  */
 export function compareQuestions(base: Source[], work: Source[], { rev, allow }: { rev: string; allow: Allow }): QuestionReport {
   const report = emptyReport()
@@ -89,8 +140,10 @@ export function compareQuestions(base: Source[], work: Source[], { rev, allow }:
   const { old, now } = loaded
   const note = noter(report)
   const gone = `(this line is at ${rev})`
+  const accepted = allow === 'new-chapters' ? findNewChapters(old, now) : { sections: new Set<string>(), chapters: [] }
+  report.newChapters = accepted.chapters
 
-  compareSections(old, now, rev, note)
+  compareSections(old, now, rev, note, accepted.sections)
   for (const [key, was] of old.concepts) {
     const is = now.concepts.get(key)
     if (!is) {
@@ -103,14 +156,15 @@ export function compareQuestions(base: Source[], work: Source[], { rev, allow }:
     compareConcept(was.concept, is, rev, allow, report)
   }
   for (const [key, is] of now.concepts) {
-    if (!old.concepts.has(key)) note(is.file, is.concept.line, `concept "${is.concept.id}" is new: it is not at ${rev}`)
+    if (old.concepts.has(key) || accepted.sections.has(`${bookOf(key)}/${is.section}`)) continue
+    note(is.file, is.concept.line, `concept "${is.concept.id}" is new: it is not at ${rev}`)
   }
   compareConceptOrder(old, now, rev, note)
   return finish(report, now)
 }
 
 function emptyReport(): QuestionReport {
-  return { errors: [], sections: 0, concepts: 0, variants: 0, distractors: { added: 0, removed: 0 } }
+  return { errors: [], sections: 0, concepts: 0, variants: 0, distractors: { added: 0, removed: 0 }, newChapters: [] }
 }
 
 function noter(report: QuestionReport): (file: string, line: number, message: string) => void {
@@ -126,16 +180,16 @@ function loadBoth(base: Source[], work: Source[], rev: string, report: QuestionR
   return report.errors.length > 0 ? null : { old: index(before.books), now: index(after.books) }
 }
 
-/** Section ids and their order may never change, whatever else is allowed. */
-function compareSections(old: Index, now: Index, rev: string, note: ReturnType<typeof noter>): void {
+/** Section ids and their order may never change, whatever else is allowed, except that the sections in `accepted` may be new. */
+function compareSections(old: Index, now: Index, rev: string, note: ReturnType<typeof noter>, accepted: ReadonlySet<string> = new Set()): void {
   const gone = `(this line is at ${rev})`
   for (const [key, section] of old.sections) {
     if (!now.sections.has(key)) note(section.file, section.line, `section "${section.id}" is gone ${gone}: section ids may not change, so restore it or its id`)
   }
   for (const [key, section] of now.sections) {
-    if (!old.sections.has(key)) note(section.file, section.line, `section "${section.id}" is new: section ids may not change, and it is not at ${rev}`)
+    if (!old.sections.has(key) && !accepted.has(key)) note(section.file, section.line, `section "${section.id}" is new: section ids may not change, and it is not at ${rev}`)
   }
-  const placed = (key: string | null) => (key ? `after "${key.slice(key.indexOf('/') + 1)}"` : 'first in its book')
+  const placed = (key: string | null) => (key ? `after "${idOf(key)}"` : 'first in its book')
   for (const move of moved([...old.sections.keys()], [...now.sections.keys()])) {
     const section = now.sections.get(move.key)!
     note(section.file, section.line, `section "${section.id}" has moved: at ${rev} it came ${placed(move.was)}, and now it comes ${placed(move.now)}`)
@@ -148,7 +202,7 @@ function compareConceptOrder(old: Index, now: Index, rev: string, note: ReturnTy
     const was = old.sections.get(key)
     if (!was) continue
     for (const move of moved(was.concepts, section.concepts)) {
-      const concept = now.concepts.get(`${key.slice(0, key.indexOf('/'))}/${move.key}`)!
+      const concept = now.concepts.get(`${bookOf(key)}/${move.key}`)!
       const where = (id: string | null) => (id ? `after "${id}"` : 'first')
       note(concept.file, concept.concept.line, `concept "${move.key}" has moved within section "${section.id}": at ${rev} it came ${where(move.was)}, and now it comes ${where(move.now)}`)
     }
@@ -351,8 +405,6 @@ export function compareStructure(base: Source[], work: Source[], { rev, changes,
   const { old, now } = loaded
   const note = noter(report)
   const changeError = (message: string) => note(file, 1, message)
-  const bookOf = (key: string) => key.slice(0, key.indexOf('/'))
-  const idOf = (key: string) => key.slice(key.indexOf('/') + 1)
 
   // Ids in the changes file carry no book, so each must name exactly one concept at the base.
   const oldKey = (id: string, role: string): string | null => {
@@ -630,13 +682,14 @@ export function checkStyle(sources: Source[]): ContentError[] {
   return errors.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : a.line - b.line))
 }
 
-const USAGE = `usage: npm run guard -- questions [--base <rev>] [--allow distractors]
+const USAGE = `usage: npm run guard -- questions [--base <rev>] [--allow distractors | --allow new-chapters]
        npm run guard -- questions [--base <rev>] --allow structure --changes <file>
        npm run guard -- style
 
 questions  compares every question block with the one at <rev> (default HEAD), ignoring line numbers;
-           --allow distractors accepts changed "-" options, and --allow structure accepts the new
-           concepts, moved and added variants, and added answers that the JSON changes file lists
+           --allow distractors accepts changed "-" options, --allow new-chapters accepts every chapter
+           none of whose sections is at <rev>, and --allow structure accepts the new concepts, moved
+           and added variants, and added answers that the JSON changes file lists
 style      checks the prose conventions of every chapter and glossary file`
 
 function readWorkingTree(root: string): Source[] {
@@ -651,6 +704,8 @@ function readRevision(root: string, rev: string): Source[] {
   return files.map((file) => ({ path: file, text: git('show', `${rev}:${file}`) }))
 }
 
+const many = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`
+
 function usage(problem: string): number {
   console.error(`${problem}\n\n${USAGE}`)
   return 2
@@ -663,7 +718,7 @@ function runQuestions(root: string, args: string[]): number {
   for (let i = 0; i < args.length; i++) {
     const value = args[i + 1]
     if (args[i] === '--base' && value) rev = value
-    else if (args[i] === '--allow' && (value === 'distractors' || value === 'structure')) allow = value
+    else if (args[i] === '--allow' && (value === 'distractors' || value === 'new-chapters' || value === 'structure')) allow = value
     else if (args[i] === '--changes' && value) changesFile = value
     else return usage(`unknown or incomplete option "${args.slice(i).join(' ')}"`)
     i++
@@ -691,7 +746,6 @@ function runQuestions(root: string, args: string[]): number {
     }
     report = compareStructure(base, readWorkingTree(root), { rev, changes, file: changesFile })
     if (report.errors.length === 0) {
-      const many = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`
       const counts = [many(changes.newConcepts.length, 'new concept'), many(changes.movedVariants.length, 'moved variant'), many(changes.addedVariants.length, 'added variant'), many(changes.addedAnswers.length, 'added answer')].join(', ')
       console.log(`questions match ${rev} with the listed structure changes (${counts}): ${report.sections} sections, ${report.concepts} concepts, ${report.variants} variants`)
       return 0
@@ -706,7 +760,13 @@ function runQuestions(root: string, args: string[]): number {
   }
   const counts = `${report.sections} sections, ${report.concepts} concepts, ${report.variants} variants`
   const { added, removed } = report.distractors
-  console.log(`questions match ${rev}: ${counts}${allow ? `; wrong options allowed to differ: ${added} new, ${removed} gone` : ''}`)
+  if (allow === 'distractors') console.log(`questions match ${rev}: ${counts}; wrong options allowed to differ: ${added} new, ${removed} gone`)
+  else if (allow === 'new-chapters') {
+    console.log(`questions match ${rev}: ${counts}; new chapters accepted: ${report.newChapters.length}`)
+    for (const c of report.newChapters) {
+      console.log(`  ${c.book}: ${c.title}, ${many(c.sections, 'section')}, ${many(c.concepts, 'concept')}, ${many(c.variants, 'variant')} (${c.file})`)
+    }
+  } else console.log(`questions match ${rev}: ${counts}`)
   return 0
 }
 

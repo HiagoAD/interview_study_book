@@ -326,7 +326,7 @@ export async function loadContent(root: string, dir = 'content'): Promise<LoadRe
 }
 
 /** Anything with the book shape: raw books from the parser and rendered books count alike. */
-interface Countable {
+export interface Countable {
   chapters: { sections: { concepts: { variants: unknown[] }[] }[] }[]
   /** A rendered book carries `glossary`; a raw one carries `entries`, which has no backlinks yet. */
   glossary?: { uses: unknown[] }[]
