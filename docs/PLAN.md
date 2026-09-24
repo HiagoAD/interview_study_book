@@ -682,7 +682,7 @@ The Unity book's conventions hold from the first draft, and `npm run guard -- st
 
 - No em dashes, no contractions, curly quotes in prose and straight ones in code, and American spelling except the verb “practise”.
 - Every section ends with its exercise: `Exercise:` to reflect on a project, `Lab exercise:` to build something, `Interview exercise:` to answer aloud, `Debugging exercise:` to investigate.
-- A section reads in a few minutes, as the Unity book's do: roughly 500 to 900 words of content, two concepts and at most three, and `?+` variants where a scenario tests the same idea from another side.
+- A section is as long as its content needs, and asks as many questions as it takes to validate that content: a concept gets the `?+` variants that test it from the sides the section teaches, and there is no set number. Concepts are one idea each, as many as the outline gives the section.
 - The distractor standard from the start. Each `-` is a mistake an engineer makes. The word-list heuristic (always, never, every, automatically, only, guarantees, cannot, forbids) gains nothing. Correct and wrong options have similar median lengths; the Unity book's are 73 and 65 characters. A yes-or-no set includes a “No” with a wrong reason. Each variant tests its own concept, and each explanation stands alone.
 - **Questions outlive facts.** Version numbers, API levels, dates, fees, quotas and limits may appear in prose, with the version or date they were checked against, but never as a correct answer. The review queue repeats a concept for a month and more, and would go on reinforcing a figure after it changed.
 - `[[term]]` at a term's first mention in a section, and `[[#id]]` back to an earlier section of this book; never inside a heading or a code span, or in a question block that has been committed. An external link is documentation the reader chooses to open, and returns HTTP 200 with no redirect when it is written.
@@ -766,7 +766,7 @@ Manual check (user): read the chapter in `npm run dev` and answer its questions.
 
 **A committed chapter is progress.** The reader may start it at once, so later phases change its question blocks only the way the Unity book's editing passes did: `-` lines under `--allow distractors`, and anything else through a changes file under `--allow structure`, with the cost to the reader's review history stated.
 
-**Phase 19 is a pilot.** The user reads chapter 1 before Phase 20 starts. A change to depth, length or tone goes into this section first, so the other twelve chapters are written to it rather than rewritten.
+**Phase 19 is a pilot.** The user reads chapter 1 before Phase 20 starts. A change to depth, length or tone goes into this section first, so the other twelve chapters are written to it rather than rewritten. The user read it on 2026-09-24: depth and tone stand, question counts and section lengths follow the content, as the writing rule above now says, and the layout works on phones.
 
 **Phase 31's link pass.** Earlier chapters mention later ones in plain text. Where a link helps the reader, the mention becomes a `[[#id]]` in prose, never in a question block.
 
