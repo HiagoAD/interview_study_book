@@ -1,4 +1,4 @@
-# Project: Interactive Study Textbook
+# Project: The Unity Stack
 
 ## Purpose
 

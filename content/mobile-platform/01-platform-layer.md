@@ -1,6 +1,6 @@
 ---
 book: unity-mobile-platform-engineering
-title: Unity Mobile Platform Engineering
+title: The Platform Layer
 chapter: 01: The platform layer and the call path
 ---
 
@@ -50,7 +50,7 @@ The topics do not carry equal weight in an interview for a Unity mobile platform
 | CI/CD and Jenkins | 11 |
 | Interview practice | 13 |
 
-The book assumes Unity and C# at the level of Unity Game Engineering, the first book on this site. Where a section builds on that book, it recaps what it needs in a paragraph and names the chapter, so this one can be read on its own. It assumes little hands-on experience with Gradle, Xcode, native plugins or CI. It teaches enough Java and Objective-C to read and write a thin bridge, and it goes as deep as an interview for a platform role goes: mechanisms, decisions, and debugging across the boundary, well short of Android or iOS app development.
+The book assumes Unity and C# at the level of *The Game Layer*, the first book on this site. Where a section builds on that book, it recaps what it needs in a paragraph and names the chapter, so this one can be read on its own. It assumes little hands-on experience with Gradle, Xcode, native plugins or CI. It teaches enough Java and Objective-C to read and write a thin bridge, and it goes as deep as an interview for a platform role goes: mechanisms, decisions, and debugging across the boundary, well short of Android or iOS app development.
 
 The reference is Unity 6.3 LTS (6000.3.11f1) with the Android toolchain that Editor installs, which is OpenJDK 17, Gradle 8.13, the Android SDK platforms up to API level 36, and NDK r27c, together with Xcode 27.0 and the iOS 27.0 SDK. They were checked in September 2026. Platform rules move faster than engines: a required target API level, a store policy or a quota can change within a year. The text gives such a fact with the version or date it was checked against, and the questions test the mechanism behind it rather than the figure, because the review queue repeats a question for a month and more and should not go on teaching a number after it has changed.
 

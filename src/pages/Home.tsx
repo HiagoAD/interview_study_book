@@ -10,7 +10,7 @@ export function HomePage() {
 
   return (
     <main>
-      <h1>Books</h1>
+      <h1>The Unity Stack</h1>
 
       {books.length === 0 ? (
         <p className="notice">

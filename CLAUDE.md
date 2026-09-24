@@ -29,8 +29,8 @@ Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm 
 
 ```
 content/        study material: *.md files and their images (format: docs/content-format.md)
-  unity-engineering/   Unity Game Engineering, the first book
-  mobile-platform/     Unity Mobile Platform Engineering, the second, written from docs/mobile-platform-outline.md
+  unity-engineering/   The Game Layer, the first book
+  mobile-platform/     The Platform Layer, the second, written from docs/mobile-platform-outline.md
 pipeline/       build-time Node code (parser, renderer, loader, Vite plugin, guard); never imported by src/
 src/
   types/        content model types, and the declaration of the virtual:content module
@@ -43,7 +43,7 @@ src/
 scripts/verify-dist.mjs   checks dist/ has only index.html, no external references and none of the dev-only UI
 ```
 
-The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 applied the review requests a teacher's read of the book left in `docs/review-requests/`; the folder keeps its README and `structure-changes.json`, the record of which concept each moved question came from. Phases 18 to 32 write the second book, Unity Mobile Platform Engineering, from [docs/mobile-platform-outline.md](docs/mobile-platform-outline.md): Phase 18 the tools, Phases 19 to 31 one chapter each, and Phase 32 a teacher's read. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
+The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 applied the review requests a teacher's read of the book left in `docs/review-requests/`; the folder keeps its README and `structure-changes.json`, the record of which concept each moved question came from. Phases 18 to 32 write the second book, The Platform Layer, from [docs/mobile-platform-outline.md](docs/mobile-platform-outline.md): Phase 18 the tools, Phases 19 to 31 one chapter each, and Phase 32 a teacher's read. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
 
 ## Notes
 

@@ -1,4 +1,4 @@
-# Interactive Study Textbook
+# The Unity Stack
 
 A personal study site. You read a short section, answer questions on it, and the concepts you get wrong come back for review on a schedule. It runs entirely on your machine: no server, no account, no network. [PROJECT.md](PROJECT.md) says what it does.
 

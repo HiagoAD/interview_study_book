@@ -654,7 +654,7 @@ The requests surfaced two product changes, deliberately left out of this feature
 
 Each changes PROJECT.md and needs a plan of its own.
 
-## Feature: second book, Unity Mobile Platform Engineering
+## Feature: second book, The Platform Layer
 
 The site can hold several books, and this feature writes the second. It covers the layer between a Unity game and the platforms it ships on: native bridges on Android and iOS, the operating system's features, third-party SDKs, both build pipelines, backend clients, CI with Jenkins, and debugging across all of them. It prepares for interviews for Unity mobile platform roles, where native integration and SDK work carry the most weight. [mobile-platform-outline.md](mobile-platform-outline.md) is the specification: every chapter, section and concept, and what each chapter's claims are checked against.
 
@@ -666,7 +666,7 @@ Three things it leaves alone. **The product:** Home lists books by title, Review
 
 | Decision | Default | Alternative |
 | --- | --- | --- |
-| Title and id | Unity Mobile Platform Engineering, id `unity-mobile-platform-engineering` | Another title at any time: since **Book ids (after Phase 19)** the id is the `book:` line, so a new title keeps the progress |
+| Title and id | The Platform Layer, first titled Unity Mobile Platform Engineering; id `unity-mobile-platform-engineering` | Another title at any time: since **Book ids (after Phase 19)** the id is the `book:` line, so a new title keeps the progress |
 | Folder | `content/mobile-platform/`: `01-…md` to `13-…md`, and `glossary.md` | None |
 | Reference version | Unity 6.3 LTS (6000.3), the installed Editor that has both platform modules; Unity links pinned to `/6000.3/` | 6.0, the Unity book's version, which is not installed with iOS support, so its iOS claims could not be checked here |
 | The Unity book | The new book stands alone. It recaps what it needs from the first in a paragraph at most, naming the chapter in plain text | Links between books: a product change that amends PROJECT.md's non-goals |
@@ -973,3 +973,7 @@ A book's id is now its `book:` line, and its title is a `title:` line in one of 
 The guard parses its base revision with the current parser, and content from before this change names its book by title, so `withBookId` in `pipeline/guard.ts` reads such a `book:` line in the base as the slug it made. It rewrites the line in place, so line numbers hold, and content in the working tree gets no such allowance. Against `a8b89af` the guard reports the same 61 differences as the code at `58ef4a4`, one line lower in the two files that gained a `title:`.
 
 Tests: 666, up from 661. They cover a new title keeping the id, books ordered by title, a second title and a shared title as errors, a title written where the id goes, and a base that names its book by title comparing cleanly with `\n` or `\r\n` line ends. Breaking the logic four ways failed the suite each time: the guard reading old bases unchanged, the id made from the title again, a second title winning silently, and `book:` accepting any text. The build is byte-identical to the one before the change. In headless Firefox from `file://`, over WebDriver BiDi, one completed section in each book showed "1 of 80" and "1 of 6" on Home; after both books were renamed to The Game Layer and The Platform Layer and rebuilt, Home showed the new titles with the same counts and the same `#/b/` routes. The titles were then restored.
+
+### Book and site names (after Phase 19)
+
+The site is now The Unity Stack: in the browser tab, as Home's heading (which said "Books"), and at the top of the README and PROJECT.md. The books are The Game Layer and The Platform Layer, the code inside a game and the layer between it and the platforms it ships on, named as two layers of one stack. Each rename is one `title:` line, and the ids are unchanged, so progress carries over. The second book's opening section named the first by its old title and now names *The Game Layer*, in italics so it does not read as the phrase "the game layer"; the outline asks later chapters to do the same. The outline, CLAUDE.md, and this plan's second-book heading and decisions use the new names, while the log keeps the old ones where it records what happened then. The repository folder and `package.json` keep `interview-website`. Home sorts books by title, and the new titles keep the reading order. Checked in headless Firefox from `file://` at 1100px and 390px: the tab and the heading say The Unity Stack, the books list in reading order under their unchanged routes, and there is no horizontal scroll.

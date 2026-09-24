@@ -1,4 +1,4 @@
-# Outline: Unity Mobile Platform Engineering
+# Outline: The Platform Layer
 
 The specification for the second book. [PLAN.md](PLAN.md), under “Feature: second book”, says
 how the phases write it and holds the rules every chapter follows. This file says what each
@@ -19,7 +19,7 @@ game code -> game-owned interface -> adapter -> bridge (JNI or P/Invoke) -> nati
 ```
 
 Every chapter works on one or two links of that path, and chapter 12 walks all of it. The reader
-knows Unity and C# at the level of the Unity Game Engineering book, and has little hands-on
+knows Unity and C# at the level of the first book, *The Game Layer*, and has little hands-on
 experience with Gradle, Xcode, native plugins or CI. The book teaches enough Java and Objective-C
 to read and write a thin bridge, not enough to be an Android or iOS app developer, and it goes as
 deep as an interview for a Unity mobile platform role goes: mechanisms, decisions, and how to
@@ -77,8 +77,9 @@ its claims need beyond the defaults in PLAN.md, and an idea for its closing exer
 - Reference versions: Unity 6.3 LTS (6000.3) and the Android and Xcode toolchains the phases
   checked against. Platform facts carry the version or date they were checked against, and the
   questions avoid them.
-- The book assumes the Unity Game Engineering book and recaps what it needs in a paragraph, naming
-  the chapter in plain text.
+- The book assumes the first book, *The Game Layer*, and recaps what it needs in a paragraph,
+  naming the chapter in plain text. The first book's title is set in italics, so it does not read as
+  the phrase “the game layer”.
 - What an answer to “how would you integrate X” covers besides API calls: threads, lifecycle,
   permissions and privacy, build impact, rollout, verification. Saying “I have not shipped that;
   here is how I would find out” is a legitimate answer, as in the first book.

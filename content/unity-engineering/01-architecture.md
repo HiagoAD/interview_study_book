@@ -1,6 +1,6 @@
 ---
 book: unity-game-engineering
-title: Unity Game Engineering
+title: The Game Layer
 chapter: 01: Reasoning about gameplay architecture
 ---
 
