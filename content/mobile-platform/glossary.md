@@ -3,6 +3,20 @@ book: unity-mobile-platform-engineering
 kind: glossary
 ---
 
+## ABI {#abi}
+= application binary interface | ABIs
+
+The application binary interface a native library is compiled for: an instruction set and its calling conventions. Android names each one, such as `arm64-v8a`, `armeabi-v7a` and `x86_64`, and a device installs the native libraries of the ABI that fits it.
+
+Unity builds its player libraries for the ABIs chosen under Target Architectures in Player Settings, and each native plugin has to exist for all of them. A plugin missing for one ABI fails on the devices that need it and nowhere else, as [[#android-plugin-forms]] shows.
+
+## ANR {#anr}
+= Application Not Responding | ANRs
+
+Application Not Responding: Android's verdict that an app's UI thread has stopped responding, most often because an input event went unanswered for too long. In the foreground it shows a dialog that offers to close the app, and Android records every thread's stack at that moment.
+
+In a Unity game the UI thread is Android's, not the thread that runs `Update`, so a frozen game loop becomes an ANR when the UI thread ends up waiting for it. [[#android-callbacks]] shows one way that happens, and [[#android-failure-evidence]] where the evidence is.
+
 ## Assembly definition {#assembly-definition}
 = asmdef | assembly definitions
 
@@ -24,6 +38,12 @@ The two environments of Unity's Test Framework. Edit Mode tests run without ente
 
 Neither runs the native half of a platform integration in the Editor, which is why the contract suite in [[#platform-testing]] has a device run. Unity 6.3 ships version 1.6 of the framework, and from Unity 6.2 on its guide is part of the Unity Manual.
 
+## Gradle {#gradle}
+
+The build system Android apps are built with. Unity exports an Android build as a Gradle project with a `launcher` module and a `unityLibrary` module, and Gradle, through the Android Gradle Plugin, compiles the Java, merges the manifests, resolves dependencies and packages the APK or app bundle.
+
+Unity 6.3 ships Gradle 8.13 with its Android module, and the project exported for this book in September 2026 named Android Gradle Plugin 8.10.0. [[#android-plugin-forms]] shows where each kind of plugin lands in the project, and chapter 5 covers the project, its templates and dependency resolution.
+
 ## Idempotence {#idempotence}
 = idempotent | idempotency
 
@@ -42,7 +62,13 @@ Two consequences reach the platform boundary. Code has to exist when the build i
 
 The Java Native Interface, through which native code and Java call each other inside one process. Unity's Android bridge is built on it: a C# call reaches Java through JNI, and a Java callback reaches C# the same way.
 
-Each crossing looks classes and methods up by name and signature at run time, which is why a renamed Java method still compiles in C# and fails when it is called, and why [[R8]] can remove Java code that C# reaches by name. Objects that cross hold references someone has to release, and a thread Unity did not create has to be attached to the Java VM before it can make a call. Chapter 2 covers the C# side: `AndroidJavaObject`, `AndroidJavaClass` and `AndroidJavaProxy`.
+Each crossing looks classes and methods up by name and signature at run time, which is why a renamed Java method still compiles in C# and fails when it is called, and why [[R8]] can remove Java code that C# reaches by name. Objects that cross hold references someone has to release, and a thread Unity did not create has to be attached to the Java VM before it can make a call. [[#android-java-calls]] covers `AndroidJavaObject` and `AndroidJavaClass` on the C# side, and [[#android-callbacks]] covers `AndroidJavaProxy`.
+
+## Logcat {#logcat}
+
+Android's system log, and the tool that reads it. Each process writes to it, Unity included: its own lines and the output of C#'s `Debug.Log` carry the tag `Unity`, and crash reports go to a separate crash buffer.
+
+Read it with `adb logcat` from a computer connected to the device, or in the Editor with Unity's Android Logcat package, filtered by tag and priority as [[#android-failure-evidence]] shows.
 
 ## Managed code stripping {#managed-code-stripping}
 = code stripping | stripping
@@ -50,6 +76,13 @@ Each crossing looks classes and methods up by name and signature at run time, wh
 A build step that removes the C# a player build appears not to use, to make it smaller. It follows static references, so a type reached only by reflection, by a string name or from native code can be missing from the build while the Editor still has it.
 
 Unity sets how aggressive it is with the Managed Stripping Level in Player Settings. A `link.xml` file or the `[Preserve]` attribute keeps what the analysis cannot see, which the first book's testing and debugging chapter covers. Android release builds add a second stripper for Java, [[R8]], and a bridge can break under either one.
+
+## Maven coordinates {#maven-coordinates}
+= Maven coordinate
+
+The name of a library in a Maven repository, written `group:artifact:version`, such as `androidx.appcompat:appcompat:1.6.1`. Gradle downloads a library by its coordinates together with its POM file, which lists the libraries it depends on.
+
+Declaring a dependency by its coordinates lets Gradle fetch what the library needs and settle version conflicts, by default by choosing the highest version requested. [[#android-plugin-forms]] contrasts it with an AAR copied into the project, and chapter 5 covers resolution.
 
 ## Observer {#observer}
 = observer pattern | observers
