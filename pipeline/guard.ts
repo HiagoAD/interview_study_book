@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { assembleBooks, findContentFiles } from './load.ts'
 import type { RawBook, Source } from './load.ts'
-import { ID_PATTERN, findFenceEnd, formatError, openFence, parseContentFile } from './parse.ts'
+import { ID_PATTERN, findFenceEnd, formatError, openFence, parseContentFile, slug } from './parse.ts'
 import type { ContentError, RawConcept, RawSection, RawVariant, Text } from './parse.ts'
 
 /**
@@ -171,9 +171,30 @@ function noter(report: QuestionReport): (file: string, line: number, message: st
   return (file, line, message) => report.errors.push({ file, line, message })
 }
 
-/** Both versions indexed, or null after reporting their content errors: a best-effort model would only add noise. */
+/**
+ * Before books had ids, `book:` gave the title and the id was its slug. Reads such a line as that id,
+ * in place so every line number stays put, and leaves the title out, since no comparison uses it.
+ */
+function withBookId(source: Source): Source {
+  const lines = source.text.split('\n')
+  if (lines[0].trim() !== '---') return source
+  for (let i = 1; i < lines.length && lines[i].trim() !== '---'; i++) {
+    const match = /^(\s*book\s*:\s*)(.*?)(\s*)$/.exec(lines[i])
+    if (!match) continue
+    const id = slug(match[2])
+    if (!id || ID_PATTERN.test(match[2])) return source
+    lines[i] = match[1] + id + match[3]
+    return { ...source, text: lines.join('\n') }
+  }
+  return source
+}
+
+/**
+ * Both versions indexed, or null after reporting their content errors: a best-effort model would only
+ * add noise. The base may be older than book ids.
+ */
 function loadBoth(base: Source[], work: Source[], rev: string, report: QuestionReport): { old: Index; now: Index } | null {
-  const before = assembleBooks(base)
+  const before = assembleBooks(base.map(withBookId))
   const after = assembleBooks(work)
   for (const error of before.errors) report.errors.push({ ...error, message: `at ${rev}: ${error.message}` })
   report.errors.push(...after.errors)

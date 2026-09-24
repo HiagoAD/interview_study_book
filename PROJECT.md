@@ -50,7 +50,8 @@ Markdown with a compact question syntax. Markdown carries the prose, code and ma
 
 ````markdown
 ---
-book: System Design
+book: system-design
+title: System Design
 chapter: Caching
 ---
 
@@ -90,6 +91,7 @@ cache = LRUCache(capacity=100)
 > FIFO ignores access; it evicts by insertion order.
 ````
 
+- `book:` names the book by a stable ID, in every file of it. `title:`, in one of those files, is the name the site shows, so a book can be renamed without losing its progress.
 - `## Title {#id}` starts a section. `{#id}` is a stable ID.
 - `?? <concept-id> [type] <text>` starts a concept and its first variant. With no type it is multiple choice.
 - `?+ [type] <text>` adds another variant to the concept above it. Variants can use different types.
@@ -152,7 +154,7 @@ A glossary file is a content file whose front matter says `kind: glossary`. Each
 
 ````markdown
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 kind: glossary
 ---
 

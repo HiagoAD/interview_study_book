@@ -92,7 +92,7 @@ This section extends "File format" in PROJECT.md. Anything PROJECT.md doesn't al
 
 **Text.** Prompts, options and explanations accept Markdown, including inline code, math and emphasis. Accepted short answers are plain text. A literal dollar sign is written `\$`.
 
-**Books.** A book's id is `slug(book title)`: NFKD, strip diacritics, lowercase, runs of non-alphanumerics become `-`, then trim the dashes. Two titles with the same slug are an error. Books are ordered by title. Renaming a book changes its id, so it loses its progress. `docs/content-format.md` must say so.
+**Books.** A book's id is `slug(book title)`: NFKD, strip diacritics, lowercase, runs of non-alphanumerics become `-`, then trim the dashes. Two titles with the same slug are an error. Books are ordered by title. Renaming a book changes its id, so it loses its progress. `docs/content-format.md` must say so. (Superseded by **Book ids (after Phase 19)** in the log: the id is now the `book:` line itself and the title a `title:` line, so renaming a book keeps its progress.)
 
 **Errors.** The format is `<path relative to repo>:<line>: <message>`. The pipeline collects every error from every file and reports them all together, then fails. Each message says what was expected.
 
@@ -666,7 +666,7 @@ Three things it leaves alone. **The product:** Home lists books by title, Review
 
 | Decision | Default | Alternative |
 | --- | --- | --- |
-| Title, which fixes the book id and with it the book's progress | Unity Mobile Platform Engineering, id `unity-mobile-platform-engineering` | Another title, chosen before Phase 19 commits; renaming later loses progress |
+| Title and id | Unity Mobile Platform Engineering, id `unity-mobile-platform-engineering` | Another title at any time: since **Book ids (after Phase 19)** the id is the `book:` line, so a new title keeps the progress |
 | Folder | `content/mobile-platform/`: `01-…md` to `13-…md`, and `glossary.md` | None |
 | Reference version | Unity 6.3 LTS (6000.3), the installed Editor that has both platform modules; Unity links pinned to `/6000.3/` | 6.0, the Unity book's version, which is not installed with iOS support, so its iOS claims could not be checked here |
 | The Unity book | The new book stands alone. It recaps what it needs from the first in a paragraph at most, naming the chapter in plain text | Links between books: a product change that amends PROJECT.md's non-goals |
@@ -965,3 +965,11 @@ For the pilot read: sections carry 540 to 800 words of content, the first 950 wi
 ### Position bar (after Phase 19)
 
 A section page now opens with `ChapterPosition`, a bar pinned to the top: "Section N of M" with the chapter title, the percentage of this section's content scrolled through, and a track with one segment per section (earlier ones full, this one filling, unlocked ones linking to their section, locked ones dimmed). Sections have no subheadings, so depth is measured over the content block alone: `readingDepth` (pure, tested) is 0 while the content's top is at or below the bar and 1 once its bottom reaches the bottom of the viewport, and the questions below it do not count. The page gets `scroll-padding-top` while the bar is on it, so Reread content, footnotes and revealed cards stop below the bar rather than under it. The locked page shows the bar without a percentage. Checked in headless Firefox from `file://` at 1100px and 390px: the percentage follows the scroll, the chapter title truncates on a phone and there is no horizontal scroll.
+
+### Book ids (after Phase 19)
+
+A book's id is now its `book:` line, and its title is a `title:` line in one of its files, so a book can be renamed without losing its progress. Both books kept the ids their titles had made: every file's `book:` line became `unity-game-engineering` or `unity-mobile-platform-engineering`, and each book's first chapter file gained its `title:`. `assembleBooks` groups files by id. A book with no `title:` shows its id, a second `title:` in one book is an error, and so are two books with the same title. A `book:` value that is not an id is an error whose message names the id it would make and the `title:` line to add. Chapter ids still come from chapter titles, but progress is keyed by section and concept ids, so renaming a chapter changes only its route. `docs/content-format.md`, PROJECT.md's examples and the README say so.
+
+The guard parses its base revision with the current parser, and content from before this change names its book by title, so `withBookId` in `pipeline/guard.ts` reads such a `book:` line in the base as the slug it made. It rewrites the line in place, so line numbers hold, and content in the working tree gets no such allowance. Against `a8b89af` the guard reports the same 61 differences as the code at `58ef4a4`, one line lower in the two files that gained a `title:`.
+
+Tests: 666, up from 661. They cover a new title keeping the id, books ordered by title, a second title and a shared title as errors, a title written where the id goes, and a base that names its book by title comparing cleanly with `\n` or `\r\n` line ends. Breaking the logic four ways failed the suite each time: the guard reading old bases unchanged, the id made from the title again, a second title winning silently, and `book:` accepting any text. The build is byte-identical to the one before the change. In headless Firefox from `file://`, over WebDriver BiDi, one completed section in each book showed "1 of 80" and "1 of 6" on Home; after both books were renamed to The Game Layer and The Platform Layer and rebuilt, Home showed the new titles with the same counts and the same `#/b/` routes. The titles were then restored.

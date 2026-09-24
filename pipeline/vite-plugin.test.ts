@@ -12,7 +12,7 @@ type Hook<F> = { handler: F; filter?: { id?: RegExp } }
 type Context = { error: (message: string) => never }
 
 const validFile = (chapter: string, id = 's') =>
-  ['---', 'book: T', `chapter: ${chapter}`, '---', `## ${id} {#${id}}`, 'Content.', `?? ${id}-q Question?`, '* right', '- wrong', '> because'].join('\n')
+  ['---', 'book: t', `chapter: ${chapter}`, '---', `## ${id} {#${id}}`, 'Content.', `?? ${id}-q Question?`, '* right', '- wrong', '> because'].join('\n')
 const throwing: Context = {
   error: (message) => {
     throw new Error(message)

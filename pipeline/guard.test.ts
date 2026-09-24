@@ -8,7 +8,7 @@ const PATH = 'content/a.md'
 /** A chapter file: one section with three concepts, then a second section. Line numbers are in the comments. */
 const BASE = [
   '---', // 1
-  'book: Test', // 2
+  'book: test', // 2
   'chapter: Intro', // 3
   '---', // 4
   '## One {#one}', // 5
@@ -161,18 +161,30 @@ test('content errors are reported instead of a comparison, naming the revision t
   expect(report.errors[0].message).toMatch(/^at base: this variant has no explanation/)
 })
 
+test('a base from before book ids, whose book: line gave the title, is read with the id that title made', () => {
+  const byTitle = edited({ 2: 'book: Test' })
+  const withTitle = source(edited({ 2: 'book: test\ntitle: Test' }))
+  for (const text of [byTitle.join('\n'), byTitle.join('\r\n')]) {
+    const report = compareQuestions([{ path: PATH, text }], [withTitle], { rev: 'base', allow: null })
+    expect(report.errors).toEqual([])
+    expect(report).toMatchObject({ sections: 2, concepts: 4, variants: 5 })
+  }
+  // Only the base is read that way: the content being checked needs an id.
+  expect(where(compare(byTitle).errors)).toEqual([[2, expect.stringContaining('invalid book id "Test"')]])
+})
+
 test('a book split across files compares by section id, whichever file holds the section', () => {
   const [head, one, two] = [BASE.slice(0, 4), BASE.slice(4, 29), BASE.slice(29)]
-  const split = [source([...head, ...one]), source(['---', 'book: Test', '---', '# Intro Two', ...two], 'content/b.md')]
+  const split = [source([...head, ...one]), source(['---', 'book: test', '---', '# Intro Two', ...two], 'content/b.md')]
   const report = compareQuestions([source(BASE)], split, { rev: 'base', allow: null })
   expect(report.errors).toEqual([])
 })
 
 /** A second chapter of BASE's book, in a file of its own. */
-const OUTRO = source(['---', 'book: Test', '---', '# Outro', '## Three {#three}', 'Text.', '', 'Exercise: write three.', '', '?? c5 New?', '* yes', '- no', '> Yes.'], 'content/b.md')
+const OUTRO = source(['---', 'book: test', '---', '# Outro', '## Three {#three}', 'Text.', '', 'Exercise: write three.', '', '?? c5 New?', '* yes', '- no', '> Yes.'], 'content/b.md')
 
 /** A second book whose section id repeats one of BASE's: sections are keyed by book, so it is still new. */
-const OTHER_BOOK = source(['---', 'book: Other', 'chapter: First', '---', '## One {#one}', 'Text.', '', 'Exercise: write one.', '', '?? c1 Other?', '* yes', '- no', '> Yes.', '?+ [tf] True?', '* true', '> Yes.'], 'content/other/a.md')
+const OTHER_BOOK = source(['---', 'book: other', 'chapter: First', '---', '## One {#one}', 'Text.', '', 'Exercise: write one.', '', '?? c1 Other?', '* yes', '- no', '> Yes.', '?+ [tf] True?', '* true', '> Yes.'], 'content/other/a.md')
 
 /** BASE with a third section, and its concept, added to its only chapter. */
 const NEW_SECTION = edited({ 38: '> Yes.\n\n## Three {#three}\nText.\n\nExercise: write three.\n\n?? c5 New?\n* yes\n- no\n> Yes.' })
@@ -309,7 +321,7 @@ test('a changes file of the wrong shape is refused, with every problem named', (
   expect(readStructureChanges(JSON.stringify({ about: 'x', ...NO_CHANGES }), 'changes.json').changes).toEqual({ about: 'x', ...NO_CHANGES })
 })
 
-const glossary = (...lines: string[]) => source(['---', 'book: Test', 'kind: glossary', '---', ...lines], 'content/glossary.md')
+const glossary = (...lines: string[]) => source(['---', 'book: test', 'kind: glossary', '---', ...lines], 'content/glossary.md')
 
 test('em dashes, contractions and straight double quotes in prose are reported at their lines', () => {
   const errors = checkStyle([source(edited({ 6: 'A pool — reused.', 31: "It isn't here,\nand it's \"there\"." }))])

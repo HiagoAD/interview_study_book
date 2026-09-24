@@ -1,5 +1,5 @@
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 chapter: 12: Mobile graphics, memory, and platform constraints
 ---
 

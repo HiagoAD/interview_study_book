@@ -1,5 +1,5 @@
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 chapter: 03: Missions, rewards, and feature boundaries
 ---
 

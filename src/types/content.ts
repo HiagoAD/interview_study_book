@@ -3,7 +3,9 @@
 // plain text: escape them when they go into a page.
 
 export interface Book {
+  /** The `book:` line of every file of the book. Progress and routes are keyed by it, so changing it loses the book's progress. */
   id: string
+  /** The `title:` line of one of its files, or the id when none has one. It can change freely. */
   title: string
   chapters: Chapter[]
   /** Terms the book uses without defining them, ordered by term. Outside the reading order: nothing tests them. */

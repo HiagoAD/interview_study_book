@@ -22,7 +22,7 @@ While you work on the site or write content:
 
 Put Markdown files under `content/`. A book can be one file or several, and images go next to the Markdown. The format for sections, questions, math and code is in [docs/content-format.md](docs/content-format.md), which is written so that an LLM can generate a book from it. Run `npm run check`, then rebuild.
 
-Progress is stored under the book's title and the section and concept ids, so renaming one of them loses the progress on it.
+Progress is stored under the book's id (its `book:` line) and the section and concept ids, so changing one of them loses the progress on it. A book's title is its `title:` line, in one of its files, and can change freely.
 
 ## Back up your progress
 

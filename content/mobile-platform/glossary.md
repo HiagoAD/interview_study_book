@@ -1,5 +1,5 @@
 ---
-book: Unity Mobile Platform Engineering
+book: unity-mobile-platform-engineering
 kind: glossary
 ---
 

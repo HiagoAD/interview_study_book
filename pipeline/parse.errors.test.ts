@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest'
 import { parseContentFile } from './parse.ts'
 
-const FM = ['---', 'book: Test', 'chapter: Intro', '---'] // lines 1-4
+const FM = ['---', 'book: test', 'chapter: Intro', '---'] // lines 1-4
 const SEC = ['## Sec {#sec}', 'Some content.'] // lines 5-6
 const MC = ['?? q1 Question?', '* right', '- wrong', '> because']
-const ROOF = ['---', 'book: Test', '---'] // front matter with no chapter, lines 1-3
+const ROOF = ['---', 'book: test', '---'] // front matter with no chapter, lines 1-3
 /** A valid file whose question block starts on line 7. */
 const q = (...body: string[]) => [...FM, ...SEC, ...body]
 
@@ -13,13 +13,19 @@ type Case = [name: string, lines: string[], expected: [line: number, fragment: s
 const cases: Case[] = [
   // Front matter
   ['front matter missing', ['# Ch', ...SEC, ...MC], [[1, 'front matter is required']]],
-  ['front matter not closed', ['---', 'book: Test', '# Ch', ...SEC, ...MC], [[1, 'front matter is not closed']]],
+  ['front matter not closed', ['---', 'book: test', '# Ch', ...SEC, ...MC], [[1, 'front matter is not closed']]],
   ['front matter line without a colon', [...ROOF.slice(0, 2), 'chapter Intro', '---', '# Ch', ...SEC, ...MC], [[3, 'expected "key: value"']]],
   ['unknown front matter key', [...ROOF.slice(0, 2), 'author: Me', '---', '# Ch', ...SEC, ...MC], [[3, 'unknown front matter key "author"']]],
-  ['front matter key twice', ['---', 'book: A', 'book: B', '---', '# Ch', ...SEC, ...MC], [[3, 'appears twice']]],
+  ['front matter key twice', ['---', 'book: a', 'book: b', '---', '# Ch', ...SEC, ...MC], [[3, 'appears twice']]],
   ['front matter key without a value', [...ROOF.slice(0, 2), 'chapter:', '---', '# Ch', ...SEC, ...MC], [[3, 'write "chapter: <title>"']]],
-  ['front matter without a book', ['---', 'chapter: Intro', '---', ...SEC, ...MC], [[1, 'add "book: <book title>"']]],
-  ['book title without letters or digits', ['---', 'book: !!!', 'chapter: Intro', '---', ...SEC, ...MC], [[2, 'at least one letter or digit']]],
+  ['front matter without a book', ['---', 'chapter: Intro', '---', ...SEC, ...MC], [[1, 'add "book: <book-id>"']]],
+  [
+    'book title where the book id goes',
+    ['---', 'book: System Design', 'chapter: Intro', '---', ...SEC, ...MC],
+    [[2, 'invalid book id "System Design": use lowercase letters, digits and single hyphens; write "book: system-design", and give the name the site shows as "title: <book title>"']],
+  ],
+  ['book id without letters or digits', ['---', 'book: !!!', 'chapter: Intro', '---', ...SEC, ...MC], [[2, 'write "book: <book-id>"']]],
+  ['chapter title without letters or digits', [...ROOF.slice(0, 2), 'chapter: !!!', '---', '# Ch', ...SEC, ...MC], [[3, '"chapter" needs at least one letter or digit']]],
   ['file with only front matter', ROOF, [[1, 'the file has no sections']]],
 
   // Chapters and sections

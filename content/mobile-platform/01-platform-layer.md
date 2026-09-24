@@ -1,5 +1,6 @@
 ---
-book: Unity Mobile Platform Engineering
+book: unity-mobile-platform-engineering
+title: Unity Mobile Platform Engineering
 chapter: 01: The platform layer and the call path
 ---
 

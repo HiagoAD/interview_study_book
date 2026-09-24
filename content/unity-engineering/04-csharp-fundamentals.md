@@ -1,5 +1,5 @@
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 chapter: 04: C# semantics that affect gameplay correctness
 ---
 

@@ -45,6 +45,13 @@ export interface Totals {
 const byString = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 const byLocation = (a: ContentError, b: ContentError) => byString(a.file, b.file) || a.line - b.line
 
+interface Place {
+  file: string
+  line: number
+}
+
+const at = (place: Place) => `${place.file}:${place.line}`
+
 /** Every `.md` file under `dir`, as repo-relative paths with `/` separators, in plain string order. */
 export function findContentFiles(root: string, dir = 'content'): string[] {
   let entries: Dirent[]
@@ -61,9 +68,10 @@ export function findContentFiles(root: string, dir = 'content'): string[] {
 }
 
 /**
- * Parses every source and merges the files into books. Books are keyed by their id, so files whose
- * titles have the same slug belong together. Never throws on bad content: every problem, in every
- * file, comes back in `errors`, and `books` is best-effort when there are any.
+ * Parses every source and merges the files into books. Every file names its book's id in `book:`, and
+ * one of them may give its title in `title:`; without one, the title is the id. Never throws on bad
+ * content: every problem, in every file, comes back in `errors`, and `books` is best-effort when there
+ * are any.
  */
 export function assembleBooks(sources: Source[]): AssembleResult {
   const errors: ContentError[] = []
@@ -74,26 +82,41 @@ export function assembleBooks(sources: Source[]): AssembleResult {
     files.push(parsed.file)
   }
 
-  const groups = new Map<string, { title: string; at: string; files: RawFile[] }>()
+  // A book's first `book:` line, and its `title:` line when it has one.
+  const groups = new Map<string, { first: Place; title: (Place & { text: string }) | null; files: RawFile[] }>()
   for (const file of files) {
     if (!file.book) continue
-    const id = slug(file.book.title)
-    const group = groups.get(id)
+    const { id } = file.book
+    let group = groups.get(id)
     if (!group) {
-      groups.set(id, { title: file.book.title, at: `${file.path}:${file.book.line}`, files: [file] })
-    } else if (group.title !== file.book.title) {
+      group = { first: { file: file.path, line: file.book.line }, title: null, files: [] }
+      groups.set(id, group)
+    }
+    group.files.push(file)
+    if (!file.title) continue
+    if (group.title) {
       errors.push({
         file: file.path,
-        line: file.book.line,
-        message: `book "${file.book.title}" has the same id "${id}" as book "${group.title}" (${group.at}): write exactly the same title in every file of one book, or rename one of the books`,
+        line: file.title.line,
+        message: `book "${id}" already has the title "${group.title.text}" (${at(group.title)}): give the title in one file of the book only`,
       })
     } else {
-      group.files.push(file)
+      group.title = { text: file.title.text, file: file.path, line: file.title.line }
     }
   }
 
   const books: RawBook[] = []
+  const titleOwners = new Map<string, { id: string; place: Place }>()
   for (const [id, group] of groups) {
+    const title = group.title?.text ?? id
+    const place = group.title ?? group.first
+    const owner = titleOwners.get(title)
+    if (owner) {
+      errors.push({ file: place.file, line: place.line, message: `book "${id}" has the same title as book "${owner.id}" (${at(owner.place)}): give one of them another title` })
+    } else {
+      titleOwners.set(title, { id, place })
+    }
+
     const chapters: RawChapter[] = []
     const entries: RawEntry[] = []
     // An entry id and every "=" name share one namespace, because `[[...]]` looks a term up by either.
@@ -175,7 +198,7 @@ export function assembleBooks(sources: Source[]): AssembleResult {
       }
     }
 
-    books.push({ id, title: group.title, chapters, entries })
+    books.push({ id, title, chapters, entries })
   }
 
   books.sort((a, b) => a.title.localeCompare(b.title, 'en'))

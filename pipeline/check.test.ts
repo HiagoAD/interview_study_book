@@ -14,9 +14,9 @@ const concept = (id: string, variants = 1) =>
 
 test('check prints the sums, then each book on its own line in book order, singular where a count is one', () => {
   const { books, errors } = assembleBooks([
-    chapter('Second Book', 'Only', section('s1', concept('c1', 3))),
-    chapter('First Book', 'Opening', section('a', concept('a1'), concept('a2', 2)), section('b', concept('b1'))),
-    chapter('First Book', 'Closing', section('c', concept('c1'))),
+    chapter('second-book', 'Only', section('s1', concept('c1', 3))),
+    chapter('first-book', 'Opening', section('a', concept('a1'), concept('a2', 2)), section('b', concept('b1'))),
+    chapter('first-book', 'Closing', section('c', concept('c1'))),
   ])
   expect(errors).toEqual([])
   expect(totalsLines(books)).toEqual([
