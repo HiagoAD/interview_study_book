@@ -36,7 +36,7 @@ src/
   types/        content model types, and the declaration of the virtual:content module
   engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list, preparing a question or a whole review (variant + options). Takes today, now and an rng as parameters; never reads the clock or Math.random
   storage/      progress: IndexedDB layer, the in-memory store written through to it, export/import, ProgressProvider and its hooks. Opening the database is given up on after 3 seconds and progress stays in memory (`persistent` is false)
-  components/   QuestionCard (study and review), Html (rendered content; handles in-page links and previews), Preview (the one hover card, drawn into the body), StorageBanner (shown while progress isn't being saved), and the small pieces they use
+  components/   QuestionCard (study and review), Html (rendered content; handles in-page links and previews), Preview (the one hover card, drawn into the body), StorageBanner (shown while progress isn't being saved), ChapterPosition (the bar pinned to a section page: section N of M and how far through it), and the small pieces they use
   pages/        Home, Book, Chapter, Section, Glossary, Term, Review, Data and Not found; they read the books from virtual:content and progress from useProgress
   router.ts     hash router (#/...)
   styles.css

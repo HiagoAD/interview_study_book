@@ -579,6 +579,96 @@ progress::-moz-progress-bar {
   scroll-margin-top: 1rem;
 }
 
+/* The position bar. It stays pinned to the top of the screen while the section scrolls under it, so anything
+   the page scrolls to has to stop below it: that is the scroll padding. It sits under the preview card. */
+html:has(.position) {
+  scroll-padding-top: 4rem;
+}
+
+.position {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0 0.15rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.position-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.position-where {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.position-text > .muted {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.position-track {
+  display: flex;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.position-track li {
+  flex: 1;
+}
+
+/* Each segment is a 24px-tall target with the bar drawn across its middle: the grey is the section, the
+   accent how much of it lies behind the reader. */
+.position-segment {
+  display: block;
+  position: relative;
+  height: 1.5rem;
+}
+
+.position-segment::before,
+.position-segment::after {
+  content: '';
+  position: absolute;
+  top: 0.6rem;
+  left: 0;
+  height: 0.3rem;
+  border-radius: 999px;
+}
+
+.position-segment::before {
+  right: 0;
+  background: var(--border);
+}
+
+.position-segment::after {
+  width: calc(var(--fill) * 100%);
+  background: var(--accent);
+}
+
+[aria-current] > .position-segment::before {
+  outline: 1px solid var(--accent);
+}
+
+a.position-segment:hover::before {
+  background: var(--control-border);
+}
+
+.position-locked::before,
+.position-locked::after {
+  opacity: 0.45;
+}
+
 .questions {
   margin-top: 2.5rem;
   padding-top: 1.5rem;

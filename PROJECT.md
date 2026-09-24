@@ -125,6 +125,8 @@ Each variant has an **explanation**. It is shown automatically when the answer i
 
 You can go back and reread the content while answering, and revisit any unlocked section.
 
+A bar pinned to the top of a section page shows where the reader is in the chapter: "Section 3 of 6", how much of this section's content has been scrolled through, and a track with one segment per section. The segments before this one are full, this one fills as it is read, and each unlocked section's segment links to it.
+
 ## Glossary and previews
 
 The book teaches what its sections cover, but it also uses terms it never stops to define, and it refers to sections you may not have read. Looking one of those up should not mean leaving the site, and it should not mean reading a whole section you did not need.
