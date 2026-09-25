@@ -1,0 +1,63 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "problems",
+    "checked"
+  ],
+  "properties": {
+    "problems": {
+      "type": "array",
+      "description": "Only problems you have verified; an empty array is a valid answer",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "line",
+          "kind",
+          "problem",
+          "evidence",
+          "proposed_fix"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Repo-relative path"
+          },
+          "line": {
+            "type": "integer",
+            "description": "1-based line of the problem"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "wrong claim",
+              "unsupported claim",
+              "question",
+              "distractor",
+              "code",
+              "writing rule",
+              "link"
+            ]
+          },
+          "problem": {
+            "type": "string",
+            "description": "What is wrong, in one or two sentences"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "How you verified it: the source and its exact words, the file and line, or the output"
+          },
+          "proposed_fix": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "checked": {
+      "type": "string",
+      "description": "What you read and checked, in under 100 words"
+    }
+  }
+}

@@ -6,7 +6,7 @@
 
 1. Read [CLAUDE.md](../CLAUDE.md), [PROJECT.md](../PROJECT.md) and this file. **Decisions** and your phase's section are binding.
 2. Build only your phase. Don't start work from later phases.
-3. Work inline; don't spawn subagents.
+3. Work inline; don't spawn subagents. Codex, under **Delegated evidence**, is the one exception.
 4. Before finishing, run every command in your phase's **Done when** and confirm it passes. If something fails and you can't fix it, report the output; don't hide it.
 5. Append an entry to the **Phase log** at the end of this file, in about 200 words: what was built, any deviation from this plan and why, the figures your phase's **Done when** asks for, and what the next phase needs to know. Detail belongs elsewhere: a chapter phase writes what it checked, against what, and where the outline was wrong in the chapter's evidence file (see **Decisions: evidence**).
 6. Commit on the feature's branch, `second-book-plan` for the second book, with a clear message. Merging into `main` is the user's decision.
@@ -18,7 +18,8 @@
 ```
 content/                study material: *.md files and their images, any subfolders
 docs/                   PLAN.md, plan-history.md (Phases 1 to 17), content-format.md,
-                        mobile-platform-outline.md, evidence/ (one file per chapter), review-requests/
+                        mobile-platform-outline.md, evidence/ (one file per chapter, and codex/
+                        with the delegation briefs, schemas and receipt checker), review-requests/
 pipeline/               build-time Node code; never imported by src/
   parse.ts              file text → raw model (Markdown strings + line numbers) and errors
   render.ts             Markdown → HTML (unified, KaTeX, Shiki, images inlined)
@@ -266,6 +267,18 @@ The Unity book was checked after it was written, and that read found thirty prob
 
 **The probe project** is one Unity 6000.3 project outside the repo, created in Phase 20 and reused by the phases after it. It is never committed, and the Phase 20 log records its path. Other scratch programs stay outside the repo too.
 
+**Delegated evidence (from Phase 24).** Codex gathers the chapter's evidence and reads the finished chapter blind; the session writes. The briefs, their schemas and the receipt checker are in `docs/evidence/codex/`, and the Codex CLI is the one bundled with the VS Code extension (`ls -d ~/.vscode/extensions/openai.chatgpt-*/bin/macos-aarch64/codex`).
+
+- Evidence: `codex exec -m gpt-6-sol -c model_reasoning_effort="xhigh" -s workspace-write -c sandbox_workspace_write.network_access=true -c approval_policy="never"`, with `--add-dir` for the probe project and the session's scratchpad, the brief `docs/evidence/codex/brief.md` filled in with the outline's chapter section, and `--output-schema docs/evidence/codex/evidence.schema.json -o <answer.json>`. Codex writes only the chapter's evidence file and lists the runs it needs, which the session batches in one script. The session reads the answer file, and the log only to see why a run failed.
+- Receipts: `python3 docs/evidence/codex/check_receipts.py <answer.json>` re-fetches every quote, and a `guard -- receipts` command can replace it later. The session reads the quotes behind each correct answer and explanation premise; a quote that does not state the claim counts as no receipt.
+- Review: `-m gpt-6-astra -c model_reasoning_effort="xhigh" -s read-only` with `docs/evidence/codex/review.md` and `review.schema.json`. Each problem is judged, and those that hold are fixed. Every Codex model draws on one usage allowance, so the evidence runs on Sol, which uses a smaller share of it, and the review runs after the evidence.
+- **When Codex is blocked.** A blocked run exits within seconds with a usage-limit error that names its reset time, and writes no answer file. Another model is no way around it, since they share the allowance. For the evidence and for the review alike:
+  1. If the reset is within two hours, schedule the step for the reset in a background command, and carry on with the parts of the phase that do not need it.
+  2. Otherwise, or if Codex does not start at all, the session does the step itself: the evidence under rule A, written to the same receipts JSON so that the checker and the evidence file work unchanged, with sentences pulled out by scripts rather than whole pages read; and the teacher's read of step 4 in place of the review.
+
+  The chapter is not committed before one of these reviews has run, since a committed question block changes only with the user's consent. The log names the step each part used.
+- The log records Codex's time and tokens, the receipts that failed, and what the review caught.
+
 **Before Phase 18,** accept the Xcode license once: `sudo xcodebuild -license accept`. Until then `/usr/bin/git`, `python3` and every Xcode tool exit with status 69, so `npm run guard -- questions` cannot read a revision and no Objective-C or Swift compiles. Putting `/Library/Developer/CommandLineTools/usr/bin` first on `PATH` restores `git`, and nothing else.
 
 ### Decisions: tools
@@ -307,9 +320,9 @@ Done when: `npm test`, `npm run typecheck`, `npm run check` and `npm run build` 
 Each phase, in order:
 
 1. Read the outline's opening sections and its chapter, the chapters it builds on, and `glossary.md`.
-2. Check the chapter's claims before writing, per **Decisions: evidence**, with probes outside the repo.
+2. Check the chapter's claims before writing, per **Decisions: evidence**, with probes outside the repo. From Phase 24, Codex gathers them, as **Delegated evidence** says.
 3. Write the chapter file. Add glossary entries for the terms it uses without defining them, and link their first mentions.
-4. Read it back as a teacher: each claim against its evidence, each question against the standard, with the word list and the option lengths measured by `npm run guard -- options`.
+4. Read it back as a teacher: each claim against its evidence, each question against the standard, with the word list and the option lengths measured by `npm run guard -- options`. From Phase 24, Codex's blind review is this read, and the session judges what it reports.
 5. Run the avoid-ai-writing detector over the new prose and fix what it reports.
 
 **Every chapter phase's Done when:**
@@ -319,7 +332,7 @@ Each phase, in order:
 - `npm run check`'s line for the book matches the outline's figures for the chapters written so far, and reports no entry that nothing links to.
 - `npm run guard -- links --base <the phase's starting commit>` passes: every external link the phase adds returns HTTP 200 with no redirect.
 - The no-brand search stays empty.
-- The chapter's evidence file says what was checked, against what, and where the outline was wrong. The phase log gives the chapter's line from `npm run guard -- options` and the terms added.
+- The chapter's evidence file says what was checked, against what, and where the outline was wrong. The phase log gives the chapter's line from `npm run guard -- options`, the terms added and, from Phase 24, the figures that **Delegated evidence** asks for.
 
 Manual check (user): read the chapter in `npm run dev` and answer its questions.
 
@@ -420,3 +433,7 @@ Deviation: the phase ran in a cloud container, in parallel with Phase 22, so cha
 Question figures: correct option longest in 24% of 37 choice sets and shortest in 22%, medians 70 and 70, no option uses the word list. The avoid-ai-writing skill is not installed in the container; a manual pass for its patterns removed a self-label, a cliché, a superlative and a vague “worth copying”.
 
 Next phase: on the Mac, 6000.3's templates can settle what this chapter left to other sources: whether a non-exported build compiles `libil2cpp.so` inside Gradle, the Publishing Settings label for `proguard-user.txt`, and the manifest order in an AGP build.
+
+### Delegated evidence (after Phase 23)
+
+Asked for by the user on 2026-09-25, after Phase 22's pilot. **Delegated evidence**, under **Decisions: evidence**, makes the pilot the rule from Phase 24: Codex gathers the evidence on GPT-6 Sol at `xhigh` and reads the chapter blind on GPT-6 Astra at `xhigh`, the session writes, and a fallback covers a blocked Codex, whose models share one allowance. The settings follow published guidance the user asked for: Sol comes closest to Astra on long agentic work at a smaller share of the allowance, and reviews gain most from high effort. `docs/evidence/codex/` holds the two briefs as templates, their schemas, and the receipt checker Phase 22 used; the checker is Python for now, with a page cache outside the repo, and passes all 100 of Phase 22's receipts.

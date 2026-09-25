@@ -1,0 +1,186 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "claims",
+    "runs_needed",
+    "harnesses",
+    "notes"
+  ],
+  "properties": {
+    "claims": {
+      "type": "array",
+      "description": "One entry per claim and source. A claim backed by two sources gets two entries with the same id.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "section",
+          "claim",
+          "verdict",
+          "evidence_kind",
+          "source",
+          "quote",
+          "narrowed_to"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Short stable id such as lifecycle-03; repeated when one claim has several sources"
+          },
+          "section": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "The section id from the outline, such as os-lifecycle"
+          },
+          "claim": {
+            "type": "string",
+            "description": "The claim as the chapter could state it, in one or two sentences"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "contradicted",
+              "narrowed",
+              "unverified"
+            ]
+          },
+          "evidence_kind": {
+            "type": "string",
+            "enum": [
+              "documentation",
+              "shipped file",
+              "run"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url",
+              "file",
+              "line",
+              "command",
+              "log"
+            ],
+            "properties": {
+              "url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The page the quote is on: the human URL, not a JSON or redirect URL"
+              },
+              "file": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Absolute path of a text file that holds the quote"
+              },
+              "line": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "1-based line where the quote starts in file"
+              },
+              "command": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Exact command whose output holds the quote"
+              },
+              "log": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Absolute path of the file holding that command's output"
+              }
+            }
+          },
+          "quote": {
+            "type": "string",
+            "description": "Exact text copied from the source: one contiguous passage, no ellipses, no paraphrase"
+          },
+          "narrowed_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "For narrowed or contradicted: what the evidence supports instead"
+          }
+        }
+      }
+    },
+    "runs_needed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "claim_ids",
+          "why_docs_and_files_are_not_enough",
+          "commands",
+          "expected_observation"
+        ],
+        "properties": {
+          "claim_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "why_docs_and_files_are_not_enough": {
+            "type": "string"
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expected_observation": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "harnesses": {
+      "type": "array",
+      "description": "Compile checks set up for the writer's samples",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "language",
+          "directory",
+          "command",
+          "verified_output"
+        ],
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "verified_output": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Anything the writer must know that fits no claim; under 300 words"
+    }
+  }
+}
