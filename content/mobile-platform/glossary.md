@@ -134,6 +134,13 @@ Key-value pairs in an app's code signature that grant it the use of a service or
 
 In a Unity export they belong to the `Unity-iPhone` target, whatever target holds the code that uses them, and a post-processor adds them with `ProjectCapabilityManager`, as [[#ios-xcode-postprocess]] shows. Each one that the app claims has to be on its provisioning profile's allowlist, as [[#xcode-signing-model]] shows.
 
+## Git LFS {#git-lfs}
+= Git Large File Storage | LFS
+
+Git Large File Storage: a Git extension that keeps large files, such as textures, audio and models, outside the repository. The repository holds a small pointer file in place of each one, and Git LFS downloads the real file when a checkout asks for it.
+
+A pointer is a text file under 1024 bytes whose first line names the LFS specification. A clone made without Git LFS installed, or a checkout that does not pull LFS files, keeps the pointers, and Unity fails to import them as the assets they stand for. [[#ci-pipeline-shape]] pulls them as part of the checkout, and [[#ci-only-failures]] traces the failure.
+
 ## Gradle {#gradle}
 
 The build system Android apps are built with. Unity exports an Android build as a Gradle project with a `launcher` module and a `unityLibrary` module, and Gradle, through the Android Gradle Plugin, compiles the Java, merges the manifests, resolves dependencies and packages the APK or app bundle.
