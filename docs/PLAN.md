@@ -402,3 +402,13 @@ Asked for by the user on 2026-09-25. Phases 1 to 17, with their feature sections
 `guard -- options` and `guard -- links` are new, with 9 tests (675 in all). `options` reproduces the word-list and median figures Phases 16 and 17 logged for the Unity book, and counts three more choice sets than the logs of Phases 20 and 21: chapter 02 holds 35 (correct option longest in 29%, shortest in 29%, medians 71 and 70) and chapter 03 holds 44 (25%, 18%, 71 and 70). `links --base 58a2436` passes chapter 03's 25 links. `--all` finds that Microsoft Learn's `GetHashCode` page, linked in the Unity book's chapter 04 prose, now redirects to `?view=net-10.0`; it is left as it is.
 
 Next phase: `UnityScene` in 6000.3.11f1 implements none of the scene delegate's URL methods, and Apple's TN3187 says an app built with the SDK after iOS 26 must use scenes, so cold links on iOS may be lost as well as warm ones. If they are, chapter 01's `platform-early-event` explanation needs a correction, and that needs the user's consent.
+
+### Phase 23: Chapter 05, Android builds
+
+Wrote `content/mobile-platform/05-android-builds.md` (5 sections, 11 concepts, 39 variants, the outline's ids) and four glossary entries: AAB, Android Gradle Plugin, bundletool and EDM4U; the Gradle, Maven coordinates and R8 entries now link the new sections. `npm run check` reports the book as 4 chapters, 23 sections, 47 concepts, 152 variants, 28 terms and 54 links with no unlinked entry; `questions --allow new-chapters --base c3597b8` accepts this chapter alone; the 18 external links return 200 with no redirect; the no-brand search is empty.
+
+Deviation: the phase ran in a cloud container, in parallel with Phase 22, so chapter 4 is named in plain text. The container had no Editor, probe project or Android SDK, and its network policy blocked Unity's documentation and downloads, `dl.google.com`, and Gradle's and Play's help pages, so the probe's Gradle export was not built. Gradle 8.13, R8 8.10.21, bundletool 1.17.2, Unity's C# reference source and packages, EDM4U's source and Android's pages stood in, and the chapter was narrowed to them: [evidence/05-android-builds.md](evidence/05-android-builds.md).
+
+Question figures: correct option longest in 24% of 37 choice sets and shortest in 22%, medians 70 and 70, no option uses the word list. The avoid-ai-writing skill is not installed in the container; a manual pass for its patterns removed a self-label, a cliché, a superlative and a vague “worth copying”.
+
+Next phase: on the Mac, 6000.3's templates can settle what this chapter left to other sources: whether a non-exported build compiles `libil2cpp.so` inside Gradle, the Publishing Settings label for `proguard-user.txt`, and the manifest order in an AGP build.

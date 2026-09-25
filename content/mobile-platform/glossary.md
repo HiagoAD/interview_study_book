@@ -3,12 +3,26 @@ book: unity-mobile-platform-engineering
 kind: glossary
 ---
 
+## AAB {#aab}
+= Android App Bundle | app bundle | app bundles
+
+Android App Bundle: the format in which an app is published on Google Play. It holds the app's code and resources for every device configuration and cannot be installed; Google Play generates APKs from it for each device and signs them.
+
+A phone downloads a base APK and the configuration APKs that fit it, such as the one with the native libraries of its ABI. [[bundletool]] turns a bundle into APKs on a computer in the same way, which is how a team tests one before uploading it. [[#gradle-packaging-signing]] covers the format and the key that Google Play signs with.
+
 ## ABI {#abi}
 = application binary interface | ABIs
 
 The application binary interface a native library is compiled for: an instruction set and its calling conventions. Android names each one, such as `arm64-v8a`, `armeabi-v7a` and `x86_64`, and a device installs the native libraries of the ABI that fits it.
 
 Unity builds its player libraries for the ABIs chosen under Target Architectures in Player Settings, and each native plugin has to exist for all of them. A plugin missing for one ABI fails on the devices that need it and nowhere else, as [[#android-plugin-forms]] shows.
+
+## Android Gradle Plugin {#android-gradle-plugin}
+= AGP
+
+The Gradle plugin that builds Android apps and libraries. It compiles Java and Kotlin, merges the manifests and resources, runs R8, converts the code into DEX, and packages and signs APKs and app bundles.
+
+Its version is chosen together with those of Gradle, the JDK and the Android SDK, and a Unity version fixes all of them: the project that Unity 6.3 writes names version 8.10.0. An AAR can state the lowest plugin version it works with, which is how an SDK update can call for a newer Unity. [[#gradle-project]] shows where the version is set.
 
 ## ANR {#anr}
 = Application Not Responding | ANRs
@@ -38,6 +52,12 @@ A Unity asset that compiles the scripts in its folder into an assembly of their 
 
 Two defaults decide whether that check has teeth. The predefined `Assembly-CSharp` references every assembly marked Auto Referenced, and every assembly definition references every precompiled plugin DLL unless the plugin's Auto Referenced setting is off or the assembly uses Override References. [[#platform-interfaces]] uses both rules to keep vendor types out of gameplay, and [[#platform-composition]] uses the platform list to compile an adapter for its own platform only.
 
+## bundletool {#bundletool}
+
+Google's command-line tool for app bundles. It builds them, and it turns a bundle into the APKs that Google Play would generate for each device, so that a bundle can be installed and tested before it is uploaded.
+
+`build-apks` makes a set of APKs from a bundle, signed with the keystore it is given or with the debug key; `install-apks` installs the ones a connected phone needs; `dump manifest` prints the manifest a bundle carries. The APKs it makes reproduce Google Play's splits and not its signature, as [[#gradle-packaging-signing]] explains.
+
 ## Deep link {#deep-link}
 = deep links
 
@@ -59,6 +79,13 @@ The debug symbol file of one Apple binary: a bundle holding the information that
 
 A Unity iOS release build produces one for the app and one for `UnityFramework`, which covers the game's C# as IL2CPP compiled it, and the Xcode archive keeps both. [[#ios-failure-evidence]] shows how to check a UUID and symbolicate with them, and chapter 11 archives them for each build.
 
+## EDM4U {#edm4u}
+= External Dependency Manager for Unity | Android Resolver
+
+Google's External Dependency Manager for Unity: a Unity package that reads the `*Dependencies.xml` files that SDKs ship in Editor folders and turns them into Android dependencies, and into CocoaPods for iOS.
+
+Its Android Resolver either resolves the dependencies itself and copies the libraries into `Assets/Plugins/Android`, or writes them into the custom main Gradle template for the build to resolve. Mixing the two modes duplicates classes, as [[#gradle-dependencies]] shows. Chapter 6 covers its iOS side.
+
 ## Edit Mode and Play Mode tests {#play-mode-tests}
 = Edit Mode tests | Unity Test Framework
 
@@ -77,7 +104,7 @@ In a Unity export they belong to the `Unity-iPhone` target, whatever target hold
 
 The build system Android apps are built with. Unity exports an Android build as a Gradle project with a `launcher` module and a `unityLibrary` module, and Gradle, through the Android Gradle Plugin, compiles the Java, merges the manifests, resolves dependencies and packages the APK or app bundle.
 
-Unity 6.3 ships Gradle 8.13 with its Android module, and the project exported for this book in September 2026 named Android Gradle Plugin 8.10.0. [[#android-plugin-forms]] shows where each kind of plugin lands in the project, and chapter 5 covers the project, its templates and dependency resolution.
+Unity 6.3 ships Gradle 8.13 with its Android module, and the project exported for this book in September 2026 named [[Android Gradle Plugin]] 8.10.0. [[#android-plugin-forms]] shows where each kind of plugin lands in the project, [[#gradle-project]] covers the project and its templates, and [[#gradle-dependencies]] covers dependency resolution.
 
 ## Idempotence {#idempotence}
 = idempotent | idempotency
@@ -124,7 +151,7 @@ Unity sets how aggressive it is with the Managed Stripping Level in Player Setti
 
 The name of a library in a Maven repository, written `group:artifact:version`, such as `androidx.appcompat:appcompat:1.6.1`. Gradle downloads a library by its coordinates together with its POM file, which lists the libraries it depends on.
 
-Declaring a dependency by its coordinates lets Gradle fetch what the library needs and settle version conflicts, by default by choosing the highest version requested. [[#android-plugin-forms]] contrasts it with an AAR copied into the project, and chapter 5 covers resolution.
+Declaring a dependency by its coordinates lets Gradle fetch what the library needs and settle version conflicts, by default by choosing the highest version requested. [[#android-plugin-forms]] contrasts it with an AAR copied into the project, and [[#gradle-dependencies]] covers resolution.
 
 ## Observer {#observer}
 = observer pattern | observers
@@ -151,7 +178,7 @@ Android apps receive a registration token from Firebase Cloud Messaging, and iOS
 
 The Android build tool that shrinks, optimizes and obfuscates Java and Kotlin code, usually in release builds. It removes what nothing in the app references and shortens names, so Java code that C# reaches by name through JNI can be removed or renamed unless a keep rule protects it.
 
-The failure appears only in minified builds, as a missing class or method at the moment the bridge calls it. Chapter 5 covers keep rules and the mapping file that turns obfuscated stack traces back into names.
+The failure appears only in minified builds, as a missing class or method at the moment the bridge calls it. [[#gradle-r8-symbols]] covers keep rules and the mapping file that turns obfuscated stack traces back into names.
 
 ## Strategy {#strategy}
 = strategy pattern | strategies
