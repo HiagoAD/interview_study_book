@@ -17,6 +17,20 @@ Application Not Responding: Android's verdict that an app's UI thread has stoppe
 
 In a Unity game the UI thread is Android's, not the thread that runs `Update`, so a frozen game loop becomes an ANR when the UI thread ends up waiting for it. [[#android-callbacks]] shows one way that happens, and [[#android-failure-evidence]] where the evidence is.
 
+## App extension {#app-extension}
+= app extensions
+
+A separate bundle inside an iOS app that the system runs in a process of its own, to extend the system on the app's behalf: a notification service extension that edits a push notification before it appears, a widget, a share extension.
+
+An extension has its own target, `Info.plist`, entitlements and signature, and the app target embeds it. Unity's Xcode export has no such target, so a post-processor adds one; [[#ios-runtime-model]] shows where it fits among the targets that Unity writes.
+
+## ARC {#arc}
+= Automatic Reference Counting
+
+Automatic Reference Counting: the Objective-C compiler inserts the retain and release calls that keep an object alive while a strong reference to it exists, and frees the object when the last one goes. Unity's Xcode export compiles plugin files with it.
+
+ARC counts Objective-C references and nothing else. A pointer borrowed from an object, such as the one `UTF8String` returns, lives no longer than the object, and an object whose one reference is an `IntPtr` held by C# needs a retain of its own, taken with `CFBridgingRetain` and given back with `CFBridgingRelease`. [[#ios-frameworks]] covers both.
+
 ## Assembly definition {#assembly-definition}
 = asmdef | assembly definitions
 
@@ -31,12 +45,33 @@ A URL that opens an app at a particular place instead of a web page. It can use 
 
 Unity reports the link that launched the app in `Application.absoluteURL` and raises `Application.deepLinkActivated` for links that arrive while it runs, so code that subscribes after start-up reads the property for the launch link. Anyone can send a link, which makes it untrusted input: it may choose a screen, and it grants nothing without the server. Chapter 4 covers verified links on both platforms.
 
+## Dispatch queue {#dispatch-queue}
+= dispatch queues | main queue | Grand Central Dispatch | GCD
+
+A queue of blocks that Grand Central Dispatch, Apple's library for concurrent work, takes in order and runs on threads it manages, or, for the main queue, on the main thread. iOS frameworks and SDKs deliver many of their callbacks on queues of their own.
+
+`dispatch_async(dispatch_get_main_queue(), block)` posts work to the main thread and returns at once, which is how an iOS bridge moves UI work to the thread that UIKit requires; in a Unity game, a block posted there runs between two frames of the player loop. A callback that arrives on another queue runs C# on that queue's thread, as [[#ios-callbacks]] shows.
+
+## dSYM {#dsym}
+= dSYMs | debug symbol file
+
+The debug symbol file of one Apple binary: a bundle holding the information that turns the binary's addresses into function names, source files and lines. A binary and its dSYM share a build UUID, and a dSYM fits no build but its own.
+
+A Unity iOS release build produces one for the app and one for `UnityFramework`, which covers the game's C# as IL2CPP compiled it, and the Xcode archive keeps both. [[#ios-failure-evidence]] shows how to check a UUID and symbolicate with them, and chapter 11 archives them for each build.
+
 ## Edit Mode and Play Mode tests {#play-mode-tests}
 = Edit Mode tests | Unity Test Framework
 
 The two environments of Unity's Test Framework. Edit Mode tests run without entering Play Mode and suit rules that need no engine; Play Mode tests run with the engine playing, and can also be built into a player and run on a device.
 
 Neither runs the native half of a platform integration in the Editor, which is why the contract suite in [[#platform-testing]] has a device run. Unity 6.3 ships version 1.6 of the framework, and from Unity 6.2 on its guide is part of the Unity Manual.
+
+## Entitlements {#entitlements}
+= entitlement | capability | capabilities
+
+Key-value pairs in an app's code signature that grant it the use of a service or technology, such as push notifications, associated domains or Sign in with Apple. Xcode adds them through a target's capabilities and records them in an `.entitlements` file.
+
+In a Unity export they belong to the `Unity-iPhone` target, whatever target holds the code that uses them, and a post-processor adds them with `ProjectCapabilityManager`, as [[#ios-xcode-postprocess]] shows. The signing that chapter 6 covers has to agree with them.
 
 ## Gradle {#gradle}
 
@@ -55,7 +90,14 @@ The identity is the whole mechanism. A purchase grant is idempotent for its tran
 
 Unity's ahead-of-time scripting backend. It converts the game's compiled C# into C++, which the platform's compiler then builds into native code, and mobile release builds normally use it.
 
-Two consequences reach the platform boundary. Code has to exist when the build is made, so reflection over types that nothing references can work in the Editor and fail on a device, where [[managed code stripping]] may have removed them. And a C# exception becomes a C++ exception: the wrapper IL2CPP generates for a callback that native code calls has no handler, so an exception that escapes the callback unwinds into native frames. The generated C++ sits in the exported project, and reading it settles questions about marshaling that the documentation leaves open.
+Two consequences reach the platform boundary. Code has to exist when the build is made, so reflection over types that nothing references can work in the Editor and fail on a device, where [[managed code stripping]] may have removed them. And a C# exception becomes a C++ exception: the wrapper IL2CPP generates for a callback that native code calls has no handler, so an exception that escapes the callback unwinds into native frames. The generated C++ sits in the exported project, and reading it settles questions about marshaling that the documentation leaves open, as [[#ios-native-calls]] does.
+
+## Info.plist {#info-plist}
+= information property list
+
+The property list at the top of an Apple app bundle, holding the keys that iOS reads about the app: its identifier and version, its scene configuration, the URL schemes it handles, and the usage descriptions shown in permission prompts.
+
+Unity generates the app's `Info.plist` from Player Settings and updates it in place on an Append build, so a key that a plugin needs is set by a post-processor with `PlistDocument`, as [[#ios-xcode-postprocess]] shows. A missing usage description ends the app the first time it asks for the protected resource, which [[#ios-failure-evidence]] covers.
 
 ## JNI {#jni}
 = Java Native Interface
@@ -96,7 +138,7 @@ The pattern's usual risks are order, retention and reentrancy. Platform events a
 
 Platform invoke: calling a native function from C# through a method declared `extern` with `[DllImport]`. On iOS the library name is `__Internal`, and IL2CPP turns the declaration into a direct call to a C function compiled into the app.
 
-Arguments are marshaled on the way across: plain values pass as they are, strings are converted, and anything native code keeps after the call returns needs an ownership rule. The reverse direction, native code calling C#, goes through a function pointer to a static method marked `[MonoPInvokeCallback]`, and IL2CPP generates a wrapper that attaches the calling thread to the runtime. Chapter 3 works through both directions.
+Arguments are marshaled on the way across: plain values pass as they are, strings are converted, and anything native code keeps after the call returns needs an ownership rule. The reverse direction, native code calling C#, goes through a function pointer to a static method marked `[MonoPInvokeCallback]`, and IL2CPP generates a wrapper that attaches the calling thread to the runtime. [[#ios-native-calls]] and [[#ios-callbacks]] work through both directions.
 
 ## Push token {#push-token}
 = push tokens | device token | registration token
@@ -117,3 +159,9 @@ The failure appears only in minified builds, as a missing class or method at the
 One interchangeable rule behind a small interface, so the code that runs the rule does not know which version it holds. The choice is made elsewhere, usually where the object is built.
 
 At the platform boundary it holds a rule that differs between platforms inside a capability that is otherwise shared, such as how purchases are restored, with the implementation chosen in the composition root that [[#platform-composition]] describes. A strategy with a single implementation is an interface nobody needed yet.
+
+## TestFlight {#testflight}
+
+Apple's service for sending beta builds of an app to testers through App Store Connect. Testers install the builds with the TestFlight app, and their crash reports reach the developer whatever their device's sharing settings.
+
+The Crashes organizer in Xcode shows crash reports from TestFlight and App Store builds, with names where the build's dSYMs were uploaded with it, as [[#ios-failure-evidence]] describes. Chapter 10 covers release tracks.
