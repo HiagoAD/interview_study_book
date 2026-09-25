@@ -447,3 +447,11 @@ Codex (GPT-6 Sol, `xhigh`) gathered the evidence in 26 minutes and 313,903 token
 Options: correct option longest in 20% of 30 sets and shortest in 20%, medians 65.5 and 65, no word-list option; the detector found minimal signals. The outline was wrong about plain HTTP: a default Unity 6.3 project refuses it on both platforms, at Unity's own check.
 
 Next phase: a Sol evidence run and an Astra review did not fit in one allowance window; starting the review after the reset avoids the fallback.
+
+### Phase 27: Chapter 09, reliable networking
+
+Ran in a cloud container, out of order: the Mac was writing chapters 07 and 08, so chapter 9 names them in plain text and explains the 401 refresh and the idempotent methods in place. Wrote `09-reliable-networking.md` (5 sections, 10 concepts, 38 variants, the outline's ids) and the TLS glossary entry, and linked the Idempotence entry to the new section. `npm run check` gives the book 7 chapters, 37 sections, 75 concepts, 254 variants, 40 terms and 89 links, none unlinked; `questions --allow new-chapters --base 3e2e5c7` accepts this chapter alone.
+
+Without Codex, the Editor, the probe, Xcode or a device, the session gathered the evidence under rule A: 73 receipts, none failed, from Unity's source at 6000.3.11f1, the specifications' repositories, Android's and Apple's pages and a .NET 8 probe. The samples compiled against stubs. A teacher's read replaced the review and narrowed three claims; the detector then found only low vocabulary diversity.
+
+Options: correct longest in 21% of 38 sets, shortest in 18%, medians 61 and 60, no word-list option. Two of 5 new links return 200, and 3 hosts were blocked. Those links, Unity's reference pages and the no-brand search wait under “To check on the Mac” in the evidence file, beside the outline's errors, such as its 27 attempts.

@@ -450,7 +450,7 @@ Exercise: In airplane mode, go through three parts of your game, such as a purch
 - A normal answer, since HTTPS traffic passes the portal untouched
 > A portal intercepts the connection, and an intercepted HTTPS connection fails the certificate check with a host name mismatch. The request ends as a connection error, which the game treats as offline. A cleartext request, by contrast, can get the portal's own page. A portal that drops HTTPS traffic instead produces timeouts, and either way no answer comes from the server.
 
-?+ A development build talks to an `http://` test server over a café's Wi-Fi, whose captive portal the tester has not accepted. What can the build receive?
+?+ A development build that allows plain HTTP talks to an `http://` test server over a café's Wi-Fi, whose captive portal the tester has not accepted. What can the build receive?
 * The portal's own page, as a 200 with HTML
 - A certificate error, since the portal's certificate is wrong
 - Nothing at all, since portals intercept HTTPS alone
