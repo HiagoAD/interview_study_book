@@ -59,7 +59,10 @@ What Phase 27 checked the chapter’s claims against, and where the outline was 
 
 - “Its requests fail on resume” became: a suspended app runs no code, and the system may reclaim its sockets, so a request in flight can fail when the app resumes, with an unknown outcome.
 - What `UnityWebRequest.timeout` covers, and which `result` a timeout or an `Abort` gives, is native code and documentation that could not be read here. The chapter says only that the request has one timeout, set before sending, and decides cancellation by the owner's token.
-- The chapter does not state what a `UnityWebRequest` does with a captive portal's redirect.
+- The chapter does not state what a `UnityWebRequest` does with a captive portal's redirect, nor what `internetReachability` reads on a portal's network: on Android that depends on whether Unity's player checks `NET_CAPABILITY_VALIDATED`, which is native code. The reachability questions rest on the property's definition alone.
+- A 502 can come from a gateway that never reached its upstream, so the chapter says a gateway “may have forwarded” the request.
+- W3C Trace Context is called a specification, since its status page on w3.org could not be read.
+- A background `URLSession` keeps transfers going after the system terminates the app, and Apple's page adds that a user's force quit cancels them, so the chapter says “after the system terminates it”.
 - The header's status is stated as the repository shows it, with the date read.
 
 ## Where the outline fell short
@@ -81,5 +84,6 @@ What Phase 27 checked the chapter’s claims against, and where the outline was 
 - **The C# samples** against 6000.3's assemblies, with `UNITY_ANDROID` and `UNITY_IOS` defined, in the brief's C# harness.
 - **The draft's status**: whether a version after 06, or an RFC, exists, on the [datatracker](https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/). If it has become an RFC, the chapter's sentence on its status changes, and no question depends on it.
 - **The links the container could not fetch**, for `npm run guard -- links`: `https://www.rfc-editor.org/rfc/rfc9110.html#name-idempotent-methods`, `https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/` and `https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html`.
+- **`internetReachability` behind a captive portal** on an Android device, and whether Unity's player reads `NET_CAPABILITY_VALIDATED`. No question depends on it.
 - **A device check**, optional: a `UnityWebRequest` in flight when an iPhone locks and the app is suspended, to record what the request reports on resume.
 - **Unity's `HttpClient`**: whether a timeout under Mono and IL2CPP nests a `TimeoutException`. The chapter's code does not depend on it.

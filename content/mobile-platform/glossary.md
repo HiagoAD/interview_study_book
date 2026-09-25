@@ -145,7 +145,7 @@ Unity 6.3 ships Gradle 8.13 with its Android module, and the project exported fo
 
 A property of an operation whose repetition changes nothing further: applying it twice for the same identity leaves the same state as applying it once.
 
-The identity is the whole mechanism. A purchase grant is idempotent for its transaction id, and a request for the key the client sent with it; an operation with no stable identity cannot be idempotent, because nothing tells the second call that it is the second. Platforms redeliver events on purpose, so a grant that is not idempotent eventually grants twice, as [[#platform-events]] shows. Chapter 9 carries the idea over HTTP with idempotency keys.
+The identity is the whole mechanism. A purchase grant is idempotent for its transaction id, and a request for the key the client sent with it; an operation with no stable identity cannot be idempotent, because nothing tells the second call that it is the second. Platforms redeliver events on purpose, so a grant that is not idempotent eventually grants twice, as [[#platform-events]] shows. [[#network-idempotency]] carries the idea over HTTP with idempotency keys.
 
 ## IL2CPP {#il2cpp}
 
@@ -268,3 +268,10 @@ At the platform boundary it holds a rule that differs between platforms inside a
 Apple's service for sending beta builds of an app to testers through App Store Connect. Testers install the builds with the TestFlight app, and their crash reports reach the developer whatever their device's sharing settings.
 
 The Crashes organizer in Xcode shows crash reports from TestFlight and App Store builds, with names where the build's dSYMs were uploaded with it, as [[#ios-failure-evidence]] describes. Chapter 10 covers release tracks.
+
+## TLS {#tls}
+= Transport Layer Security
+
+Transport Layer Security: the protocol that encrypts HTTPS and proves the server's identity. In its handshake the server presents a certificate for its host name, and the client refuses the connection unless the certificate chains to an authority it trusts and names the host it asked for.
+
+That check is why nothing between the device and the server can answer in the server's name without the connection failing. A captive portal that intercepts a game's HTTPS request produces a certificate for the wrong host, and the request ends as a connection error, as [[#network-offline]] describes.
