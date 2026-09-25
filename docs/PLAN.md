@@ -437,3 +437,13 @@ Next phase: on the Mac, 6000.3's templates can settle what this chapter left to 
 ### Delegated evidence (after Phase 23)
 
 Asked for by the user on 2026-09-25, after Phase 22's pilot. **Delegated evidence**, under **Decisions: evidence**, makes the pilot the rule from Phase 24: Codex gathers the evidence on GPT-6 Sol at `xhigh` and reads the chapter blind on GPT-6 Astra at `xhigh`, the session writes, and a fallback covers a blocked Codex, whose models share one allowance. The settings follow published guidance the user asked for: Sol comes closest to Astra on long agentic work at a smaller share of the allowance, and reviews gain most from high effort. `docs/evidence/codex/` holds the two briefs as templates, their schemas, and the receipt checker Phase 22 used; the checker is Python for now, with a page cache outside the repo, and passes all 100 of Phase 22's receipts.
+
+### Phase 24: Chapter 06, iOS builds
+
+Wrote `content/mobile-platform/06-ios-builds.md` (4 sections, 8 concepts, 30 variants, the outline's ids) and four glossary entries: App Store Connect, App Transport Security, CocoaPods and Privacy manifest; four older entries now link the new sections. `npm run check` reports the book as 6 chapters, 32 sections, 65 concepts, 216 variants, 39 terms and 84 links with no unlinked entry; `questions --allow new-chapters --base 23425df` accepts this chapter alone; its 17 new links return 200; the no-brand search is empty. The probe's Xcode export archives unsigned, and exporting it needs a team this Mac lacks. Evidence and runs: [evidence/06-ios-builds.md](evidence/06-ios-builds.md).
+
+Codex (GPT-6 Sol, `xhigh`) gathered the evidence in 26 minutes and 313,903 tokens: 76 receipts, none failed on re-fetch, and the session's 78 more, from two batches of runs, passed too. The blind review (GPT-6 Astra, `xhigh`) hit the shared limit after a minute and 105,754 tokens, with the reset three hours off, so the session read the chapter as a teacher. That read caught a wrong correct answer: an unsigned archive records no team even with `DEVELOPMENT_TEAM` set, so the variant now names `teamID` in the export options.
+
+Options: correct option longest in 20% of 30 sets and shortest in 20%, medians 65.5 and 65, no word-list option; the detector found minimal signals. The outline was wrong about plain HTTP: a default Unity 6.3 project refuses it on both platforms, at Unity's own check.
+
+Next phase: a Sol evidence run and an Astra review did not fit in one allowance window; starting the review after the reset avoids the fallback.

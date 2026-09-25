@@ -45,6 +45,19 @@ A separate bundle inside an iOS app that the system runs in a process of its own
 
 An extension has its own target, `Info.plist`, entitlements and signature, and the app target embeds it. Unity's Xcode export has no such target, so a post-processor adds one; [[#ios-runtime-model]] shows where it fits among the targets that Unity writes.
 
+## App Store Connect {#app-store-connect}
+
+Apple's service for publishing apps. A team uploads builds to it, sends them to testers through [[TestFlight]], submits them for review and releases them on the App Store, and its API lets a pipeline do the same with a key instead of a signed-in account.
+
+[[#xcode-build-flow]] follows a build from Unity's export to an upload, and [[#xcode-signing-model]] shows `xcodebuild` using an API key to manage signing. Chapter 10 covers release tracks.
+
+## App Transport Security {#app-transport-security}
+= ATS
+
+The iOS policy that makes connections through the URL Loading System, such as `URLSession`, use HTTPS. An app declares exceptions under the `NSAppTransportSecurity` key of its [[Info.plist]]: for the whole app, for named domains, or for local networking.
+
+Unity's `UnityWebRequest` is built on `URLSession` on iOS, so the policy covers it, and Unity's “Allow downloads over HTTP” setting writes an exception for the whole app, as [[#xcode-build-settings]] shows.
+
 ## ARC {#arc}
 = Automatic Reference Counting
 
@@ -64,6 +77,13 @@ Two defaults decide whether that check has teeth. The predefined `Assembly-CShar
 Google's command-line tool for app bundles. It builds them, and it turns a bundle into the APKs that Google Play would generate for each device, so that a bundle can be installed and tested before it is uploaded.
 
 `build-apks` makes a set of APKs from a bundle, signed with the keystore it is given or with the debug key; `install-apks` installs the ones a connected phone needs; `dump manifest` prints the manifest a bundle carries. The APKs it makes reproduce Google Play's splits and not its signature, as [[#gradle-packaging-signing]] explains.
+
+## CocoaPods {#cocoapods}
+= pods | Podfile
+
+A dependency manager for Apple platforms. A project lists its pods in a `Podfile`; `pod install` resolves their versions from a spec repository, records them in `Podfile.lock`, and builds them through a Pods project that a workspace joins to the app's own project.
+
+In a Unity project, [[EDM4U]] writes the Podfile from the SDKs' dependency files and runs `pod install`. [[#xcode-cocoapods]] covers the workspace, the conflicts the resolver reports, and the plan to make CocoaPods' central spec repository read-only.
 
 ## Custom Tabs {#custom-tabs}
 = Custom Tab | Auth Tab
@@ -91,14 +111,14 @@ A queue of blocks that Grand Central Dispatch, Apple's library for concurrent wo
 
 The debug symbol file of one Apple binary: a bundle holding the information that turns the binary's addresses into function names, source files and lines. A binary and its dSYM share a build UUID, and a dSYM fits no build but its own.
 
-A Unity iOS release build produces one for the app and one for `UnityFramework`, which covers the game's C# as IL2CPP compiled it, and the Xcode archive keeps both. [[#ios-failure-evidence]] shows how to check a UUID and symbolicate with them, and chapter 11 archives them for each build.
+A Unity iOS release build produces one for the app and one for `UnityFramework`, which covers the game's C# as IL2CPP compiled it, and the Xcode archive keeps both, as [[#xcode-build-flow]] shows. [[#ios-failure-evidence]] shows how to check a UUID and symbolicate with them, and chapter 11 archives them for each build.
 
 ## EDM4U {#edm4u}
 = External Dependency Manager for Unity | Android Resolver
 
 Google's External Dependency Manager for Unity: a Unity package that reads the `*Dependencies.xml` files that SDKs ship in Editor folders and turns them into Android dependencies, and into CocoaPods for iOS.
 
-Its Android Resolver either resolves the dependencies itself and copies the libraries into `Assets/Plugins/Android`, or writes them into the custom main Gradle template for the build to resolve. Mixing the two modes duplicates classes, as [[#gradle-dependencies]] shows. Chapter 6 covers its iOS side.
+Its Android Resolver either resolves the dependencies itself and copies the libraries into `Assets/Plugins/Android`, or writes them into the custom main Gradle template for the build to resolve. Mixing the two modes duplicates classes, as [[#gradle-dependencies]] shows. Its iOS Resolver writes a Podfile into the Xcode project and runs `pod install`, as [[#xcode-cocoapods]] shows.
 
 ## Edit Mode and Play Mode tests {#play-mode-tests}
 = Edit Mode tests | Unity Test Framework
@@ -112,7 +132,7 @@ Neither runs the native half of a platform integration in the Editor, which is w
 
 Key-value pairs in an app's code signature that grant it the use of a service or technology, such as push notifications, associated domains or Sign in with Apple. Xcode adds them through a target's capabilities and records them in an `.entitlements` file.
 
-In a Unity export they belong to the `Unity-iPhone` target, whatever target holds the code that uses them, and a post-processor adds them with `ProjectCapabilityManager`, as [[#ios-xcode-postprocess]] shows. The signing that chapter 6 covers has to agree with them.
+In a Unity export they belong to the `Unity-iPhone` target, whatever target holds the code that uses them, and a post-processor adds them with `ProjectCapabilityManager`, as [[#ios-xcode-postprocess]] shows. Each one that the app claims has to be on its provisioning profile's allowlist, as [[#xcode-signing-model]] shows.
 
 ## Gradle {#gradle}
 
@@ -202,12 +222,19 @@ Google Play's arrangement in which Google keeps the app signing key and signs th
 
 Anything that identifies the installed app by its certificate, such as the fingerprint in an App Links `assetlinks.json`, uses the app signing key's, which Play Console shows. [[#os-deep-links]] depends on it, and chapter 5 covers the two keys.
 
+## Privacy manifest {#privacy-manifest}
+= PrivacyInfo.xcprivacy | privacy manifests
+
+A property list named `PrivacyInfo.xcprivacy` in which an app or an SDK declares the data it collects, whether it tracks, the domains it tracks through, and its reasons for calling the APIs that Apple lists as required-reason APIs.
+
+Each binary declares for itself: an SDK ships its own manifest inside its framework or bundle, and Xcode's privacy report aggregates the app's and the SDKs' manifests. Unity 6.3 puts one for the engine in `UnityFramework`, as [[#xcode-build-settings]] shows.
+
 ## Provisioning profile {#provisioning-profile}
 = provisioning profiles
 
 A file from Apple, embedded in a signed iOS app, that ties the app's identifier to a team, the certificates allowed to sign it and the entitlements it may use, and for development builds the devices it may run on.
 
-Xcode derives some entitlements from it, such as `aps-environment`, which decides whether the app's push token belongs to the sandbox or the production environment of APNs, as [[#os-notifications]] shows. Chapter 6 covers profiles and signing.
+Xcode derives some entitlements from it, such as `aps-environment`, which decides whether the app's push token belongs to the sandbox or the production environment of APNs, as [[#os-notifications]] shows. [[#xcode-signing-model]] covers profiles, certificates and their expiry.
 
 ## Push token {#push-token}
 = push tokens | device token | registration token
