@@ -403,6 +403,14 @@ Asked for by the user on 2026-09-25. Phases 1 to 17, with their feature sections
 
 Next phase: `UnityScene` in 6000.3.11f1 implements none of the scene delegate's URL methods, and Apple's TN3187 says an app built with the SDK after iOS 26 must use scenes, so cold links on iOS may be lost as well as warm ones. If they are, chapter 01's `platform-early-event` explanation needs a correction, and that needs the user's consent.
 
+### Phase 22: Chapter 04, lifecycle, permissions, links, notifications, and sign-in
+
+Wrote `content/mobile-platform/04-os-integration.md` (5 sections, 10 concepts, 34 variants, the outline's ids) and seven glossary entries: Android Keystore, Custom Tabs, Keychain, OAuth, Play App Signing, Provisioning profile and Scene delegate. Phase 23 was committed first, so the checks run against `69781db`: `questions --allow new-chapters` accepts this chapter alone, its 23 new links return 200, and `check` reports the book as 5 chapters, 28 sections, 57 concepts, 35 terms and 71 links with no unlinked entry. Options: correct longest in 24% of 34 sets, shortest in 18%, medians 74.5 and 74, no word-list option. Evidence and the one run: [evidence/04-os-integration.md](evidence/04-os-integration.md).
+
+Two deviations, piloted at the user's request. A: evidence cheapest first, with a run only where documentation and shipped files were silent. B: Codex (GPT-6 Astra, `xhigh`) gathered the evidence in 42 minutes and 276,965 tokens, 100 receipts for 97 claims, and none was misquoted when a script re-fetched them (6 first-pass failures: 5 in the checker's normalization, 1 a Simulator command its sandbox could not run). That run spent the plan's shared Astra and Sol allowance, so the blind review waited an hour, then took 9.5 minutes and 273,809 tokens and found 8 problems, all of which held and are fixed.
+
+The run: Unity 6000.3.11f1 loses custom-scheme links on iOS, cold and warm, since `UnityScene` implements no scene URL method; the chapter prints a category that restores both. By the user's choice, chapter 01's `platform-early-event` stays as it is.
+
 ### Phase 23: Chapter 05, Android builds
 
 Wrote `content/mobile-platform/05-android-builds.md` (5 sections, 11 concepts, 39 variants, the outline's ids) and four glossary entries: AAB, Android Gradle Plugin, bundletool and EDM4U; the Gradle, Maven coordinates and R8 entries now link the new sections. `npm run check` reports the book as 4 chapters, 23 sections, 47 concepts, 152 variants, 28 terms and 54 links with no unlinked entry; `questions --allow new-chapters --base c3597b8` accepts this chapter alone; the 18 external links return 200 with no redirect; the no-brand search is empty.

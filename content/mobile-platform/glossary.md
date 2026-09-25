@@ -24,6 +24,13 @@ The Gradle plugin that builds Android apps and libraries. It compiles Java and K
 
 Its version is chosen together with those of Gradle, the JDK and the Android SDK, and a Unity version fixes all of them: the project that Unity 6.3 writes names version 8.10.0. An AAR can state the lowest plugin version it works with, which is how an SDK update can call for a newer Unity. [[#gradle-project]] shows where the version is set.
 
+## Android Keystore {#android-keystore}
+= Keystore
+
+Android's store for cryptographic keys, which keeps their key material out of the app's process: the app asks the Keystore to encrypt, decrypt or sign with a key that it has no way to export.
+
+It holds keys rather than arbitrary data, so an app that must keep a secret, such as a pending sign-in attempt, encrypts it with a Keystore key and stores the result in its own files. [[#os-auth-callbacks]] uses it for the state and verifier of a sign-in that may outlive the process.
+
 ## ANR {#anr}
 = Application Not Responding | ANRs
 
@@ -58,12 +65,19 @@ Google's command-line tool for app bundles. It builds them, and it turns a bundl
 
 `build-apks` makes a set of APKs from a bundle, signed with the keystore it is given or with the debug key; `install-apks` installs the ones a connected phone needs; `dump manifest` prints the manifest a bundle carries. The APKs it makes reproduce Google Play's splits and not its signature, as [[#gradle-packaging-signing]] explains.
 
+## Custom Tabs {#custom-tabs}
+= Custom Tab | Auth Tab
+
+An Android feature that shows a web page in a tab of the player's browser, over the app, instead of in a web view that the app owns. The page runs in the browser, with its cookies and signed-in sessions, and the app has no access to what the player types.
+
+That is why OAuth for native apps uses it. Auth Tab is a variant made for authentication that returns the result, or a cancellation, to the app. [[#os-auth-callbacks]] shows a sign-in that runs through one.
+
 ## Deep link {#deep-link}
 = deep links
 
 A URL that opens an app at a particular place instead of a web page. It can use a custom scheme, which any app can claim, or a verified https link that the platform has confirmed belongs to the app.
 
-Unity reports the link that launched the app in `Application.absoluteURL` and raises `Application.deepLinkActivated` for links that arrive while it runs, so code that subscribes after start-up reads the property for the launch link. Anyone can send a link, which makes it untrusted input: it may choose a screen, and it grants nothing without the server. Chapter 4 covers verified links on both platforms.
+Unity reports the link that launched the app in `Application.absoluteURL` and raises `Application.deepLinkActivated` for links that arrive while it runs, so code that subscribes after start-up reads the property for the launch link. Anyone can send a link, which makes it untrusted input: it may choose a screen, and it grants nothing without the server. [[#os-deep-links]] covers verified links on both platforms, and a gap in Unity 6000.3 through which iOS links reach neither.
 
 ## Dispatch queue {#dispatch-queue}
 = dispatch queues | main queue | Grand Central Dispatch | GCD
@@ -133,6 +147,13 @@ The Java Native Interface, through which native code and Java call each other in
 
 Each crossing looks classes and methods up by name and signature at run time, which is why a renamed Java method still compiles in C# and fails when it is called, and why [[R8]] can remove Java code that C# reaches by name. Objects that cross hold references someone has to release, and a thread Unity did not create has to be attached to the Java VM before it can make a call. [[#android-java-calls]] covers `AndroidJavaObject` and `AndroidJavaClass` on the C# side, and [[#android-callbacks]] covers `AndroidJavaProxy`.
 
+## Keychain {#keychain}
+= iOS Keychain
+
+The encrypted database in which iOS apps keep small secrets, such as passwords, tokens and keys, through Keychain Services.
+
+Each item has an accessibility setting that says when it can be read, for example while the device is unlocked. [[#os-auth-callbacks]] keeps a pending sign-in attempt there, so that it survives the app's process.
+
 ## Logcat {#logcat}
 
 Android's system log, and the tool that reads it. Each process writes to it, Unity included: its own lines and the output of C#'s `Debug.Log` carry the tag `Unity`, and crash reports go to a separate crash buffer.
@@ -153,6 +174,13 @@ The name of a library in a Maven repository, written `group:artifact:version`, s
 
 Declaring a dependency by its coordinates lets Gradle fetch what the library needs and settle version conflicts, by default by choosing the highest version requested. [[#android-plugin-forms]] contrasts it with an AAR copied into the project, and [[#gradle-dependencies]] covers resolution.
 
+## OAuth {#oauth}
+= OAuth 2.0
+
+The authorization framework of RFC 6749, in which a client obtains tokens from an authorization server, usually after the user signs in on the server's pages and approves.
+
+A native app uses the authorization code flow with PKCE through an external browser, as RFC 8252 sets out, and holds no client secret. [[#os-auth-callbacks]] covers the flow and its callbacks, and chapter 8 the session that follows it.
+
 ## Observer {#observer}
 = observer pattern | observers
 
@@ -167,18 +195,39 @@ Platform invoke: calling a native function from C# through a method declared `ex
 
 Arguments are marshaled on the way across: plain values pass as they are, strings are converted, and anything native code keeps after the call returns needs an ownership rule. The reverse direction, native code calling C#, goes through a function pointer to a static method marked `[MonoPInvokeCallback]`, and IL2CPP generates a wrapper that attaches the calling thread to the runtime. [[#ios-native-calls]] and [[#ios-callbacks]] work through both directions.
 
+## Play App Signing {#play-app-signing}
+= app signing key | upload key
+
+Google Play's arrangement in which Google keeps the app signing key and signs the app that players install with it, while the team signs what it uploads with a separate upload key.
+
+Anything that identifies the installed app by its certificate, such as the fingerprint in an App Links `assetlinks.json`, uses the app signing key's, which Play Console shows. [[#os-deep-links]] depends on it, and chapter 5 covers the two keys.
+
+## Provisioning profile {#provisioning-profile}
+= provisioning profiles
+
+A file from Apple, embedded in a signed iOS app, that ties the app's identifier to a team, the certificates allowed to sign it and the entitlements it may use, and for development builds the devices it may run on.
+
+Xcode derives some entitlements from it, such as `aps-environment`, which decides whether the app's push token belongs to the sandbox or the production environment of APNs, as [[#os-notifications]] shows. Chapter 6 covers profiles and signing.
+
 ## Push token {#push-token}
 = push tokens | device token | registration token
 
 The identifier a push service issues to one app on one device, which the backend needs to send that device a notification. The platform can replace it, so the client sends it to the backend again whenever it changes.
 
-Android apps receive a registration token from Firebase Cloud Messaging, and iOS apps receive a device token from the Apple Push Notification service; the two are separate services with separate tokens. [[#platform-events]] treats the current token as state the boundary keeps for late subscribers, and chapter 4 covers when tokens change and what the client does at logout.
+Android apps receive a registration token from Firebase Cloud Messaging, and iOS apps receive a device token from the Apple Push Notification service; the two are separate services with separate tokens. [[#platform-events]] treats the current token as state the boundary keeps for late subscribers, and [[#os-notifications]] covers when tokens change and what the client does at sign-out.
 
 ## R8 {#r8}
 
 The Android build tool that shrinks, optimizes and obfuscates Java and Kotlin code, usually in release builds. It removes what nothing in the app references and shortens names, so Java code that C# reaches by name through JNI can be removed or renamed unless a keep rule protects it.
 
 The failure appears only in minified builds, as a missing class or method at the moment the bridge calls it. [[#gradle-r8-symbols]] covers keep rules and the mapping file that turns obfuscated stack traces back into names.
+
+## Scene delegate {#scene-delegate}
+= scene delegates | UISceneDelegate
+
+The object that receives the events of a UIKit scene: connecting, becoming active, resigning active, entering the background, and the links and user activities meant for it.
+
+An app that declares a scene manifest in its `Info.plist` gets these for each scene, and its application delegate no longer receives them, nor the launch URL in its launch options. Unity 6.3 declares `UnityScene` as the scene delegate, which forwards the lifecycle to `UnityAppController` and, in 6000.3.11f1, not the links; [[#os-deep-links]] shows the gap and a category that closes it.
 
 ## Strategy {#strategy}
 = strategy pattern | strategies
