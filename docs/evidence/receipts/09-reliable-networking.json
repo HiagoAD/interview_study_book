@@ -1,0 +1,1234 @@
+{
+ "claims": [
+  {
+   "id": "t-uwr-timeout-seconds",
+   "section": "network-timeouts",
+   "claim": "UnityWebRequest.timeout is an int in whole seconds, stored as milliseconds.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/src/ucr/Modules/UnityWebRequest/Public/UnityWebRequest.bindings.cs",
+    "line": 630,
+    "command": null,
+    "log": null
+   },
+   "quote": "UnityWebRequestError ret = SetTimeoutMsec(value * 1000);",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-uwr-timeout-fixed",
+   "section": "network-timeouts",
+   "claim": "A sent UnityWebRequest refuses a new timeout, so each attempt is configured before it is sent.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/src/ucr/Modules/UnityWebRequest/Public/UnityWebRequest.bindings.cs",
+    "line": 627,
+    "command": null,
+    "log": null
+   },
+   "quote": "throw new InvalidOperationException(\"UnityWebRequest has already been sent; cannot modify the timeout\");",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-uwr-one-timeout",
+   "section": "network-timeouts",
+   "claim": "UnityWebRequest exposes one timeout property and no separate connection timeout.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "grep -n -i \"timeout\" Modules/UnityWebRequest/Public/UnityWebRequest.bindings.cs (UnityCsReference at 6000.3.11f1)",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/logs/uwr-timeout-grep.log"
+   },
+   "quote": "621:        public int timeout",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-uwr-abort-threadsafe",
+   "section": "network-timeouts",
+   "claim": "UnityWebRequest.Abort is a native method marked thread-safe, so a cancellation callback may call it.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Modules/UnityWebRequest/Public/UnityWebRequest.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "[NativeMethod(IsThreadSafe = true)] public extern void Abort();",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-uwr-post-contenttype",
+   "section": "network-timeouts",
+   "claim": "UnityWebRequest.Post takes a body and a content type in 6000.3.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Modules/UnityWebRequest/Public/WebRequestExtensions.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static UnityWebRequest Post(string uri, string postData, string contentType)",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-destroy-token",
+   "section": "network-timeouts",
+   "claim": "MonoBehaviour.destroyCancellationToken exists and is tied to the object being destroyed.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Runtime/Export/Scripting/MonoBehaviour.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "DestroyCancellation token should be called atleast once before destroying the monobehaviour object",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-asyncop-awaiter",
+   "section": "network-timeouts",
+   "claim": "An AsyncOperation such as SendWebRequest's result can be awaited in Unity 6.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Runtime/Export/Scripting/Awaitable.AsyncOperation.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static Awaitable.Awaiter GetAwaiter(this AsyncOperation op)",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-httpclient-default",
+   "section": "network-timeouts",
+   "claim": "HttpClient.Timeout defaults to 100 seconds.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/src/apidocs/xml/System.Net.Http/HttpClient.xml",
+    "line": 3498,
+    "command": null,
+    "log": null
+   },
+   "quote": "The default value is 100,000 milliseconds (100 seconds).",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-httpclient-default-run",
+   "section": "network-timeouts",
+   "claim": "A new HttpClient on .NET 8 has a 100 s Timeout.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "default Timeout of a new HttpClient: 100 s",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-httpclient-shorter",
+   "section": "network-timeouts",
+   "claim": "HttpClient.Timeout and a caller token both apply, and the shorter wins.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/dotnet/dotnet-api-docs/144389736db763095655c8d38bc95f0baddf1d44/xml/System.Net.Http/HttpClient.xml",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Note that only the shorter of the two timeouts will apply.",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-httpclient-timeout-exception",
+   "section": "network-timeouts",
+   "claim": "On .NET 8 an HttpClient timeout throws a TaskCanceledException, an OperationCanceledException, that nests a TimeoutException, while the caller token stays uncancelled.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "1 timeout: TaskCanceledException, inner TimeoutException; is OperationCanceledException: True; caller token cancelled: False",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-httpclient-cancel-exception",
+   "section": "network-timeouts",
+   "claim": "Cancelling the caller token throws the same exception type, with the token cancelled.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "2 caller cancel: TaskCanceledException, inner TaskCanceledException; caller token cancelled: True",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-cancel-server-continues",
+   "section": "network-timeouts",
+   "claim": "The server finished the work of requests that the client had timed out or cancelled.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "2 server work completed after the client gave up: 2 of 2 requests",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-per-attempt-unbounded",
+   "section": "network-timeouts",
+   "claim": "Three attempts with a 1 s per-attempt timeout took 3 s: the per-attempt timeout does not bound the operation.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "3 three attempts with a 1 s Timeout each took 3.0 s",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-deadline-bounds",
+   "section": "network-timeouts",
+   "claim": "A 1.5 s deadline token across the same loop stopped it after two attempts at 1.5 s.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "4 with a 1.5 s deadline: 2 attempts, 1.5 s",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-504",
+   "section": "network-timeouts",
+   "claim": "A gateway that gives up on its upstream answers 504.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 504 (Gateway Timeout) status code indicates that the server, while acting as a gateway or proxy, did not receive a timely response from an upstream server it needed to access in order to complete the request.",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-ios-suspend",
+   "section": "network-timeouts",
+   "claim": "iOS gives applicationDidEnterBackground five seconds and then suspends the app.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/uikit/extending-your-app-s-background-execution-time",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "That method has five seconds to perform any tasks and return. Shortly after that method returns, the system puts your app into the suspended state.",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-ios-socket-reclaim",
+   "section": "network-timeouts",
+   "claim": "While an iOS app is suspended, the system may reclaim its sockets and close their connections.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/library/archive/technotes/tn2277/_index.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Furthermore, while the app is suspended the system may choose to reclaim resources out from underneath a network socket used by the app, thereby closing the network connection represented by that socket.",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-ios-background-session",
+   "section": "network-timeouts",
+   "claim": "A background URLSession configuration lets transfers continue while the app is suspended or terminated.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/foundation/urlsessionconfiguration/background(withidentifier:)",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "In iOS, this configuration makes it possible for transfers to continue even when the app itself is suspended or terminated.",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-android-downloadmanager",
+   "section": "network-timeouts",
+   "claim": "Android's DownloadManager handles long-running HTTP downloads as a system service.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/reference/android/app/DownloadManager",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The download manager is a system service that handles long-running HTTP downloads.",
+   "narrowed_to": null
+  },
+  {
+   "id": "t-android-uidt",
+   "section": "network-timeouts",
+   "claim": "Android offers user-initiated data transfer jobs for transfers the user started.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/develop/background-work/background-tasks/data-transfer-options",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If your app needs to transfer data to a remote server, you may want to use a user-initiated data transfer job.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-idempotent-methods",
+   "section": "network-retries",
+   "claim": "PUT, DELETE and the safe methods are idempotent; POST is not.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Of the request methods defined by this specification, PUT, DELETE, and safe request methods are idempotent.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-no-auto-retry-nonidempotent",
+   "section": "network-retries",
+   "claim": "A client should not retry a non-idempotent request unless it knows the request is idempotent or was never applied.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "A client SHOULD NOT automatically retry a request with a non-idempotent method unless it has some means to know that the request semantics are actually idempotent, regardless of the method, or some means to detect that the original request was never applied.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-connection-closed",
+   "section": "network-retries",
+   "claim": "An idempotent request can be repeated after the connection closes before a response.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Idempotent methods are distinguished because the request can be repeated automatically if a communication failure occurs before the client is able to read the server's response.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-408",
+   "section": "network-retries",
+   "claim": "408 means the server did not receive a complete request, and the client may repeat it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 408 (Request Timeout) status code indicates that the server did not receive a complete request message within the time that it was prepared to wait. If the client has an outstanding request in transit, it MAY repeat that request.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-502",
+   "section": "network-retries",
+   "claim": "502 comes from a gateway that got an invalid response from the server it forwarded to.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 502 (Bad Gateway) status code indicates that the server, while acting as a gateway or proxy, received an invalid response from an inbound server it accessed while attempting to fulfill the request.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-503",
+   "section": "network-retries",
+   "claim": "503 means the server cannot handle the request now, for overload or maintenance.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 503 (Service Unavailable) status code indicates that the server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-retry-after",
+   "section": "network-retries",
+   "claim": "Retry-After says how long to wait before the next request.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Servers send the \"Retry-After\" header field to indicate how long the user agent ought to wait before making a follow-up request.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-retry-after-forms",
+   "section": "network-retries",
+   "claim": "Retry-After holds an HTTP date or a number of seconds.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The Retry-After field value can be either an HTTP-date or a number of seconds to delay after receiving the response.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-429",
+   "section": "network-retries",
+   "claim": "429 is rate limiting, and may carry Retry-After.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc6585.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "MAY include a Retry-After header indicating how long to wait before making a new request.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-401",
+   "section": "network-retries",
+   "claim": "401 means the request was not applied for lack of valid credentials, which calls for a refresh rather than a retry.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 401 (Unauthorized) status code indicates that the request has not been applied because it lacks valid authentication credentials for the target resource.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-403",
+   "section": "network-retries",
+   "claim": "403 means authenticated and refused.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 403 (Forbidden) status code indicates that the server understood the request but refuses to fulfill it.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-409",
+   "section": "network-retries",
+   "claim": "409 is a conflict with the resource's current state.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 409 (Conflict) status code indicates that the request could not be completed due to a conflict with the current state of the target resource.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-422",
+   "section": "network-retries",
+   "claim": "422 means the server understood the content and could not process it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "and the syntax of the request content is correct, but it was unable to process the contained instructions.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-first-book-backoff",
+   "section": "network-retries",
+   "claim": "The first book, chapter 13, teaches capped exponential backoff with full jitter and a deadline.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "content/unity-engineering/13-liveops-and-releases.md",
+    "line": 267,
+    "command": null,
+    "log": null
+   },
+   "quote": "A concrete schedule is easier to review than a description. Exponential backoff with full jitter, capped, looks like this:",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-first-book-deadline",
+   "section": "network-retries",
+   "claim": "The first book gives the retry sequence a deadline as well as a cap.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "content/unity-engineering/13-liveops-and-releases.md",
+    "line": 280,
+    "command": null,
+    "log": null
+   },
+   "quote": "Give the whole sequence a deadline as well as a cap, since an operation that retries forever is a different failure wearing the costume of resilience.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-throttling",
+   "section": "network-retries",
+   "claim": "Retry throttling that stops retries when failures pass a threshold is used in practice.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/grpc/proposal/6342be729b96478a2897ceb208a8cddcd832a17b/A6-client-retries.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "gRPC prevents server overload due to retries and hedged RPCs by disabling these policies when the client’s ratio of failures to successes passes a certain threshold.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-draft-status",
+   "section": "network-idempotency",
+   "claim": "The Idempotency-Key header is an Internet-Draft of the IETF HTTPAPI working group; the repository's latest change, on 2025-02-26, followed version 06.",
+   "verdict": "narrowed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "git -C idempotency log -1 --format=\"%H %ci %s\" (github.com/ietf-wg-httpapi/idempotency, main)",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/logs/idem-gitlog.log"
+   },
+   "quote": "dab060c553677a70c73c2fe8b872473e7f0a793b 2025-02-26 13:28:03 -0800 draft 06, incorporated pr",
+   "narrowed_to": "The repository shows version 06 as the latest; whether a later version or an RFC exists is for the Mac to check on the datatracker."
+  },
+  {
+   "id": "i-draft-is-id",
+   "section": "network-idempotency",
+   "claim": "The repository calls the document an Internet-Draft.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/README.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Internet-Draft, \"The Idempotency-Key HTTP Header Field\".",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-purpose",
+   "section": "network-idempotency",
+   "claim": "The header makes non-idempotent methods such as POST fault-tolerant.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The HTTP Idempotency-Key request header field can be used to make non-idempotent HTTP methods such as `POST` or `PATCH` fault-tolerant.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-problem",
+   "section": "network-idempotency",
+   "claim": "A timed-out POST leaves the client uncertain whether the server applied it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Consider a scenario where the client sent a `POST` request to the server, but the request timed out. The client is left uncertain about the status of the resource.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-unique",
+   "section": "network-idempotency",
+   "claim": "A key is unique and is never reused with a different payload.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The idempotency key MUST be unique and MUST NOT be reused with another request with a different request payload.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-uuid",
+   "section": "network-idempotency",
+   "claim": "A UUID or similar random identifier is recommended as the key.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "It is RECOMMENDED that a UUID {{!RFC4122}} or a similar random identifier be used as an idempotency key.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-syntax",
+   "section": "network-idempotency",
+   "claim": "The header value is a Structured Field String, so it is sent in double quotes.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "is an Item Structured Header {{!RFC8941}}. Its value MUST be a String (Section 3.3.3 of {{!RFC8941}}).",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-expiry",
+   "section": "network-idempotency",
+   "claim": "The server may expire keys and should publish its expiration policy.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The resource MAY require time based idempotency keys to be able to purge or delete a key upon its expiry. The resource SHOULD define such expiration policy and publish it in the documentation.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-retry-after-complete",
+   "section": "network-idempotency",
+   "claim": "A retry after completion gets the recorded result, success or error.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The request was retried after the original request completed. The resource SHOULD respond with the result of the previously completed operation, success or an error.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-concurrent",
+   "section": "network-idempotency",
+   "claim": "A retry while the original is in flight gets a conflict error.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The request was retried before the original request completed. The resource SHOULD respond with a resource conflict error.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-422",
+   "section": "network-idempotency",
+   "claim": "A key reused with a different payload gets 422.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If there is an attempt to reuse an idempotency key with a different request payload, the resource SHOULD reply with a HTTP `422` status code with body containing a link pointing to relevant documentation.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-409",
+   "section": "network-idempotency",
+   "claim": "A retry while the original is still processing gets 409.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If the request is retried, while the original request is still being processed, the resource SHOULD reply with an HTTP `409` status code with body containing problem description.",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-400",
+   "section": "network-idempotency",
+   "claim": "A missing key where the operation requires one gets 400.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If the `Idempotency-Key` request header is missing for a documented idempotent operation requiring this header, the resource SHOULD reply with an HTTP `400` status code",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-409-no-correction",
+   "section": "network-idempotency",
+   "claim": "After 409 the client retries without changing the request.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/ietf-wg-httpapi/idempotency/dab060c553677a70c73c2fe8b872473e7f0a793b/draft-ietf-httpapi-idempotency-key-header.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Clients MUST correct the requests (with the exception of 409 where no correction is required) before performing a retry operation",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-probe-same-key",
+   "section": "network-idempotency",
+   "claim": "Against a fake server that committed and dropped the response, a retry with the same key returned the recorded result and one write was applied.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "5 same key attempt 2: 200 {\"granted\":1} 5 writes applied on the server so far: 1",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-probe-new-key",
+   "section": "network-idempotency",
+   "claim": "A retry with a new key made the server apply a second write.",
+   "verdict": "confirmed",
+   "evidence_kind": "run",
+   "source": {
+    "url": null,
+    "file": null,
+    "line": null,
+    "command": "cd /tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe && dotnet run -c Release",
+    "log": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe/run.log"
+   },
+   "quote": "5 new key attempt 2: 200 {\"granted\":3} 5 writes applied on the server so far: 3",
+   "narrowed_to": null
+  },
+  {
+   "id": "i-first-book-pending",
+   "section": "network-idempotency",
+   "claim": "The first book saves the pending claim with its identity before sending.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "content/unity-engineering/03-missions-and-rewards.md",
+    "line": 165,
+    "command": null,
+    "log": null
+   },
+   "quote": "Step 2 before step 3 is the whole point.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-reachability-source",
+   "section": "network-offline",
+   "claim": "internetReachability returns the type of reachability, a route kind.",
+   "verdict": "narrowed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Runtime/Export/Application/Application.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Returns the type of Internet reachability currently possible on the device.",
+   "narrowed_to": "The source comment gives the reference summary; the reference's warning about actual connectivity was not reachable and is listed for the Mac."
+  },
+  {
+   "id": "o-reachability-enum",
+   "section": "network-offline",
+   "claim": "NetworkReachability names a carrier route and a Wi-Fi or cable route.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Runtime/Export/Application/Application.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "// Network is reachable via carrier data network ReachableViaCarrierDataNetwork = 1, // Network is reachable via WiFi or cable",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-android-internet",
+   "section": "network-offline",
+   "claim": "Android's INTERNET capability is about setup, not reaching servers, and a captive portal network has it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/develop/connectivity/network-ops/reading-network-state",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "This is about setup and not actual ability to reach public servers. For example, a network can be set up to access the internet but be subject to a captive portal.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-android-validated",
+   "section": "network-offline",
+   "claim": "VALIDATED means the system probed and found access; a network behind a captive portal lacks it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/develop/connectivity/network-ops/reading-network-state",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "A network behind a captive portal or a network that doesn't provide domain name resolution doesn't have this capability.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-android-validated-loss",
+   "section": "network-offline",
+   "claim": "A validated network can still lose connectivity.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/develop/connectivity/network-ops/reading-network-state",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "although a validated network can still, in principle, be subject to IP-based filtering or suffer sudden losses of connectivity due to issues such as poor signal.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-android-portal",
+   "section": "network-offline",
+   "claim": "Android notifies the user of a captive portal and marks the network INTERNET and CAPTIVE_PORTAL but not VALIDATED.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/develop/connectivity/network-ops/reading-network-state",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "When the system detects a captive portal, it shows a notification inviting the user to log in. While this is ongoing, the network has the NET_CAPABILITY_INTERNET and NET_CAPABILITY_CAPTIVE_PORTAL capabilities but not the NET_CAPABILITY_VALIDATED capability.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-nwpath-satisfied",
+   "section": "network-offline",
+   "claim": "On iOS, a satisfied network path means connections can be made, not that a server answers.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/network/nwpath/status-swift.enum/satisfied",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The path is available to establish connections and send data.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-portal-forge",
+   "section": "network-offline",
+   "claim": "Captive portals forge DNS or HTTP responses, and some attempt to intercept HTTPS.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/capport-wg/architecture/471d2f961ab290885a94c95bdfcc39bb894b22f3/draft-ietf-capport-architecture.xml",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Current captive portal solutions typically implement some variations of forging DNS or HTTP responses. Some attempt man-in-the-middle (MITM) proxy of HTTPS in order to forge reponses.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-portal-tls-mismatch",
+   "section": "network-offline",
+   "claim": "An intercepted TLS connection to a portal fails with a host name mismatch.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/capport-wg/architecture/471d2f961ab290885a94c95bdfcc39bb894b22f3/draft-ietf-capport-architecture.xml",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "This check is typically not secured with TLS, as a network with a captive portal may intercept the connection, leading to a host name mismatch.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-portal-breaks-apps",
+   "section": "network-offline",
+   "claim": "Portals work as intended only with browsers and break other applications.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/capport-wg/architecture/471d2f961ab290885a94c95bdfcc39bb894b22f3/draft-ietf-capport-architecture.xml",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Current captive portal solutions that work by affecting DNS or HTTP generally only function as intended with browsers, breaking other applications using those protocols; applications using other protocols are not alerted that the network is a captive portal.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-if-match",
+   "section": "network-offline",
+   "claim": "If-Match guards a state-changing request against a lost update.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If-Match is most often used with state-changing methods (e.g., POST, PUT, DELETE) to prevent accidental overwrites when multiple user agents might be acting in parallel on the same resource (i.e., to prevent the \"lost update\" problem).",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-412",
+   "section": "network-offline",
+   "claim": "A failed precondition answers 412.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/httpwg/httpwg.github.io/03f35d852e7b64668ab08fda1a8076d6d44d17ae/specs/rfc9110.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The 412 (Precondition Failed) status code indicates that one or more conditions given in the request header fields evaluated to false when tested on the server",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-first-book-queue",
+   "section": "network-offline",
+   "claim": "The first book bounds the offline queue and defines its order.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "content/unity-engineering/13-liveops-and-releases.md",
+    "line": 263,
+    "command": null,
+    "log": null
+   },
+   "quote": "Limit offline queue size and define processing order.",
+   "narrowed_to": null
+  },
+  {
+   "id": "o-first-book-states",
+   "section": "network-offline",
+   "claim": "The first book gives a pending record the states pending, confirmed and rejected.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "content/unity-engineering/03-missions-and-rewards.md",
+    "line": 173,
+    "command": null,
+    "log": null
+   },
+   "quote": "| Pending | Saved locally, not yet confirmed | Send or resend the same claimId |",
+   "narrowed_to": null
+  },
+  {
+   "id": "l-traceparent",
+   "section": "network-observability",
+   "claim": "W3C Trace Context defines a traceparent header that identifies a request in a tracing system.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/w3c/trace-context/acab820be9db7b3433668baa5cdd43f57f4c4be0/spec/20-http_request_header_format.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The `traceparent` HTTP header field identifies the incoming request in a tracing system.",
+   "narrowed_to": null
+  },
+  {
+   "id": "l-owasp",
+   "section": "network-observability",
+   "claim": "Session identifiers, access tokens and sensitive personal data should be removed, masked, sanitized, hashed or encrypted rather than logged.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/OWASP/CheatSheetSeries/c04039adbe6f727a2198b3a3ea634fec98ac068a/cheatsheets/Logging_Cheat_Sheet.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Session identification values (consider replacing with a hashed value if needed to track session specific events) - Access tokens - Sensitive personal data and some forms of personally identifiable information (PII)",
+   "narrowed_to": null
+  },
+  {
+   "id": "l-owasp-intro",
+   "section": "network-observability",
+   "claim": "OWASP lists what should usually not be recorded directly in logs.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/OWASP/CheatSheetSeries/c04039adbe6f727a2198b3a3ea634fec98ac068a/cheatsheets/Logging_Cheat_Sheet.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The following should usually not be recorded directly in the logs, but instead should be removed, masked, sanitized, hashed, or encrypted:",
+   "narrowed_to": null
+  },
+  {
+   "id": "l-android-shared-logs",
+   "section": "network-observability",
+   "claim": "On Android, logs are shared with apps that hold READ_LOGS.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/privacy-and-security/security-tips",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "On Android, logs are a shared resource and are available to an application with the READ_LOGS permission.",
+   "narrowed_to": null
+  },
+  {
+   "id": "l-android-limit-logs",
+   "section": "network-observability",
+   "claim": "Android advises not logging personal data and limiting logs in production.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/privacy-and-security/security-tips",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "In addition to not logging PII, limit log usage in production apps.",
+   "narrowed_to": null
+  }
+ ],
+ "runs_needed": [
+  {
+   "claim_ids": [
+    "o-reachability-source"
+   ],
+   "why_docs_and_files_are_not_enough": "docs.unity3d.com was blocked in the container, and the source comment gives only the summary line, not the reference note on actual connectivity.",
+   "commands": [
+    "curl -s -H 'Accept-Language: en-US,en;q=0.9' https://docs.unity3d.com/6000.3/Documentation/ScriptReference/Application-internetReachability.html",
+    "grep -n -A6 'P:UnityEngine.Application.internetReachability' $E/Unity.app/Contents/Resources/Scripting/Managed/UnityEngine/UnityEngine.CoreModule.xml"
+   ],
+   "expected_observation": "The reference says the property describes the kind of network available and should not be used to determine actual connectivity."
+  },
+  {
+   "claim_ids": [
+    "t-uwr-timeout-seconds",
+    "t-uwr-one-timeout"
+   ],
+   "why_docs_and_files_are_not_enough": "What the timeout covers and which result a timeout or an Abort gives are native behavior and documentation that the container could not read.",
+   "commands": [
+    "curl -s -H 'Accept-Language: en-US,en;q=0.9' https://docs.unity3d.com/6000.3/Documentation/ScriptReference/Networking.UnityWebRequest-timeout.html",
+    "grep -n -A6 'UnityWebRequest.timeout\\|UnityWebRequest.Abort' $E/Unity.app/Contents/Resources/Scripting/Managed/UnityEngine/UnityEngine.UnityWebRequestModule.xml"
+   ],
+   "expected_observation": "The reference states that the request is aborted after timeout seconds; the chapter makes no claim beyond one timeout per request, set before sending."
+  },
+  {
+   "claim_ids": [
+    "i-draft-status"
+   ],
+   "why_docs_and_files_are_not_enough": "datatracker.ietf.org was blocked; the working group repository shows version 06 as its latest change.",
+   "commands": [
+    "curl -s -H 'Accept-Language: en-US,en;q=0.9' https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/"
+   ],
+   "expected_observation": "The datatracker names the latest version and whether the document is still an Internet-Draft; the chapter sentence on its status changes if it is now an RFC."
+  },
+  {
+   "claim_ids": [
+    "t-uwr-abort-threadsafe",
+    "t-uwr-post-contenttype",
+    "t-asyncop-awaiter"
+   ],
+   "why_docs_and_files_are_not_enough": "The samples were compiled against stubs copied from the reference source, not against the 6000.3 assemblies.",
+   "commands": [
+    "Compile the three csharp blocks of content/mobile-platform/09-reliable-networking.md in the brief C# harness against UnityEngine.CoreModule.dll and UnityEngine.UnityWebRequestModule.dll, with UNITY_ANDROID and then UNITY_IOS defined and warnings as errors"
+   ],
+   "expected_observation": "All three blocks compile with no warnings."
+  }
+ ],
+ "harnesses": [
+  {
+   "language": "C#",
+   "directory": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/harness",
+   "command": "dotnet build -c Release (net8.0, LangVersion 9.0, TreatWarningsAsErrors, UNITY_ANDROID defined; Stubs.cs copies the signatures of UnityWebRequest, AsyncOperation, Awaitable<T> and its builder from UnityCsReference 6000.3.11f1; Samples.cs holds the chapter's three csharp blocks)",
+   "verified_output": "Build succeeded. 0 Warning(s) 0 Error(s)"
+  },
+  {
+   "language": "C# (.NET 8 probe)",
+   "directory": "/tmp/claude-0/-home-user-interview-study-book/88731178-5824-541a-a83c-c1de2e4b7783/scratchpad/probe",
+   "command": "dotnet run -c Release (SDK 8.0.131; HttpListener server on 127.0.0.1:18089 and a raw socket server on 127.0.0.1:18090)",
+   "verified_output": "default Timeout of a new HttpClient: 100 s\n1 timeout: TaskCanceledException, inner TimeoutException; is OperationCanceledException: True; caller token cancelled: False; after 1.0 s\n2 caller cancel: TaskCanceledException, inner TaskCanceledException; caller token cancelled: True; after 0.5 s\n2 server work completed after the client gave up: 2 of 2 requests\n3 three attempts with a 1 s Timeout each took 3.0 s\n4 with a 1.5 s deadline: 2 attempts, 1.5 s\n5 same key attempt 1: HttpRequestException (Unknown)\n5 same key attempt 2: 200 {\"granted\":1}\n5 writes applied on the server so far: 1\n5 new key attempt 1: HttpRequestException (Unknown)\n5 new key attempt 2: 200 {\"granted\":3}\n5 writes applied on the server so far: 3"
+  }
+ ],
+ "notes": "Phase 27 ran in a cloud container without Codex, the Editor, the probe project, Xcode or a device, so the session gathered this evidence under rule A. docs.unity3d.com, rfc-editor.org, datatracker.ietf.org, learn.microsoft.com, w3.org and owasp.org were blocked; the receipts use UnityCsReference at the tag 6000.3.11f1 and the documents' own repositories on raw.githubusercontent.com, each pinned to a commit. Three receipts use local copies (source.file) because the checker's tag stripping removes text between a C# '<' and a later '>'; their raw URLs are in the evidence file. Receipts from the first book use repo-relative paths, so run the checker from the repo root. Logs and local copies under the scratchpad exist only in the container."
+}
