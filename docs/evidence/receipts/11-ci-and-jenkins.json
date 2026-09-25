@@ -1,0 +1,2385 @@
+{
+ "claims": [
+  {
+   "id": "s-projectversion",
+   "section": "ci-pipeline-shape",
+   "claim": "A Unity project records the Editor version it was saved with in ProjectSettings/ProjectVersion.txt, as m_EditorVersion.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/BoatAttack/master/ProjectSettings/ProjectVersion.txt",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "m_EditorVersion: 2020.3.23f1",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-hub-path",
+   "section": "ci-pipeline-shape",
+   "claim": "On a Mac, the Hub installs the 6000.3.11f1 Editor under /Applications/Unity/Hub/Editor/6000.3.11f1/.",
+   "verdict": "narrowed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": null,
+    "file": "/home/user/interview_study_book/docs/evidence/codex/brief.md",
+    "line": 9,
+    "command": null,
+    "log": null
+   },
+   "quote": "Reference version: Unity 6000.3.11f1, installed at `/Applications/Unity/Hub/Editor/6000.3.11f1/`",
+   "narrowed_to": "The project's brief records this path on the author's Mac; the chapter says the script assumes the Hub's install folder on macOS agents."
+  },
+  {
+   "id": "s-utf-batchmode",
+   "section": "ci-pipeline-shape",
+   "claim": "Tests run from the command line use -batchmode, which removes the need for manual input.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/Documentation~/reference-command-line.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Use the `-batchmode` option when running tests on the command line to remove the need for manual user inputs.",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-utf-example",
+   "section": "ci-pipeline-shape",
+   "claim": "The Test Framework's command line combines -runTests, -batchmode, -projectPath, -testResults and -testPlatform, and its example has no -quit.",
+   "verdict": "narrowed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/Documentation~/reference-command-line.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "-runTests -batchmode -projectPath PATH_TO_YOUR_PROJECT -testResults C:\\temp\\results.xml -testPlatform PS4",
+   "narrowed_to": "The Editor's own arguments (-nographics, -quit, -buildTarget, -executeMethod, -logFile) are named with a short purpose each; their 6000.3 page was not reachable and is listed for the Mac."
+  },
+  {
+   "id": "s-utf-runtests",
+   "section": "ci-pipeline-shape",
+   "claim": "-runTests runs the project's tests.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/Documentation~/reference-command-line.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Runs tests in the Project.",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-utf-platform",
+   "section": "ci-pipeline-shape",
+   "claim": "Without -testPlatform, tests run in Edit Mode.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/Documentation~/reference-command-line.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If no value is specified for this argument, tests run in Edit Mode.",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-utf-nunit",
+   "section": "ci-pipeline-shape",
+   "claim": "The results file follows NUnit's XML format.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/Documentation~/reference-command-line.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Test results follow the XML format as defined by NUnit",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-utf-version",
+   "section": "ci-pipeline-shape",
+   "claim": "The Test Framework source read here is version 1.4.6, the last published outside the Editor; Unity 6.3 ships 1.6.",
+   "verdict": "narrowed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/package.json",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "\"version\": \"1.4.6\",",
+   "narrowed_to": "The runner's exit codes are stated as read in 1.4.6; the 1.6 source in the 6000.3 Editor is listed for the Mac."
+  },
+  {
+   "id": "s-utf-codes",
+   "section": "ci-pipeline-shape",
+   "claim": "The runner's return codes are 0 for Ok, 2 for Failed and 3 for RunError.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/UnityEditor.TestRunner/CommandLineTest/Executer.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Ok = 0, Failed = 2, RunError = 3,",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-utf-failed",
+   "section": "ci-pipeline-shape",
+   "claim": "A run in which a test failed returns Failed.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/UnityEditor.TestRunner/CommandLineTest/Executer.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "{TestRunState.OneOrMoreTestsExecutedWithOneOrMoreFailed, ReturnCodes.Failed},",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-utf-zero",
+   "section": "ci-pipeline-shape",
+   "claim": "A run that completes without executing any test returns Ok, the same code as a passing run.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/UnityEditor.TestRunner/CommandLineTest/Executer.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "{TestRunState.CompletedJobWithoutAnyTestsExecuted, ReturnCodes.Ok},",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-utf-compile",
+   "section": "ci-pipeline-shape",
+   "claim": "Script compilation errors end the run with RunError.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/needle-mirror/com.unity.test-framework/master/UnityEditor.TestRunner/CommandLineTest/Executer.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "new ExceptionHandling(SetupException.ExceptionType.ScriptCompilationFailed, \"Scripts had compilation errors.\", ReturnCodes.RunError),",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-nunit-total",
+   "section": "ci-pipeline-shape",
+   "claim": "NUnit's test-run element has a total attribute, the number of test cases executed.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/nunit/docs/master/docs/articles/nunit/technical-notes/usage/Test-Result-XML-Format.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The total number of test cases executed in the run.",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-bp-throws",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildPipeline.BuildPlayer throws an ArgumentException for an invalid output path before it builds.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/BuildPipeline.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "throw new ArgumentException(locationPathNameError);",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-bp-inprogress",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildPlayer throws when another build is in progress.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/BuildPipeline.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "throw new InvalidOperationException(\"Cannot start a new build because there is already a build in progress.\");",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-bp-null",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildPlayer logs an ArgumentException from the build itself and returns null.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/BuildPipeline.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Debug.LogException(argumentException); return null;",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-bp-exit",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildPlayer logs any other exception and ends the Editor with EditorApplication.Exit(1).",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/pages/raw.githubusercontent.com_Unity-Technologies_UnityCsReference_6000.3.11f1_Editor_Mono_BuildPipeline.bindings.cs",
+    "line": 298,
+    "command": null,
+    "log": null
+   },
+   "quote": "Debug.LogException(exception); EditorApplication.Exit(1);",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-bp-group",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildPlayer derives the target group from the target when BuildPlayerOptions leaves it unset.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/BuildPipeline.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "if (buildTargetGroup == BuildTargetGroup.Unknown) buildTargetGroup = GetBuildTargetGroup(target);",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-bp-options",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildPlayerOptions is a struct passed to BuildPipeline.BuildPlayer, which returns a BuildReport.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/BuildPipeline.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static BuildReport BuildPlayer(BuildPlayerOptions buildPlayerOptions)",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-strictmode",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildOptions.StrictMode fails the build when any error is encountered.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/pages/raw.githubusercontent.com_Unity-Technologies_UnityCsReference_6000.3.11f1_Editor_Mono_BuildPipeline.bindings.cs",
+    "line": 105,
+    "command": null,
+    "log": null
+   },
+   "quote": "// Force the build to fail when any errors are encountered StrictMode = 1 << 21,",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-exit-api",
+   "section": "ci-pipeline-shape",
+   "claim": "EditorApplication.Exit(int) ends the Editor with a return value.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/EditorApplication.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static extern void Exit(int returnValue);",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-summary-result",
+   "section": "ci-pipeline-shape",
+   "claim": "A BuildReport's summary has a result of type BuildResult.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Modules/BuildReportingEditor/Managed/BuildSummary.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public BuildResult result { get; }",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-buildresult",
+   "section": "ci-pipeline-shape",
+   "claim": "BuildResult has Succeeded, Failed and Cancelled values.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/pages/raw.githubusercontent.com_Unity-Technologies_UnityCsReference_6000.3.11f1_Modules_BuildReportingEditor_Managed_BuildResult.cs",
+    "line": 15,
+    "command": null,
+    "log": null
+   },
+   "quote": "Succeeded = 1, ///<summary>Indicates that the build failed.</summary> Failed = 2,",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-scenes",
+   "section": "ci-pipeline-shape",
+   "claim": "EditorBuildSettingsScene.GetActiveSceneList takes the scenes from EditorBuildSettings.scenes.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/EditorBuildSettings.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static string[] GetActiveSceneList(EditorBuildSettingsScene[] scenes)",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-defines",
+   "section": "ci-pipeline-shape",
+   "claim": "PlayerSettings.SetScriptingDefineSymbols takes a NamedBuildTarget and a string.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/PlayerSettings.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static void SetScriptingDefineSymbols(NamedBuildTarget buildTarget, string defines)",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-named",
+   "section": "ci-pipeline-shape",
+   "claim": "NamedBuildTarget has Android and iOS fields.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/BuildPipeline/NamedBuildTarget.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static readonly NamedBuildTarget iOS = new NamedBuildTarget(\"iPhone\"); public static readonly NamedBuildTarget Android = new NamedBuildTarget(\"Android\");",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-bundleversion",
+   "section": "ci-pipeline-shape",
+   "claim": "PlayerSettings.bundleVersion is a string property.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/PlayerSettings.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static extern string bundleVersion { get; set; }",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-versioncode",
+   "section": "ci-pipeline-shape",
+   "claim": "PlayerSettings.Android.bundleVersionCode is an int.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/PlayerSettingsAndroid.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static extern int bundleVersionCode",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-buildnumber",
+   "section": "ci-pipeline-shape",
+   "claim": "PlayerSettings.iOS.buildNumber is a string.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/pages/raw.githubusercontent.com_Unity-Technologies_UnityCsReference_6000.3.11f1_Editor_Mono_PlayerSettingsIOS.bindings.cs",
+    "line": 296,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static string buildNumber",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-appbundle",
+   "section": "ci-pipeline-shape",
+   "claim": "EditorUserBuildSettings.buildAppBundle makes the Android build an app bundle.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/EditorUserBuildSettings.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static extern bool buildAppBundle { get; set; }",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-symbols-setting",
+   "section": "ci-pipeline-shape",
+   "claim": "In 6000.3 the Android debug symbols setting is UnityEditor.Android.UserBuildSettings.DebugSymbols.level.",
+   "verdict": "narrowed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/EditorUserBuildSettings.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Use UnityEditor.Android.UserBuildSettings.DebugSymbols.level property",
+   "narrowed_to": "The name comes from the obsolete message of the old property; where the symbols file lands for a non-exported build is listed for the Mac."
+  },
+  {
+   "id": "s-xcode-select",
+   "section": "ci-pipeline-shape",
+   "claim": "xcode-select -switch selects the default Xcode for the command-line tools.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/library/archive/technotes/tn2339/_index.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "To select a default Xcode for your command-line tools, run the following command in Terminal:",
+   "narrowed_to": null
+  },
+  {
+   "id": "s-xcode-print",
+   "section": "ci-pipeline-shape",
+   "claim": "xcode-select --print-path shows which Xcode the tools use.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/library/archive/technotes/tn2339/_index.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "To find out what version of Xcode is being used by your tools, run the following command in Terminal:",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-controller",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The controller is Jenkins's central process: it stores configuration, loads plugins and renders the user interfaces.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/glossary/index.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The central, coordinating process which stores configuration, loads plugins, and renders the various user interfaces for Jenkins.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-label",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A label is text that groups agents by capability.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/glossary/index.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "typically by similar functionality or capability. For example `linux` for Linux-based agents or `docker` for Docker-capable agents.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-executor",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A node's executors set how many builds it runs at once.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/glossary/index.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "A Node may have zero or more Executors configured which corresponds to how many concurrent Jobs or Pipelines are able to execute on that Node.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-builtin",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Builds on the built-in node have the same access to the controller's file system as Jenkins.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/security/controller-isolation.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Any builds running on the built-in node have the same level of access to the controller file system as the Jenkins process.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-builtin-advice",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Jenkins advises running builds on agents, not the built-in node.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/security/controller-isolation.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "It is therefore highly advisable to not run any builds on the built-in node",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-agent-section",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The agent section says where the pipeline or a stage runs.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The `agent` section specifies where the entire Pipeline, or a specific stage, will execute in the Jenkins environment depending on where the `agent` section is placed.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-label-agent",
+   "section": "ci-jenkins-pipeline",
+   "claim": "agent { label } runs on an agent with that label.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Execute the Pipeline, or stage, on an agent available in the Jenkins environment with the provided label.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-label-expr",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A label can be an expression such as 'a && b'.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "agent { label 'my-label1 && my-label2' }",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-agent-none",
+   "section": "ci-jenkins-pipeline",
+   "claim": "agent none at the top forces each stage to name its own agent.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Using `agent none` also forces each `stage` section to contain its own `agent` section.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-jenkinsfile-scm",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A Jenkinsfile in source control gives the pipeline code review and an audit trail.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/jenkinsfile.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Code review/iteration on the Pipeline",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-parameters",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The parameters directive lists values a user gives when starting a run.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The `parameters` directive provides a list of parameters that a user should provide when triggering the Pipeline.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-when",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The when directive decides whether a stage runs.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The `when` directive allows the Pipeline to determine whether the stage should be executed depending on the given condition.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-beforeagent",
+   "section": "ci-jenkins-pipeline",
+   "claim": "With beforeAgent true, when is evaluated before an agent is taken.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If `beforeAgent` is set to `true`, the `when` condition will be evaluated first, and the `agent` will only be entered if the `when` condition evaluates to true.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-parallel",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A stage may hold parallel stages.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Stages in Declarative Pipeline may have a `parallel` section containing a list of nested stages to be run in parallel.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-nesting",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A stage inside parallel can have its own agent, when and nested sequential stages, but no parallel of its own.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "However, a `stage` directive within a `parallel` or `matrix` block can use all other functionality of a `stage`, including `agent`, `tools`, `when`, etc.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-one-of",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A stage has exactly one of steps, stages, parallel or matrix.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "A stage must have one and only one of `steps`, `stages`, `parallel`, or `matrix`.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-post-order",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Post conditions run in the documented order: always, changed, fixed, regression, aborted, failure, success, unstable, unsuccessful, cleanup.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The condition blocks are executed in the order shown below.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-always",
+   "section": "ci-jenkins-pipeline",
+   "claim": "always runs whatever the result.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Run the steps in the `post` section regardless of the completion status of the Pipeline's or stage's run.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-changed",
+   "section": "ci-jenkins-pipeline",
+   "claim": "changed runs when the result differs from the previous run's.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Only run the steps in `post` if the current Pipeline's run has a different completion status from its previous run.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-fixed",
+   "section": "ci-jenkins-pipeline",
+   "claim": "fixed runs when a run succeeds after a failed or unstable one.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Only run the steps in `post` if the current Pipeline's run is successful and the previous run failed or was unstable.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-aborted",
+   "section": "ci-jenkins-pipeline",
+   "claim": "aborted runs for an aborted run, usually a manual abort.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Only run the steps in `post` if the current Pipeline's run has an \"aborted\" status, usually due to the Pipeline being manually aborted.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-failure",
+   "section": "ci-jenkins-pipeline",
+   "claim": "failure runs for a failed status.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Only run the steps in `post` if the current Pipeline's or stage's run has a \"failed\" status",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-success",
+   "section": "ci-jenkins-pipeline",
+   "claim": "success runs for a success status.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Only run the steps in `post` if the current Pipeline's or stage's run has a \"success\" status",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-unsuccessful",
+   "section": "ci-jenkins-pipeline",
+   "claim": "unsuccessful runs for any status but success.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Only run the steps in `post` if the current Pipeline's or stage's run has not a \"success\" status.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-cleanup",
+   "section": "ci-jenkins-pipeline",
+   "claim": "cleanup runs after every other post condition, whatever the result.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Run the steps in this `post` condition after every other `post` condition has been evaluated, regardless of the Pipeline or stage's status.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-stash-run",
+   "section": "ci-jenkins-pipeline",
+   "claim": "stash saves files for use on any node in the same run.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/support/steps/stash/StashStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Saves a set of files for later use on any node/workspace in the same Pipeline run.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-stash-discard",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Stashes are discarded when the run ends, unless preserveStashes keeps them for restarts.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/support/steps/stash/StashStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "By default, stashed files are discarded at the end of a pipeline run.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-stash-other-runs",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A stash is not available to other runs, pipelines or jobs; archiveArtifacts is for that.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/support/steps/stash/StashStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Stashes from one Pipeline run are not available in other runs, other Pipelines, or other jobs. If you want to persist artifacts for use outside of a single run, consider using archiveArtifacts instead.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-stash-small",
+   "section": "ci-jenkins-pipeline",
+   "claim": "stash and unstash are designed for small files.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/support/steps/stash/StashStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Note that the stash and unstash steps are designed for use with small files.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-stash-size",
+   "section": "ci-jenkins-pipeline",
+   "claim": "There is no hard limit; from somewhere between 5 and 100 MB, alternatives are advised.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/support/steps/stash/StashStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "There's not a hard stash size limit, but between 5-100 MB you should probably consider alternatives.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-stash-controller",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The controller compresses each stash, which costs it CPU for large files.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/support/steps/stash/StashStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "This is because stashed files are archived in a compressed TAR, and with large files this demands considerable resources on the controller, particularly CPU time.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-stash-large",
+   "section": "ci-jenkins-pipeline",
+   "claim": "For large transfers the step's help points to an external repository manager.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/support/steps/stash/StashStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "For large data transfers, use the External Workspace Manager plugin, or use an external repository manager such as Nexus or Artifactory.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-unstash",
+   "section": "ci-jenkins-pipeline",
+   "claim": "unstash retrieves a stash from the controller into the current workspace.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/jenkinsfile.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "`unstash` will retrieve the named \"stash\" from the Jenkins controller into the Pipeline's current workspace.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-archive",
+   "section": "ci-jenkins-pipeline",
+   "claim": "archiveArtifacts saves files on the controller for later retrieval.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/jenkinsfile.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "and saves them to the Jenkins controller for later retrieval.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-archive-keep",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Archived artifacts are kept as long as the build's log is kept.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/jenkins/master/core/src/main/resources/hudson/tasks/ArtifactArchiver/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Normally, Jenkins keeps artifacts for a build as long as a build log itself is kept",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-archive-empty",
+   "section": "ci-jenkins-pipeline",
+   "claim": "archiveArtifacts fails the build when it archives nothing, unless allowEmptyArchive is set.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/jenkins/master/core/src/main/resources/hudson/tasks/ArtifactArchiver/help-allowEmptyArchive.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Normally, a build fails if archiving returns zero artifacts.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-junit-format",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The junit step reads JUnit XML files.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/jenkinsfile.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "`junit` captures and associates the JUnit XML files matching the inclusion pattern",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-junit-nofiles",
+   "section": "ci-jenkins-pipeline",
+   "claim": "junit fails when no report files are found, unless allowEmptyResults is set.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/junit-plugin/master/src/main/resources/hudson/tasks/junit/Messages.properties",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "JUnitResultArchiver.NoTestReportFound=No test report files were found. Configuration error?",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-junit-empty",
+   "section": "ci-jenkins-pipeline",
+   "claim": "junit fails when the reports hold no results, unless allowEmptyResults is set.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/junit-plugin/master/src/main/resources/hudson/tasks/junit/Messages.properties",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "JUnitResultArchiver.ResultIsEmpty=None of the test reports contained any result",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-nunit",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The NUnit plugin publishes NUnit results with the nunit step.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/nunit-plugin/master/README.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "This plugin allows you to publish [NUnit](http://www.nunit.org/) test results.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-nunit-default",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The nunit step's failIfNoResults is on by default.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/nunit-plugin/master/src/main/java/hudson/plugins/nunit/NUnitPublisher.java",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "this.failIfNoResults = true;",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-nunit-nofiles",
+   "section": "ci-jenkins-pipeline",
+   "claim": "With failIfNoResults, nunit aborts when no report file is found.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/nunit-plugin/master/src/main/java/hudson/plugins/nunit/NUnitPublisher.java",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "No test report files were found or the NUnit input XML file contained no tests.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-nunit-empty",
+   "section": "ci-jenkins-pipeline",
+   "claim": "With failIfNoResults, nunit fails the build when the reports hold no passed, failed or skipped test.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/nunit-plugin/master/src/main/java/hudson/plugins/nunit/NUnitPublisher.java",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "listener.getLogger().println(\"None of the test reports contained any result\"); build.setResult(Result.FAILURE);",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-timeout",
+   "section": "ci-jenkins-pipeline",
+   "claim": "timeout aborts its block and the build when the limit is reached.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/steps/TimeoutStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If the time limit is reached, an exception (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException) is thrown, which leads to aborting the build (unless it is caught and processed somehow).",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-retry",
+   "section": "ci-jenkins-pipeline",
+   "claim": "retry reruns its block on any exception, up to N times, and does not catch user aborts.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/steps/RetryStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Retry the block (up to N times) if any exception happens during its body execution. If an exception happens on the final attempt then it will lead to aborting the build (unless it is caught and processed somehow). User aborts of the build are not caught.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-discarder",
+   "section": "ci-jenkins-pipeline",
+   "claim": "buildDiscarder keeps artifacts and logs for a number of recent runs.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Persist artifacts and console output for the specific number of recent Pipeline runs.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-concurrent",
+   "section": "ci-jenkins-pipeline",
+   "claim": "disableConcurrentBuilds queues a new run behind a running one, or aborts the running one with abortPrevious.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "to queue a build when there's already an executing build of the Pipeline, or `options { disableConcurrentBuilds(abortPrevious: true) }` to abort the running one and start the new build.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-multibranch",
+   "section": "ci-jenkins-pipeline",
+   "claim": "A multibranch pipeline runs the Jenkinsfile of each branch that has one.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/multibranch.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "In a Multibranch Pipeline project, Jenkins automatically discovers, manages and executes Pipelines for branches which contain a `Jenkinsfile` in source control.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-shared-lib",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Shared libraries live in their own repositories and are loaded into pipelines.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/shared-libraries.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Pipeline has support for creating \"Shared Libraries\" which can be defined in external source control repositories and loaded into existing Pipelines.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-scripted",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Scripted pipelines are a general-purpose Groovy DSL.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Unlike Declarative, Scripted Pipeline is effectively a general-purpose DSL",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-linter",
+   "section": "ci-jenkins-pipeline",
+   "claim": "Jenkins can lint a declarative pipeline before running it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/development.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "a Declarative Pipeline from the command line before actually running it.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-mail",
+   "section": "ci-jenkins-pipeline",
+   "claim": "The mail step sends email.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/steps/MailStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Simple step for sending email.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-build-url",
+   "section": "ci-jenkins-pipeline",
+   "claim": "BUILD_URL holds the URL of the build's results.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/jenkinsfile.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The URL where the results of this build can be found",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-bind-scope",
+   "section": "ci-secrets-signing",
+   "claim": "Each withCredentials binding is an environment variable that exists within the step's block.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Each binding will define an environment variable active within the scope of the step.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-single-quotes",
+   "section": "ci-secrets-signing",
+   "claim": "Jenkins's examples pass the script in single quotes so that the shell expands the secret.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Note the use of single quotes to define the script (implicit parameter to sh ) in Groovy above. You want the secret to be expanded by the shell as an environment variable.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-interp",
+   "section": "ci-secrets-signing",
+   "claim": "With double quotes Groovy interpolates the secret into the command, where process listings can show it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The following idiom is potentially less secure, as the secret is interpolated by Groovy and so (for example) typical operating system process listings will accidentally disclose it:",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-gstrings",
+   "section": "ci-secrets-signing",
+   "claim": "Secrets stay out of Groovy strings so only the shell expands them.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/jenkinsfile.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "the key is keeping secrets out of GStrings so only the shell expands them.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-masked",
+   "section": "ci-secrets-signing",
+   "claim": "A bound secret printed to the log is masked with asterisks.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The secret(s) will be masked ( **** ) in case they are printed to the build log.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-debug-dump",
+   "section": "ci-secrets-signing",
+   "claim": "Build tools in debug mode may print all environment variables.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "but build tools in debug mode might dump all environment variables to standard output/error",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-circumvent",
+   "section": "ci-secrets-signing",
+   "claim": "Masking can be circumvented, and whoever can edit the pipeline is trusted with its credentials.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The masking could of course be trivially circumvented; anyone permitted to configure a job or define Pipeline steps is assumed to be trusted to use any credentials in scope however they like.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-best-effort",
+   "section": "ci-secrets-signing",
+   "claim": "Mangled forms of a secret are masked on a best-effort basis, for the output of common shells.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Mangled secrets can only be detected on a best-effort basis. By default, Jenkins will attempt to mask mangled secrets as they would appear in output of Bourne shell, Bash, Almquist shell and Windows batch.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-base64",
+   "section": "ci-secrets-signing",
+   "claim": "A secret piped through base64 is printed in its encoded form, which is not masked.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/blog/2019/02/2019-02-21-credentials-masking.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "sh 'echo $PWD | base64' // will print e.g. dDBwczNjcjN0Cg= which is trivially converted back to the top secret password",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-mangled",
+   "section": "ci-secrets-signing",
+   "claim": "A changed secret is no longer masked.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": null,
+    "file": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/pages/raw.githubusercontent.com_jenkins-infra_jenkins.io_master_content_doc_book_pipeline_jenkinsfile.adoc",
+    "line": 832,
+    "command": null,
+    "log": null
+   },
+   "quote": "When the credential value is mangled, it is no longer valid and will no longer be masked in the console log.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-other-procs",
+   "section": "ci-secrets-signing",
+   "claim": "On Linux, other processes of the same account can read a build's environment, so secret-using jobs do not share a node with untrusted ones.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "At least on Linux, environment variables can be obtained by other processes running in the same account, so you should not run a job which uses secrets on the same node as a job controlled by untrusted parties.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-credentials-helper",
+   "section": "ci-secrets-signing",
+   "claim": "The environment directive's credentials() helper binds a credential by its id.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "This directive supports a special helper method `credentials()` which can be used to access pre-defined Credentials by their identifier in the Jenkins environment.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-usr-psw",
+   "section": "ci-secrets-signing",
+   "claim": "For a username and password, credentials() also defines NAME_USR and NAME_PSW.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The environment variable specified will be set to `username:password` and two additional environment variables will be automatically defined: `MYVARNAME_USR` and `MYVARNAME_PSW` respectively.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-file-temp",
+   "section": "ci-secrets-signing",
+   "claim": "A secret file is written to a private temporary directory that is deleted when the binding ends.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/java/org/jenkinsci/plugins/credentialsbinding/impl/AbstractOnDiskBinding.java",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "creation of a -rwx------ temporary directory, and its full deletion when unbinding",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-file-dir",
+   "section": "ci-secrets-signing",
+   "claim": "A file binding inside dir() may land inside the workspace, where anyone who can browse it sees the file.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/credentials-binding-plugin/master/src/main/resources/org/jenkinsci/plugins/credentialsbinding/impl/BindingStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "might be inside the workspace (in subdir@tmp/secretFiles/ ), and thus visible to anyone able to browse the job’s workspace.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-custom-keystore",
+   "section": "ci-secrets-signing",
+   "claim": "PlayerSettings.Android.useCustomKeystore turns on signing with a custom keystore.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/PlayerSettingsAndroid.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static extern bool useCustomKeystore",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-keystore-name",
+   "section": "ci-secrets-signing",
+   "claim": "PlayerSettings.Android.keystoreName and keystorePass exist.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/PlayerSettingsAndroid.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static extern string keystoreName",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-keyalias",
+   "section": "ci-secrets-signing",
+   "claim": "PlayerSettings.Android.keyaliasName and keyaliasPass exist.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/Unity-Technologies/UnityCsReference/6000.3.11f1/Editor/Mono/PlayerSettingsAndroid.bindings.cs",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "public static extern string keyaliasPass",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-create-p",
+   "section": "ci-secrets-signing",
+   "claim": "security create-keychain -p puts the password on the command line, which the manual calls insecure.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Use of the -p option is insecure.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-settings",
+   "section": "ci-secrets-signing",
+   "claim": "set-keychain-settings -l locks on sleep, -u locks after the -t timeout.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Lock keychain when the system sleeps. .It Fl u Lock keychain after timeout interval.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-partition",
+   "section": "ci-secrets-signing",
+   "claim": "The partition list limits access to a key by code signature, and codesign needs apple: in it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The \"partition list\" is an extra parameter in the ACL which limits access to the key based on an application's code signature. You must present the keychain's password to change a partition list. If you'd like to run /usr/bin/codesign with the key, \"apple:\" must be an element of the partition list.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-import-gui",
+   "section": "ci-secrets-signing",
+   "claim": "security import without -P asks for the passphrase through a GUI.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Specify the unwrapping passphrase immediately. The default is to obtain a secure passphrase via GUI.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-import-a",
+   "section": "ci-secrets-signing",
+   "claim": "import -A lets any application use the key without warning, which the manual calls insecure.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Allow any application to access the imported key without warning (insecure, not recommended!)",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-import-t",
+   "section": "ci-secrets-signing",
+   "claim": "import -T names an application that may access the key.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Specify an application which may access the imported key",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-list-s",
+   "section": "ci-secrets-signing",
+   "claim": "list-keychains -s sets the keychain search list.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Set the search list to the specified keychains.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-delete",
+   "section": "ci-secrets-signing",
+   "claim": "delete-keychain deletes a keychain and removes it from the search list.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/SecurityTool/macOS/security.1",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Delete keychains and remove them from the search list.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-profiles",
+   "section": "ci-secrets-signing",
+   "claim": "Since Xcode 16, downloaded profiles live in ~/Library/Developer/Xcode/UserData/Provisioning Profiles.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/xcode-release-notes/xcode-16-release-notes",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Xcode 16 stores downloaded provisioning profiles in a new location on disk, at ~/Library/Developer/Xcode/UserData/Provisioning Profiles.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-asc-role",
+   "section": "ci-secrets-signing",
+   "claim": "An App Store Connect API key has a role that decides what it can do.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "When you create an API key, assign it a role that determines the key’s access to areas of the App Store Connect API and permissions for performing tasks.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-asc-team",
+   "section": "ci-secrets-signing",
+   "claim": "Team API keys reach all of a team's apps, whatever their role.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Team API keys can access all apps, regardless of their role.",
+   "narrowed_to": null
+  },
+  {
+   "id": "k-asc-revoke",
+   "section": "ci-secrets-signing",
+   "claim": "A compromised private key is revoked in App Store Connect.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "If you suspect a private key is compromised, immediately revoke the key in App Store Connect.",
+   "narrowed_to": null
+  },
+  {
+   "id": "c-cocoapods-cache",
+   "section": "ci-caching",
+   "claim": "CocoaPods caches downloads in ~/Library/Caches/CocoaPods by default.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/CocoaPods/CocoaPods/master/lib/cocoapods/config.rb",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": ":cache_root => Pathname.new(Dir.home) + 'Library/Caches/CocoaPods',",
+   "narrowed_to": null
+  },
+  {
+   "id": "c-cocoapods-env",
+   "section": "ci-caching",
+   "claim": "CP_CACHE_DIR moves CocoaPods' cache.",
+   "verdict": "confirmed",
+   "evidence_kind": "shipped file",
+   "source": {
+    "url": "https://raw.githubusercontent.com/CocoaPods/CocoaPods/master/lib/cocoapods/config.rb",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "@cache_root = Pathname.new(ENV['CP_CACHE_DIR']).expand_path",
+   "narrowed_to": null
+  },
+  {
+   "id": "c-workspace-kept",
+   "section": "ci-caching",
+   "claim": "Jenkins leaves a workspace in place after a build unless a cleanup policy removes it.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/glossary/index.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Workspaces are typically left in place after a",
+   "narrowed_to": null
+  },
+  {
+   "id": "f-lfs-pointer",
+   "section": "ci-only-failures",
+   "claim": "Git LFS stores a pointer file in the repository in place of a large file.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/git-lfs/git-lfs/main/docs/spec.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The core Git LFS idea is that instead of writing large blobs to a Git repository, only a pointer file is written.",
+   "narrowed_to": null
+  },
+  {
+   "id": "f-lfs-size",
+   "section": "ci-only-failures",
+   "claim": "A pointer file is smaller than 1024 bytes.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/git-lfs/git-lfs/main/docs/spec.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Pointer files must be less than 1024 bytes in size",
+   "narrowed_to": null
+  },
+  {
+   "id": "f-lfs-version",
+   "section": "ci-only-failures",
+   "claim": "A pointer file starts with its spec's version line.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/git-lfs/git-lfs/main/docs/spec.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "version https://git-lfs.github.com/spec/v1",
+   "narrowed_to": null
+  },
+  {
+   "id": "f-lfs-exec",
+   "section": "ci-only-failures",
+   "claim": "Git records a file's executable bit.",
+   "verdict": "narrowed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/git-lfs/git-lfs/main/docs/spec.md",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Pointer files MUST be stored in Git with their executable bit matching that",
+   "narrowed_to": "Git's own documentation was not reachable; the LFS spec shows that Git stores the bit."
+  },
+  {
+   "id": "f-lfs-agent",
+   "section": "ci-only-failures",
+   "claim": "Jenkins's Git plugin pulls LFS files after checkout when asked, and each agent needs git lfs installed.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/git-plugin/master/src/main/resources/hudson/plugins/git/extensions/impl/GitLFSPull/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Enable git large file support for the workspace by pulling large files after the checkout completes. Requires that the controller and each agent performing an LFS checkout have installed `git lfs`.",
+   "narrowed_to": null
+  },
+  {
+   "id": "f-deletedir",
+   "section": "ci-only-failures",
+   "claim": "deleteDir deletes the current directory and its contents.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkinsci/workflow-basic-steps-plugin/master/src/main/resources/org/jenkinsci/plugins/workflow/steps/DeleteDirStep/help.html",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Recursively deletes the current directory and its contents.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-vc-reuse",
+   "section": "ci-release-automation",
+   "claim": "Google Play refuses an upload whose versionCode was used before.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/studio/publish/versioning",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "You can't upload an APK to the Play Store with a versionCode you have already used for a previous version.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-vc-increase",
+   "section": "ci-release-automation",
+   "claim": "versionCode usually increases with each release, whatever the release's size.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/studio/publish/versioning",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Typically, you release the first version of your app with versionCode set to 1, then monotonically increase the value with each release, regardless of whether the release constitutes a major or minor release.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-vc-max",
+   "section": "ci-release-automation",
+   "claim": "Google Play allows versionCode up to 2100000000 (read in September 2026).",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/studio/publish/versioning",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The greatest value Google Play allows for versionCode is 2100000000.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-asc-build-string",
+   "section": "ci-release-automation",
+   "claim": "App Store Connect identifies each build by its build string.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The build string is used to uniquely identify the build throughout the system.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-cfbv",
+   "section": "ci-release-automation",
+   "claim": "CFBundleVersion identifies the build version and is required by the App Store.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundleversion",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "This key is required by the App Store and is used throughout the system to identify the version of the build.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-build-number-env",
+   "section": "ci-release-automation",
+   "claim": "BUILD_NUMBER is the current build's number.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/jenkinsfile.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The current build number, such as \"153\".",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-play-edit",
+   "section": "ci-release-automation",
+   "claim": "The Play Developer API works through an edit: create it, upload a bundle, update a track, commit.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/googleapis/google-api-go-client/main/androidpublisher/v3/androidpublisher-api.json",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Uploads a new Android App Bundle to this edit.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-play-commit",
+   "section": "ci-release-automation",
+   "claim": "An edit's changes take effect when it is committed.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/googleapis/google-api-go-client/main/androidpublisher/v3/androidpublisher-api.json",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Commits an app edit.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-play-versioncodes",
+   "section": "ci-release-automation",
+   "claim": "A track's release lists the version codes of bundles already uploaded.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/googleapis/google-api-go-client/main/androidpublisher/v3/androidpublisher-api.json",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Version codes of all APKs in the release. Must include version codes to retain from previous releases.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-play-deobf",
+   "section": "ci-release-automation",
+   "claim": "The API uploads deobfuscation files for a version: ProGuard mappings and native symbols.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/googleapis/google-api-go-client/main/androidpublisher/v3/androidpublisher-api.json",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Uploads a new deobfuscation file and attaches to the specified APK.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-play-native",
+   "section": "ci-release-automation",
+   "claim": "One deobfuscation file type is native debugging symbols.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/googleapis/google-api-go-client/main/androidpublisher/v3/androidpublisher-api.json",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "Native debugging symbols file type.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-asc-select",
+   "section": "ci-release-automation",
+   "claim": "An App Store submission selects one of the builds already uploaded.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/help/app-store-connect/manage-builds/choose-a-build-to-submit",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "In the Add Build dialog, select the build you want to submit.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-asc-one",
+   "section": "ci-release-automation",
+   "claim": "An app version is associated with one build.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.apple.com/help/app-store-connect/manage-builds/choose-a-build-to-submit",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "You can only associate one build with each app version.",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-input",
+   "section": "ci-release-automation",
+   "claim": "A stage's input directive stops the run until someone answers.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The `input` directive on a `stage` allows you to prompt for input",
+   "narrowed_to": null
+  },
+  {
+   "id": "r-vc-downgrade",
+   "section": "ci-release-automation",
+   "claim": "Android refuses to install a lower versionCode over a higher one.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://developer.android.com/studio/publish/versioning",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "The Android system uses the versionCode value to protect against downgrades by preventing users from installing an APK with a lower versionCode than the version currently installed on their device.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-retry-option",
+   "section": "ci-jenkins-pipeline",
+   "claim": "retry is also a pipeline option that retries the whole pipeline on failure.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "On failure, retry the entire Pipeline the specified number of times.",
+   "narrowed_to": null
+  },
+  {
+   "id": "j-when-default",
+   "section": "ci-jenkins-pipeline",
+   "claim": "By default a stage's when is evaluated after its agent is entered.",
+   "verdict": "confirmed",
+   "evidence_kind": "documentation",
+   "source": {
+    "url": "https://raw.githubusercontent.com/jenkins-infra/jenkins.io/master/content/doc/book/pipeline/syntax.adoc",
+    "file": null,
+    "line": null,
+    "command": null,
+    "log": null
+   },
+   "quote": "However, this can be changed by specifying the `beforeAgent` option within the `when` block.",
+   "narrowed_to": null
+  }
+ ],
+ "runs_needed": [
+  {
+   "claim_ids": [
+    "s-utf-example"
+   ],
+   "why_docs_and_files_are_not_enough": "docs.unity3d.com was blocked in the container, so the Editor's own command-line arguments rest on no page read here.",
+   "commands": [
+    "curl -s -H 'Accept-Language: en-US,en;q=0.9' https://docs.unity3d.com/6000.3/Documentation/Manual/EditorCommandLineArguments.html"
+   ],
+   "expected_observation": "The page describes -batchmode, -nographics, -quit, -projectPath, -buildTarget, -executeMethod and -logFile as the chapter does: no windows or prompts, no graphics device, quit after the other commands, the project, the active build target selected before the project loads, a static Editor method, and the log's path."
+  },
+  {
+   "claim_ids": [
+    "s-utf-zero",
+    "s-utf-codes",
+    "s-utf-compile"
+   ],
+   "why_docs_and_files_are_not_enough": "The runner's source was read at 1.4.6 from a mirror; Unity 6.3 ships 1.6 inside the Editor.",
+   "commands": [
+    "grep -rn 'CompletedJobWithoutAnyTestsExecuted\\|RunError = \\|Failed = ' \"$E/Unity.app/Contents/Resources/PackageManager/BuiltInPackages/com.unity.test-framework/UnityEditor.TestRunner/CommandLineTest/\""
+   ],
+   "expected_observation": "1.6 maps a run without executed tests to Ok, failures to 2 and run errors to 3, as 1.4.6 does. If it no longer returns Ok for zero tests, the chapter's sentence on that changes; no correct answer depends on the code."
+  },
+  {
+   "claim_ids": [
+    "s-projectversion"
+   ],
+   "why_docs_and_files_are_not_enough": "The file read here is from a 2020.3 sample project.",
+   "commands": [
+    "head -3 ~/Documents/PlatformLayerProbe/ProjectSettings/ProjectVersion.txt"
+   ],
+   "expected_observation": "m_EditorVersion: 6000.3.11f1 on the first line."
+  },
+  {
+   "claim_ids": [],
+   "why_docs_and_files_are_not_enough": "Unity's manual was blocked: the package lock file, license activation and return, the Library folder, the Unity Accelerator and IL2CPP's cache location rest on no page read here.",
+   "commands": [
+    "curl -s -H 'Accept-Language: en-US,en;q=0.9' https://docs.unity3d.com/6000.3/Documentation/Manual/upm-conflicts-auto.html",
+    "ls ~/Documents/PlatformLayerProbe/Packages/packages-lock.json && ls ~/Documents/PlatformLayerProbe/Library/Bee"
+   ],
+   "expected_observation": "The lock file records every resolved package, direct and indirect; Library is derived data that Unity rebuilds; IL2CPP's intermediate output is under Library. The chapter states only what its evidence file lists as unchecked."
+  },
+  {
+   "claim_ids": [
+    "k-partition",
+    "k-create-p",
+    "k-import-gui",
+    "k-list-s",
+    "k-delete"
+   ],
+   "why_docs_and_files_are_not_enough": "No Mac here; the manual was read, and the script was not run.",
+   "commands": [
+    "bash -x ci/ios-archive-and-export.sh up to the xcodebuild lines, with a self-signed identity exported as a .p12, then security find-identity -p codesigning and codesign -s on a scratch binary, then ci/ios-remove-signing.sh"
+   ],
+   "expected_observation": "The identity appears in find-identity, codesign signs without a prompt, and after the cleanup script the keychain is gone from disk and from the search list."
+  },
+  {
+   "claim_ids": [
+    "s-appbundle",
+    "s-symbols-setting"
+   ],
+   "why_docs_and_files_are_not_enough": "Where 6000.3 writes the symbols zip and R8's mapping file for a build that Unity runs through Gradle itself could not be read here.",
+   "commands": [
+    "Build the probe for Android with buildAppBundle and DebugSymbols.level set, then ls the output folder and find ~/Documents/PlatformLayerProbe/Library -name mapping.txt"
+   ],
+   "expected_observation": "A *.symbols.zip beside the AAB, as the chapter's Jenkinsfile archives it."
+  },
+  {
+   "claim_ids": [
+    "j-linter"
+   ],
+   "why_docs_and_files_are_not_enough": "No Jenkins could be downloaded in the container, so the Jenkinsfile was checked against the syntax reference and parsed as Groovy, not linted.",
+   "commands": [
+    "java -jar jenkins-cli.jar -s http://localhost:8080/ declarative-linter < Jenkinsfile   (a local controller with the pipeline-model-definition, workflow-basic-steps, credentials-binding, nunit and mailer plugins)"
+   ],
+   "expected_observation": "Jenkinsfile successfully validated."
+  },
+  {
+   "claim_ids": [
+    "s-bundleversion"
+   ],
+   "why_docs_and_files_are_not_enough": "The reference source shows the property, not what it maps to on each platform.",
+   "commands": [
+    "curl -s -H 'Accept-Language: en-US,en;q=0.9' https://docs.unity3d.com/6000.3/Documentation/ScriptReference/PlayerSettings-bundleVersion.html"
+   ],
+   "expected_observation": "The page says that bundleVersion is the version shared by iOS and Android, which becomes versionName and CFBundleShortVersionString."
+  }
+ ],
+ "harnesses": [
+  {
+   "language": "C#",
+   "directory": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/harness/cs",
+   "command": "dotnet build -c Release (SDK 8.0.131, net8.0, LangVersion 9.0, TreatWarningsAsErrors, UNITY_ANDROID and UNITY_IOS defined; Stubs.cs copies the signatures of BuildPipeline, BuildPlayerOptions, BuildOptions, BuildReport, BuildSummary, BuildResult, EditorApplication, EditorBuildSettings, EditorBuildSettingsScene, EditorUserBuildSettings, NamedBuildTarget, PlayerSettings and its Android and iOS classes from UnityCsReference 6000.3.11f1; block1.cs and block2.cs are the chapter's two csharp blocks)",
+   "verified_output": "Build succeeded. 0 Warning(s) 0 Error(s)"
+  },
+  {
+   "language": "Groovy",
+   "directory": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/harness/groovy",
+   "command": "java -cp groovy-4.0.24.jar groovy.ui.GroovyMain -e \"new GroovyShell().parse(new File('block1.groovy'))\" (the chapter's Jenkinsfile; syntax only, since no Jenkins and no declarative linter could be downloaded)",
+   "verified_output": "Jenkinsfile parsed"
+  },
+  {
+   "language": "Bash",
+   "directory": "/tmp/claude-0/-home-user-interview-study-book/d2c0692b-2d43-5037-b1b1-4ba328f1f9b0/scratchpad/harness/sh",
+   "command": "bash -n on the six bash blocks, then shellcheck 0.11.0 -s bash on the four scripts",
+   "verified_output": "bash -n passed for all six; shellcheck reports only SC1091 (info), for the sourced stamp.env"
+  }
+ ],
+ "notes": "Phase 29 ran in a cloud container without Codex, the Editor, the probe project, Xcode, macOS or a device, so the session gathered this evidence under rule A. jenkins.io, Jenkins's update and download sites, docs.unity3d.com, Unity's package registry, docs.gradle.org, git-scm.com, git-lfs.com, guides.cocoapods.org, developers.google.com and support.apple.com were blocked; the receipts use the sources of those pages on GitHub (jenkins-infra/jenkins.io and the jenkinsci plugins at master), UnityCsReference at 6000.3.11f1, a mirror of the Test Framework package at 1.4.6, Apple's open-source security man page, and Google's discovery document for the Play Developer API."
+}
