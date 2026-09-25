@@ -10,7 +10,7 @@ facts these requests assert against Unity's 6.0 manual and scripting reference, 
 requests quote Unity where they correct the book. The scratch programs it used are not
 kept in the repo.
 
-Phases 11 to 17 of [docs/PLAN.md](../PLAN.md) applied the second read, and each request's
+Phases 11 to 17 of [docs/plan-history.md](../plan-history.md) applied the second read, and each request's
 file was deleted as it closed. [structure-changes.json](structure-changes.json) stays: it
 lists the concepts Phase 17 split off and the variants it moved, which is the one record of
 where those questions came from.
@@ -52,7 +52,7 @@ None. A later read adds one file per problem here, with a row in this section.
 
 ## How to close one
 
-[docs/PLAN.md](../PLAN.md), under “Feature: second-read editing pass”, orders these
+[docs/plan-history.md](../plan-history.md), under “Feature: second-read editing pass”, orders these
 requests into Phases 11 to 17, says which phase closes each one, and lists the defaults it
 assumes for the choices the requests leave open.
 

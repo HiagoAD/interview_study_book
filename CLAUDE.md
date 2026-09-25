@@ -24,6 +24,7 @@ Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm 
 - `npm run typecheck` — type-checks without emitting.
 - `npm run check` — parses and renders everything under `content/` (Markdown, KaTeX, Shiki, images) and prints each problem as `file:line: message`; on success it prints the totals, summed and per book.
 - `npm run guard -- questions` — fails if any question block differs from `HEAD`, or from `--base <rev>`, ignoring line numbers; `--allow distractors` accepts changed `-` options, `--allow new-chapters` accepts every chapter none of whose sections is at the base and names each one, and `--allow structure --changes <file>` accepts the new concepts, moved or added variants, and added answers a JSON file lists. `npm run guard -- style` checks the book's prose conventions: no em dashes, no contractions, no straight double quotes in prose, and each section closing with its exercise.
+- `npm run guard -- options` — prints the figures the distractor standard is measured by, per chapter file and per book: how often the correct option is the longest or the shortest, the median option lengths, and the word list. `npm run guard -- links --base <rev>` checks each external link that is new since `<rev>`, or every link with `--all`, for HTTP 200 with no redirect; it is the only command that needs the network, and nothing else runs it.
 
 ## Layout
 
@@ -43,7 +44,7 @@ src/
 scripts/verify-dist.mjs   checks dist/ has only index.html, no external references and none of the dev-only UI
 ```
 
-The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 applied the review requests a teacher's read of the book left in `docs/review-requests/`; the folder keeps its README and `structure-changes.json`, the record of which concept each moved question came from. Phases 18 to 32 write the second book, The Platform Layer, from [docs/mobile-platform-outline.md](docs/mobile-platform-outline.md): Phase 18 the tools, Phases 19 to 31 one chapter each, and Phase 32 a teacher's read. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
+The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 applied the review requests a teacher's read of the book left in `docs/review-requests/`; the folder keeps its README and `structure-changes.json`, the record of which concept each moved question came from. Phases 18 to 32 write the second book, The Platform Layer, from [docs/mobile-platform-outline.md](docs/mobile-platform-outline.md): Phase 18 the tools, Phases 19 to 31 one chapter each, and Phase 32 a teacher's read. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, how a phase runs, and the second book's phases with their log. [docs/plan-history.md](docs/plan-history.md) holds Phases 1 to 17 with their own decisions and log, and `docs/evidence/` what each chapter of the second book was checked against. Read them for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
 
 ## Notes
 

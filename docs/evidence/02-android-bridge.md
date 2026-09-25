@@ -1,0 +1,11 @@
+# Evidence for chapter 02: Calling Android from C# and back
+
+What Phase 20 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+
+## Checked, and against what
+
+Checked, and against what: the exports (single activity block per entry point, `singleTask`, fifteen `configChanges`, where each plugin form lands, `jniLibs` per ABI, games-activity 3.0.5, AGP 8.10.0, Gradle 8.13); IL of `UnityEngine.AndroidJNIModule` (two global references per wrapper, queued release and finalizer, the name-and-signature lookup through `ReflectionHelper` on every call by name, `AndroidJavaException` built from `toString` and the Java stack trace, `InvokeOnUIThread` through `runOnUiThread`, `InvokeOnUnityMainThread` as `SynchronizationContext.Send` with an untimed `WaitOne`); `javap` of `classes.jar` (`UnityMain` thread with a Looper, the 2 s pause timeout for the Activity entry, `UnitySendMessage` dropping messages before native load, proxies held by a GC handle until Java finalizes them, no uncaught-exception handler); `libunity.so` disassembly (`ProcessSendMessages` logs `SendMessage: object %s not found!`; log tag `Unity`); IL2CPP's source and generated C++ (lazy `[DllImport]` resolution, `DllNotFoundException`); the games-activity AAR's glue (`onPause` waits for the game thread with no timeout; `GameActivity` extends `AppCompatActivity`); ART source (51,200 global references, `LOG(FATAL)` on overflow); AOSP (`ConnectivityThread`); `ndk-stack`'s source (build ID mismatch refused); release and development `libunity.so` build IDs; Unity 6.3, Android, AOSP and Gradle pages for the rest.
+
+## Where the outline fell short
+
+Where the outline fell short: the high-level API already caches method IDs (in Java, so a call by name still crosses to look it up); undisposed wrappers are released by finalizers, late; whether a stuck main thread alone causes an ANR depends on the entry point, per the pause code above, and no device was used; Unity 6.3 warns about native plugins not aligned for 16 KB pages; `singleTask` destroys activities above Unity's, so a helper activity must report a missing result in `onDestroy`. `android-new-intent` also covers configuration changes, as the same delivery to the running activity.

@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import { checkUrls, findLinks, newLinks } from './links.ts'
 import { assembleBooks, findContentFiles } from './load.ts'
 import type { RawBook, Source } from './load.ts'
+import { describeFigures, optionFigures } from './options.ts'
 import { ID_PATTERN, findFenceEnd, formatError, openFence, parseContentFile, slug } from './parse.ts'
 import type { ContentError, RawConcept, RawSection, RawVariant, Text } from './parse.ts'
 
@@ -706,12 +708,18 @@ export function checkStyle(sources: Source[]): ContentError[] {
 const USAGE = `usage: npm run guard -- questions [--base <rev>] [--allow distractors | --allow new-chapters]
        npm run guard -- questions [--base <rev>] --allow structure --changes <file>
        npm run guard -- style
+       npm run guard -- options [--book <id>]
+       npm run guard -- links [--base <rev> | --all]
 
 questions  compares every question block with the one at <rev> (default HEAD), ignoring line numbers;
            --allow distractors accepts changed "-" options, --allow new-chapters accepts every chapter
            none of whose sections is at <rev>, and --allow structure accepts the new concepts, moved
            and added variants, and added answers that the JSON changes file lists
-style      checks the prose conventions of every chapter and glossary file`
+style      checks the prose conventions of every chapter and glossary file
+options    prints figures for the options of choice questions, per chapter file and per book: how often
+           the correct option is the longest or the shortest, the median lengths, and the word list
+links      checks each external link that is new since <rev> (default HEAD), or with --all every link,
+           for HTTP 200 with no redirect; the only command that needs the network`
 
 function readWorkingTree(root: string): Source[] {
   return findContentFiles(root).map((file) => ({ path: file, text: readFileSync(path.join(root, file), 'utf8') }))
@@ -804,12 +812,75 @@ function runStyle(root: string, args: string[]): number {
   return 0
 }
 
-function main(args: string[]): number {
+function runOptions(root: string, args: string[]): number {
+  let only: string | null = null
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--book' && args[i + 1]) only = args[++i]
+    else return usage(`unknown or incomplete option "${args.slice(i).join(' ')}"`)
+  }
+  const { books, errors } = assembleBooks(readWorkingTree(root))
+  if (errors.length > 0) {
+    for (const error of errors) console.error(formatError(error))
+    return 1
+  }
+  const chosen = only === null ? books : books.filter((book) => book.id === only)
+  if (chosen.length === 0) return usage(`no book has the id "${only}"; the ids are ${books.map((book) => book.id).join(', ')}`)
+  for (const book of optionFigures(chosen)) {
+    console.log(book.book)
+    for (const { file, figures } of book.files) console.log(`  ${path.basename(file)}: ${describeFigures(figures)}`)
+    console.log(`  whole book: ${describeFigures(book.total)}`)
+  }
+  return 0
+}
+
+async function runLinks(root: string, args: string[]): Promise<number> {
+  let rev: string | null = null
+  let all = false
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--base' && args[i + 1]) rev = args[++i]
+    else if (args[i] === '--all') all = true
+    else return usage(`unknown or incomplete option "${args.slice(i).join(' ')}"`)
+  }
+  if (all && rev !== null) return usage('--base and --all do not go together')
+  const { links, errors } = findLinks(readWorkingTree(root))
+  if (errors.length > 0) {
+    for (const error of errors) console.error(formatError(error))
+    return 1
+  }
+  let chosen = links
+  const since = all ? '' : ` new since ${rev ?? 'HEAD'}`
+  if (!all) {
+    try {
+      chosen = newLinks(links, readRevision(root, rev ?? 'HEAD'))
+    } catch (error) {
+      const stderr = (error as { stderr?: string }).stderr?.trim()
+      return usage(`cannot read content/ at "${rev ?? 'HEAD'}": ${stderr || (error as Error).message}`)
+    }
+  }
+  const results = await checkUrls(chosen.map((link) => link.url))
+  const failed = chosen.filter((link) => results.get(link.url))
+  for (const link of failed) console.error(formatError({ file: link.file, line: link.line, message: `${link.url} ${results.get(link.url)}` }))
+  const bad = [...results.values()].filter((problem) => problem !== null).length
+  if (bad > 0) {
+    console.error(`\nlink check failed: ${bad} of ${many(results.size, 'URL')}${since} fail`)
+    return 1
+  }
+  console.log(`links OK: ${many(results.size, 'URL')}${since} return 200 with no redirect (${many(links.length, 'link')} in the content)`)
+  return 0
+}
+
+function main(args: string[]): number | Promise<number> {
   const root = path.resolve(import.meta.dirname, '..')
   const [command, ...rest] = args
   if (command === 'questions') return runQuestions(root, rest)
   if (command === 'style') return runStyle(root, rest)
+  if (command === 'options') return runOptions(root, rest)
+  if (command === 'links') return runLinks(root, rest)
   return usage(command ? `unknown command "${command}"` : 'no command given')
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) process.exitCode = main(process.argv.slice(2))
+if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
+  void Promise.resolve(main(process.argv.slice(2))).then((code) => {
+    process.exitCode = code
+  })
+}
