@@ -17,6 +17,13 @@ The application binary interface a native library is compiled for: an instructio
 
 Unity builds its player libraries for the ABIs chosen under Target Architectures in Player Settings, and each native plugin has to exist for all of them. A plugin missing for one ABI fails on the devices that need it and nowhere else, as [[#android-plugin-forms]] shows.
 
+## Advertising identifier {#advertising-identifier}
+= advertising identifiers | advertising ID | IDFA
+
+An identifier for advertising that a device offers to the apps on it: the identifier for advertisers on iOS, and on Android the advertising ID that Google Play services provides.
+
+On iOS, Apple's page on user privacy says that the value reads as all zeros unless the player has given the app permission to track through [[App Tracking Transparency]]. On Android, an app that uses the advertising ID and targets Android 13 or higher declares the `AD_ID` permission in its manifest. [[#sdk-consent-init]] places both in the start-up sequence.
+
 ## Android Gradle Plugin {#android-gradle-plugin}
 = AGP
 
@@ -30,6 +37,13 @@ Its version is chosen together with those of Gradle, the JDK and the Android SDK
 Android's store for cryptographic keys, which keeps their key material out of the app's process: the app asks the Keystore to encrypt, decrypt or sign with a key that it has no way to export.
 
 It holds keys rather than arbitrary data, so an app that must keep a secret, such as a pending sign-in attempt, encrypts it with a Keystore key and stores the result in its own files. [[#os-auth-callbacks]] uses it for the state and verifier of a sign-in that may outlive the process.
+
+## Android vitals {#android-vitals}
+= vitals
+
+Google Play's measures of an app's technical quality on players' devices, among them the user-perceived crash rate, the user-perceived ANR rate and start-up times.
+
+Each rate has a bad behavior threshold. As checked in September 2026, an app crosses it when 1.09% of its daily active users meet a user-perceived crash, or 0.47% a user-perceived ANR, and a cold start of five seconds counts as excessive. [[#sdk-upgrades]] watches them during a rollout.
 
 ## ANR {#anr}
 = Application Not Responding | ANRs
@@ -50,6 +64,13 @@ An extension has its own target, `Info.plist`, entitlements and signature, and t
 Apple's service for publishing apps. A team uploads builds to it, sends them to testers through [[TestFlight]], submits them for review and releases them on the App Store, and its API lets a pipeline do the same with a key instead of a signed-in account.
 
 [[#xcode-build-flow]] follows a build from Unity's export to an upload, and [[#xcode-signing-model]] shows `xcodebuild` using an API key to manage signing. Chapter 10 covers release tracks.
+
+## App Tracking Transparency {#app-tracking-transparency}
+= ATT
+
+Apple's framework through which an app asks the player's permission to track them or to read the device's [[advertising identifier]], which Apple requires before either.
+
+The app calls `ATTrackingManager.requestTrackingAuthorization`, with its reason in the `NSUserTrackingUsageDescription` key of its `Info.plist`, and the answer is one of four statuses: not determined, restricted, denied or authorized. The request shows its prompt only while the app is active. [[#sdk-consent-init]] fits it into the game's consent flow.
 
 ## App Transport Security {#app-transport-security}
 = ATS
@@ -84,6 +105,13 @@ Google's command-line tool for app bundles. It builds them, and it turns a bundl
 A dependency manager for Apple platforms. A project lists its pods in a `Podfile`; `pod install` resolves their versions from a spec repository, records them in `Podfile.lock`, and builds them through a Pods project that a workspace joins to the app's own project.
 
 In a Unity project, [[EDM4U]] writes the Podfile from the SDKs' dependency files and runs `pod install`. [[#xcode-cocoapods]] covers the workspace, the conflicts the resolver reports, and the plan to make CocoaPods' central spec repository read-only.
+
+## Content provider {#content-provider}
+= content providers | ContentProvider
+
+An Android app component, declared in the manifest, that provides content to applications, its own and others. Android creates each registered one as the app's process starts.
+
+Android calls each provider's `onCreate` on the main thread at launch, before the app's first activity. Libraries use that to start themselves without a call from the app: Firebase's `FirebaseInitProvider` and Jetpack App Startup's `InitializationProvider` are two. In a Unity game it happens before any C# runs, and [[#sdk-consent-init]] shows how to control it.
 
 ## Custom Tabs {#custom-tabs}
 = Custom Tab | Auth Tab
@@ -194,6 +222,13 @@ The name of a library in a Maven repository, written `group:artifact:version`, s
 
 Declaring a dependency by its coordinates lets Gradle fetch what the library needs and settle version conflicts, by default by choosing the highest version requested. [[#android-plugin-forms]] contrasts it with an AAR copied into the project, and [[#gradle-dependencies]] covers resolution.
 
+## Method swizzling {#method-swizzling}
+= swizzling | swizzles | swizzled
+
+Exchanging the implementations of two Objective-C methods at run time, so that a call to one runs the other.
+
+SDKs use it to hear what the application delegate hears without asking the game to forward it: the SDK's version of a delegate method runs in place of the original and is expected to call it. When two SDKs swizzle one method, the one installed last runs first, and the chain holds only while each calls through, as [[#ios-xcode-postprocess]] shows. [[#sdk-evaluation]] asks whether an SDK does it and whether it can be turned off.
+
 ## OAuth {#oauth}
 = OAuth 2.0
 
@@ -255,6 +290,13 @@ The failure appears only in minified builds, as a missing class or method at the
 The object that receives the events of a UIKit scene: connecting, becoming active, resigning active, entering the background, and the links and user activities meant for it.
 
 An app that declares a scene manifest in its `Info.plist` gets these for each scene, and its application delegate no longer receives them, nor the launch URL in its launch options. Unity 6.3 declares `UnityScene` as the scene delegate, which forwards the lifecycle to `UnityAppController` and, in 6000.3.11f1, not the links; [[#os-deep-links]] shows the gap and a category that closes it.
+
+## Staged rollout {#staged-rollout}
+= staged rollouts | phased release
+
+Releasing an update to a fraction of players first, and widening it while its metrics hold. Google Play calls it a staged rollout and the App Store a phased release.
+
+On Google Play the team sets the percentage and raises it over time, and halting a rollout stops new deliveries while the players who already updated keep the version. The App Store's phased release spreads an update over seven days to players who have automatic updates on, can be paused for up to 30 days, and leaves any player free to update by hand. [[#sdk-upgrades]] decides what halts one.
 
 ## Strategy {#strategy}
 = strategy pattern | strategies

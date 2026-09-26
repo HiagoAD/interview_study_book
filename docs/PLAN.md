@@ -447,3 +447,13 @@ Codex (GPT-6 Sol, `xhigh`) gathered the evidence in 26 minutes and 313,903 token
 Options: correct option longest in 20% of 30 sets and shortest in 20%, medians 65.5 and 65, no word-list option; the detector found minimal signals. The outline was wrong about plain HTTP: a default Unity 6.3 project refuses it on both platforms, at Unity's own check.
 
 Next phase: a Sol evidence run and an Astra review did not fit in one allowance window; starting the review after the reset avoids the fallback.
+
+### Phase 25: Chapter 07, integrating third-party SDKs
+
+Wrote `content/mobile-platform/07-sdk-integration.md` (6 sections, 12 concepts, 36 variants, the outline's ids) and six glossary entries: Advertising identifier, Android vitals, App Tracking Transparency, Content provider, Method swizzling and Staged rollout. `npm run check` reports the book as 7 chapters, 38 sections, 77 concepts, 252 variants, 45 terms and 113 links with no unlinked entry; `questions --allow new-chapters --base 3e2e5c7` accepts this chapter alone; its 27 new links return 200; the no-brand search is empty. Evidence and runs: [evidence/07-sdk-integration.md](evidence/07-sdk-integration.md).
+
+Codex was blocked until its reset, so the session drafted the sections with each vendor fact marked and later replaced every marker from the receipts; the first scheduled run died with the session that started it. Codex (GPT-6 Sol, `xhigh`) took 40 minutes and 485,058 tokens: 100 receipts, none failed on re-fetch. Its three runs, once their scripts were fixed, showed one Firebase Analytics dependency adding 20 libraries, six permissions and `FirebaseInitProvider` on Android, and Mobile Notifications 2.5.0 taking the notification delegate. The blind review (GPT-6 Astra, `xhigh`, 8 minutes, 137,088 tokens) fit in the same window and found 9 problems, all of which held and are fixed.
+
+Options: correct option longest in 17% of 36 sets and shortest in 25%, medians 75 and 77, no word-list option; the detector found minimal signals.
+
+Next phase: Xcode 27 builds for iOS 15.0 and later, and four Firebase pods still declare 9.0 or 12.0, so an unsigned archive of an export with them failed; no fix was tried.
