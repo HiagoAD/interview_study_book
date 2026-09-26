@@ -35,7 +35,7 @@ Each layer can give you its own evidence, and a symptom rarely says which one to
 | Network | Captured requests and responses, with their timings |
 | Backend | Server logs and records, joined to the client by an operation id |
 
-“The purchase never arrived” can start in any row. What this book practises is choosing the row whose evidence splits the possibilities, and looking there first; chapter 12 turns that into a method for the whole path.
+“The purchase never arrived” can start in any row. What this book practises is choosing the row whose evidence splits the possibilities, and looking there first; chapter 15 turns that into a method for the whole path.
 
 The topics do not carry equal weight in an interview for a Unity mobile platform role. This table lists them from heaviest to lightest, with the chapters that cover each:
 
@@ -45,10 +45,11 @@ The topics do not carry equal weight in an interview for a Unity mobile platform
 | Third-party SDK integration | 7, building on 1, 5 and 6 |
 | Build and release pipeline | 5, 6 and 10 |
 | Backend and API clients | 8 and 9 |
-| Debugging across boundaries | 12, which uses everything before it |
+| System design for game services | 12–14, building on 8 and 9 |
+| Debugging across boundaries | 15, which uses everything before it |
 | C# architecture at the boundary | 1 |
 | CI/CD and Jenkins | 11 |
-| Interview practice | 13 |
+| Interview practice | 16 |
 
 The book assumes Unity and C# at the level of *The Game Layer*, the first book on this site. Where a section builds on that book, it recaps what it needs in a paragraph and names the chapter, so this one can be read on its own. It assumes little hands-on experience with Gradle, Xcode, native plugins or CI. It teaches enough Java and Objective-C to read and write a thin bridge, and it goes as deep as an interview for a platform role goes: mechanisms, decisions, and debugging across the boundary, well short of Android or iOS app development.
 
@@ -472,7 +473,7 @@ The device run matters because the Editor never executes part of the path:
 - the real lifecycle: backgrounding, process death, and a launch started by a link or a notification;
 - the callback threads, which a simulator reproduces only if it is written to.
 
-The smoke test is a short scripted run on a build configured like the release: start-up, sign-in, a purchase in the store's test environment, a push, a link, and a background and resume. Chapters 5, 10 and 12 come back to why that configuration matters.
+The smoke test is a short scripted run on a build configured like the release: start-up, sign-in, a purchase in the store's test environment, a push, a link, and a background and resume. Chapters 5, 10 and 15 come back to why that configuration matters.
 
 Exercise: Pick a fake in a project you know and write down one behavior of the real SDK that it does not model. Then decide which of the four kinds of test would catch the difference.
 

@@ -99,6 +99,14 @@ Google's command-line tool for app bundles. It builds them, and it turns a bundl
 
 `build-apks` makes a set of APKs from a bundle, signed with the keystore it is given or with the debug key; `install-apks` installs the ones a connected phone needs; `dump manifest` prints the manifest a bundle carries. The APKs it makes reproduce Google Play's splits and not its signature, as [[#gradle-packaging-signing]] explains.
 
+## CDN {#cdn}
+= content delivery network | content delivery networks | CDNs
+-> object-storage
+
+Content delivery network: a network of caches at many sites, close to players, that serves static files such as asset bundles and images from a site near each player instead of from the game's own servers.
+
+A file is cached at a site the first time a player near it asks for it, and served from there until it expires, so a new release's content reaches millions of players without each download crossing to the origin. Files are named by version or by hash, so that a new version gets a new address instead of waiting for the old copy to expire. [[#design-caches-queues]] places it among the backend's caches.
+
 ## Certificate pinning {#certificate-pinning}
 = pinning | pinned | pin | pins
 
@@ -237,6 +245,14 @@ The encrypted database in which iOS apps keep small secrets, such as passwords, 
 
 Each item has an accessibility setting that says when it can be read, for example while the device is unlocked, and a setting ending in `ThisDeviceOnly` keeps the item from migrating to a new device. [[#os-auth-callbacks]] keeps a pending sign-in attempt there, so that it survives the app's process, and [[#http-sessions]] keeps the session's tokens there.
 
+## Load balancer {#load-balancer}
+= load balancers
+-> websocket
+
+A server or managed service that spreads incoming connections or requests over a pool of instances, and stops sending to an instance that fails its health check.
+
+It works at one of two levels. A balancer that forwards TCP connections without reading them keeps each connection on the instance it chose; one that terminates HTTP can route each request by its path or headers. Taking an instance out of the pool while its open connections finish, called draining, is how a deploy replaces instances without cutting requests off. [[#design-services-state]] places it in front of the gateway.
+
 ## Logcat {#logcat}
 
 Android's system log, and the tool that reads it. Each process writes to it, Unity included: its own lines and the output of C#'s `Debug.Log` carry the tag `Unity`, and crash reports go to a separate crash buffer.
@@ -270,6 +286,14 @@ SDKs use it to hear what the application delegate hears without asking the game 
 The authorization framework of RFC 6749, in which a client obtains tokens from an authorization server, usually after the user signs in on the server's pages and approves.
 
 A native app uses the authorization code flow with PKCE through an external browser, as RFC 8252 sets out, and holds no client secret. [[#os-auth-callbacks]] covers the flow and its callbacks, and [[#http-sessions]] the session that follows it.
+
+## Object storage {#object-storage}
+= object store | object stores
+-> cdn
+
+A store for files, called objects, kept under keys in containers called buckets, written whole and read over HTTP. It answers no query beyond a key or a key prefix, and holds very large amounts of data for less than a database would cost.
+
+Telemetry, logs, backups and a game's downloadable content live there: files written once and read in bulk, such as a day of events that a warehouse or a batch job reads by time range. [[#design-storage]] places it among the backend's stores.
 
 ## Observer {#observer}
 = observer pattern | observers
@@ -313,6 +337,14 @@ A file from Apple, embedded in a signed iOS app, that ties the app's identifier 
 
 Xcode derives some entitlements from it, such as `aps-environment`, which decides whether the app's push token belongs to the sandbox or the production environment of APNs, as [[#os-notifications]] shows. [[#xcode-signing-model]] covers profiles, certificates and their expiry.
 
+## Pub/sub {#pub-sub}
+= publish/subscribe
+-> websocket
+
+Publish/subscribe: a messaging pattern in which a publisher sends a message to a channel or topic without knowing who receives it, and each subscriber to that channel receives its own copy.
+
+It fans one message out to many receivers, such as one purchase event to the ledger, analytics and notifications, or one chat message to the node that holds its recipient's connection. What happens to a subscriber that is away depends on the system: Redis's Pub/Sub delivers each message at most once and keeps nothing, while a log-based system keeps messages for subscribers to read later. [[#design-services-state]] and [[#design-caches-queues]] use it.
+
 ## Push token {#push-token}
 = push tokens | device token | registration token
 
@@ -326,12 +358,27 @@ The Android build tool that shrinks, optimizes and obfuscates Java and Kotlin co
 
 The failure appears only in minified builds, as a missing class or method at the moment the bridge calls it. [[#gradle-r8-symbols]] covers keep rules and the mapping file that turns obfuscated stack traces back into names.
 
+## Read replica {#read-replica}
+= read replicas | replica | replicas
+
+A copy of a database that follows its primary by applying the primary's changes, and serves reads. Writes go to the primary.
+
+Replication is usually asynchronous, so a replica runs behind the primary, and a read from it can miss a write that has already succeeded. A replica can also take the primary's place when the primary fails. [[#design-storage]] covers the stale reads that replicas cause, and their fixes.
+
 ## Remote configuration {#remote-configuration}
 = remote config
 
 Values that a game fetches from a service while it runs, to turn features on and off or change numbers without a new build. The game starts from defaults compiled into it, and uses the fetched values once it activates them.
 
 Where each backend environment has its own, as with a Firebase project per environment, remote configuration chooses among values inside an environment, not the environment itself, as [[#release-environments]] explains. A flag in it stops the calls that the game makes, not native code that runs without a call, as [[#sdk-upgrades]] shows.
+
+## Saga {#saga}
+= sagas
+-> idempotence
+
+A way to run an operation that spans services or databases as a series of local transactions, each with a compensating step that undoes it if a later step fails, instead of one transaction over everything.
+
+The name comes from a 1987 paper by Hector Garcia-Molina and Kenneth Salem. Each step is idempotent, so that it can be retried, and the saga records which steps are done, so that a failure halfway ends in a finished operation or an undone one. [[#design-consistency]] places it beside the transactions that one database gives.
 
 ## Scene delegate {#scene-delegate}
 = scene delegates | UISceneDelegate
@@ -346,6 +393,13 @@ An app that declares a scene manifest in its `Info.plist` gets these for each sc
 A name that Unity passes to the C# compiler, so that code under `#if NAME` is compiled into a build where the name is defined and left out of the others. Unity defines its own, such as `UNITY_ANDROID` and `DEVELOPMENT_BUILD`, and a project adds its own in Player settings or in a build profile.
 
 A define decides what a build contains, not what it does when it runs: code under a define that a build lacks is not in that build at all. [[#release-build-variants]] uses one to keep QA tools out of store builds, and [[#release-environments]] one to keep other environments' addresses out.
+
+## Sorted set {#sorted-set}
+= sorted sets
+
+A collection of unique members, each with a numeric score, kept in score order so that a member's rank, and a range of ranks, can be read quickly. Redis offers it as a data type.
+
+In Redis, adding or updating a member and finding a member's rank each take O(log N) time for N members, and reading M members from a given rank takes O(log N + M), which is why leaderboards are built on it. [[#design-storage]] compares it with the stores that fit other queries.
 
 ## Staged rollout {#staged-rollout}
 = staged rollouts | phased release
@@ -373,3 +427,17 @@ The Crashes organizer in Xcode shows crash reports from TestFlight and App Store
 Transport Layer Security: the protocol that encrypts HTTPS and proves the server's identity. In its handshake the server presents a certificate for its host name, and the client refuses the connection unless the certificate chains to an authority it trusts and names the host it asked for.
 
 That check is why nothing between the device and the server can answer in the server's name without the connection failing. A captive portal that intercepts a game's HTTPS request produces a certificate for the wrong host, and the request ends as a connection error, as [[#network-offline]] describes.
+## Unity Gaming Services {#unity-gaming-services}
+= UGS
+
+Unity's managed backend services for games. In September 2026 its catalog listed Authentication, Cloud Save, Economy, Leaderboards, Remote Config, Lobby, Relay, Matchmaker and Friends, and Cloud Code, which runs a game's own logic in Unity's cloud.
+
+Buying such a backend saves building and running the common services, and it constrains data models, limits and cost in return. The catalog changes: Unity's game server hosting shut down on March 31, 2026, as the upgrade guide for Unity 6.3 records. [[#design-services-state]] lists what to check before choosing one.
+
+## WebSocket {#websocket}
+= WebSockets
+-> pub-sub | load-balancer
+
+A protocol, defined in RFC 6455, for a long-lived, two-way connection between a client and a server over one TCP connection, which starts as an HTTP request that asks to be upgraded.
+
+Once the connection is open, either side sends messages when it likes, which is what a server needs to push chat, presence or an event's start to a player without being asked. The connection is state on the server that accepted it, so a backend that pushes messages keeps a tier of connection nodes and routes each message to the node that holds its player, as [[#design-services-state]] describes.
