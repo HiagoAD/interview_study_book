@@ -63,7 +63,7 @@ An extension has its own target, `Info.plist`, entitlements and signature, and t
 
 Apple's service for publishing apps. A team uploads builds to it, sends them to testers through [[TestFlight]], submits them for review and releases them on the App Store, and its API lets a pipeline do the same with a key instead of a signed-in account.
 
-[[#xcode-build-flow]] follows a build from Unity's export to an upload, and [[#xcode-signing-model]] shows `xcodebuild` using an API key to manage signing. Chapter 10 covers release tracks.
+[[#xcode-build-flow]] follows a build from Unity's export to an upload, and [[#xcode-signing-model]] shows `xcodebuild` using an API key to manage signing. [[#release-rollouts]] covers its testers, App Review and phased releases.
 
 ## App Tracking Transparency {#app-tracking-transparency}
 = ATT
@@ -119,6 +119,13 @@ In a Unity project, [[EDM4U]] writes the Podfile from the SDKs' dependency files
 An Android app component, declared in the manifest, that provides content to applications, its own and others. Android creates each registered one as the app's process starts.
 
 Android calls each provider's `onCreate` on the main thread at launch, before the app's first activity. Libraries use that to start themselves without a call from the app: Firebase's `FirebaseInitProvider` and Jetpack App Startup's `InitializationProvider` are two. In a Unity game it happens before any C# runs, and [[#sdk-consent-init]] shows how to control it.
+
+## Crash-free users {#crash-free-users}
+= crash-free user | crash-free rate
+
+The share of an app's users who had no crash in a period, as a crash reporter counts them. Crashlytics counts fatal events for it, and for Unity games also the uncaught exceptions that its SDK reports as fatal.
+
+A release compares it version against version, for the same hours, as the first of its halting criteria in [[#release-rollouts]]. A failure that does not crash, such as a purchase that ends in an error, leaves it unchanged, which is why the criteria also count funnels.
 
 ## Custom Tabs {#custom-tabs}
 = Custom Tab | Auth Tab
@@ -312,6 +319,13 @@ The Android build tool that shrinks, optimizes and obfuscates Java and Kotlin co
 
 The failure appears only in minified builds, as a missing class or method at the moment the bridge calls it. [[#gradle-r8-symbols]] covers keep rules and the mapping file that turns obfuscated stack traces back into names.
 
+## Remote configuration {#remote-configuration}
+= remote config
+
+Values that a game fetches from a service while it runs, to turn features on and off or change numbers without a new build. The game starts from defaults compiled into it, and uses the fetched values once it activates them.
+
+Where each backend environment has its own, as with a Firebase project per environment, remote configuration chooses among values inside an environment, not the environment itself, as [[#release-environments]] explains. A flag in it stops the calls that the game makes, not native code that runs without a call, as [[#sdk-upgrades]] shows.
+
 ## Scene delegate {#scene-delegate}
 = scene delegates | UISceneDelegate
 
@@ -319,12 +333,19 @@ The object that receives the events of a UIKit scene: connecting, becoming activ
 
 An app that declares a scene manifest in its `Info.plist` gets these for each scene, and its application delegate no longer receives them, nor the launch URL in its launch options. Unity 6.3 declares `UnityScene` as the scene delegate, which forwards the lifecycle to `UnityAppController` and, in 6000.3.11f1, not the links; [[#os-deep-links]] shows the gap and a category that closes it.
 
+## Scripting define symbol {#scripting-define-symbol}
+= scripting define | scripting defines | scripting define symbols
+
+A name that Unity passes to the C# compiler, so that code under `#if NAME` is compiled into a build where the name is defined and left out of the others. Unity defines its own, such as `UNITY_ANDROID` and `DEVELOPMENT_BUILD`, and a project adds its own in Player settings or in a build profile.
+
+A define decides what a build contains, not what it does when it runs: code under a define that a build lacks is not in that build at all. [[#release-build-variants]] uses one to keep QA tools out of store builds, and [[#release-environments]] one to keep other environments' addresses out.
+
 ## Staged rollout {#staged-rollout}
 = staged rollouts | phased release
 
 Releasing an update to a fraction of players first, and widening it while its metrics hold. Google Play calls it a staged rollout and the App Store a phased release.
 
-On Google Play the team sets the percentage and raises it over time, and halting a rollout stops new deliveries while the players who already updated keep the version. The App Store's phased release spreads an update over seven days to players who have automatic updates on, can be paused for up to 30 days, and leaves any player free to update by hand. [[#sdk-upgrades]] decides what halts one.
+On Google Play the team sets the percentage and raises it over time, and halting a rollout stops new deliveries while the players who already updated keep the version. The App Store's phased release spreads an update over seven days to players who have automatic updates on, can be paused for up to 30 days, and leaves any player free to update by hand. [[#sdk-upgrades]] decides what halts one, and [[#release-rollouts]] compares the two stores' controls and sets out the halting criteria.
 
 ## Strategy {#strategy}
 = strategy pattern | strategies
@@ -337,7 +358,7 @@ At the platform boundary it holds a rule that differs between platforms inside a
 
 Apple's service for sending beta builds of an app to testers through App Store Connect. Testers install the builds with the TestFlight app, and their crash reports reach the developer whatever their device's sharing settings.
 
-The Crashes organizer in Xcode shows crash reports from TestFlight and App Store builds, with names where the build's dSYMs were uploaded with it, as [[#ios-failure-evidence]] describes. Chapter 10 covers release tracks.
+The Crashes organizer in Xcode shows crash reports from TestFlight and App Store builds, with names where the build's dSYMs were uploaded with it, as [[#ios-failure-evidence]] describes. [[#release-rollouts]] covers internal and external testers, and [[#release-verification]] why a release candidate is tested from it.
 
 ## TLS {#tls}
 = Transport Layer Security
