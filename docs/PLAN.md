@@ -467,3 +467,11 @@ Deviation, at the user's request: Codex was nearly out of its allowance, so the 
 Options: correct option longest in 19% of 42 sets and shortest in 19%, medians 77.5 and 77, no word-list option; the detector found minimal signals.
 
 Next phase: chapter 9 builds on this chapter's `IHttpTransport`, `ApiResponse.NoResponse` and `SessionClient`. The Editor applied `UnityWebRequest.timeout` to the whole transfer, while the iOS Trampoline hands it to an idle timeout, so the game keeps its own deadlines.
+
+### Phase 27: Chapter 09, reliable networking
+
+Ran in a cloud container, out of order: the Mac was writing chapters 07 and 08, so chapter 9 names them in plain text and explains the 401 refresh and the idempotent methods in place. Wrote `09-reliable-networking.md` (5 sections, 10 concepts, 38 variants, the outline's ids) and the TLS glossary entry, and linked the Idempotence entry to the new section. `npm run check` gives the book 7 chapters, 37 sections, 75 concepts, 254 variants, 40 terms and 89 links, none unlinked; `questions --allow new-chapters --base 3e2e5c7` accepts this chapter alone.
+
+Without Codex, the Editor, the probe, Xcode or a device, the session gathered the evidence under rule A: 73 receipts, none failed, from Unity's source at 6000.3.11f1, the specifications' repositories, Android's and Apple's pages and a .NET 8 probe. The samples compiled against stubs. A teacher's read replaced the review and narrowed three claims; the detector then found only low vocabulary diversity.
+
+Merged on the Mac from d02a753: 9 chapters, 48 sections, 97 concepts, 332 variants, 50 terms, 135 links, none unlinked; every check passes. `UnityWebRequest.timeout` is idle time on iOS, so attempts now run their own timer through chapter 8's layers, compiled for both platforms and run in the Editor. Receipts: 60 pass, the container's 13 cannot. Astra (`xhigh`, after a reset: 9 minutes, 224,142 tokens) found 12 problems; 9 held and are fixed. Options: longest in 18% of 38 sets, shortest in 18%, medians 61 and 60.
