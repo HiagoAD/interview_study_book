@@ -36,7 +36,7 @@ Its version is chosen together with those of Gradle, the JDK and the Android SDK
 
 Android's store for cryptographic keys, which keeps their key material out of the app's process: the app asks the Keystore to encrypt, decrypt or sign with a key that it has no way to export.
 
-It holds keys rather than arbitrary data, so an app that must keep a secret, such as a pending sign-in attempt, encrypts it with a Keystore key and stores the result in its own files. [[#os-auth-callbacks]] uses it for the state and verifier of a sign-in that may outlive the process.
+It holds keys rather than arbitrary data, so an app that must keep a secret, such as a pending sign-in attempt, encrypts it with a Keystore key and stores the result in its own files. [[#os-auth-callbacks]] uses it for the state and verifier of a sign-in that may outlive the process, and [[#http-sessions]] for the session's refresh token.
 
 ## Android vitals {#android-vitals}
 = vitals
@@ -77,7 +77,7 @@ The app calls `ATTrackingManager.requestTrackingAuthorization`, with its reason 
 
 The iOS policy that makes connections through the URL Loading System, such as `URLSession`, use HTTPS. An app declares exceptions under the `NSAppTransportSecurity` key of its [[Info.plist]]: for the whole app, for named domains, or for local networking.
 
-Unity's `UnityWebRequest` is built on `URLSession` on iOS, so the policy covers it, and Unity's “Allow downloads over HTTP” setting writes an exception for the whole app, as [[#xcode-build-settings]] shows.
+Unity's `UnityWebRequest` is built on `URLSession` on iOS, so the policy covers it, and Unity's “Allow downloads over HTTP” setting writes an exception for the whole app, as [[#xcode-build-settings]] shows. `HttpClient` is not: Unity builds it on Mono's own HTTP code, which the policy does not reach, as [[#http-unity-clients]] explains.
 
 ## ARC {#arc}
 = Automatic Reference Counting
@@ -98,6 +98,13 @@ Two defaults decide whether that check has teeth. The predefined `Assembly-CShar
 Google's command-line tool for app bundles. It builds them, and it turns a bundle into the APKs that Google Play would generate for each device, so that a bundle can be installed and tested before it is uploaded.
 
 `build-apks` makes a set of APKs from a bundle, signed with the keystore it is given or with the debug key; `install-apks` installs the ones a connected phone needs; `dump manifest` prints the manifest a bundle carries. The APKs it makes reproduce Google Play's splits and not its signature, as [[#gradle-packaging-signing]] explains.
+
+## Certificate pinning {#certificate-pinning}
+= pinning | pinned | pin | pins
+
+A client's rule that accepts a server's certificate only when the certificate, or a public key in its chain, matches one that the client carries, on top of the usual check that a trusted authority issued it.
+
+It keeps out a party that can make the device trust a certificate of its own choosing, such as a proxy whose authority someone installed on the device. The cost is that the pins ship in the build: a server key replaced by one that no pin matches cuts off each installed client pinned to the old one, so teams pin more than one key, one of them a backup, and plan the rotation before the first release that pins. In Unity, a `CertificateHandler` makes the check for `UnityWebRequest`, as [[#http-unity-clients]] shows.
 
 ## CocoaPods {#cocoapods}
 = pods | Podfile
@@ -126,6 +133,13 @@ That is why OAuth for native apps uses it. Auth Tab is a variant made for authen
 A URL that opens an app at a particular place instead of a web page. It can use a custom scheme, which any app can claim, or a verified https link that the platform has confirmed belongs to the app.
 
 Unity reports the link that launched the app in `Application.absoluteURL` and raises `Application.deepLinkActivated` for links that arrive while it runs, so code that subscribes after start-up reads the property for the launch link. Anyone can send a link, which makes it untrusted input: it may choose a screen, and it grants nothing without the server. [[#os-deep-links]] covers verified links on both platforms, and a gap in Unity 6000.3 through which iOS links reach neither.
+
+## Device attestation {#device-attestation}
+= attestation | Play Integrity API | App Attest
+
+A platform service that vouches for the app and the device a request comes from, in a form the backend checks with the platform: the Play Integrity API on Android, and App Attest, part of the DeviceCheck framework, on iOS.
+
+A passing check makes it more likely that the request comes from the genuine app on a genuine device, and neither platform presents it as proof: Google recommends Play Integrity alongside other anti-abuse measures, and Apple warns that a single compromised device can serve assertions to many users. [[#http-sessions]] places it beside the session and the backend's own rules.
 
 ## Dispatch queue {#dispatch-queue}
 = dispatch queues | main queue | Grand Central Dispatch | GCD
@@ -173,7 +187,7 @@ Unity 6.3 ships Gradle 8.13 with its Android module, and the project exported fo
 
 A property of an operation whose repetition changes nothing further: applying it twice for the same identity leaves the same state as applying it once.
 
-The identity is the whole mechanism. A purchase grant is idempotent for its transaction id, and a request for the key the client sent with it; an operation with no stable identity cannot be idempotent, because nothing tells the second call that it is the second. Platforms redeliver events on purpose, so a grant that is not idempotent eventually grants twice, as [[#platform-events]] shows. Chapter 9 carries the idea over HTTP with idempotency keys.
+The identity is the whole mechanism. A purchase grant is idempotent for its transaction id, and a request for the key the client sent with it; an operation with no stable identity cannot be idempotent, because nothing tells the second call that it is the second. Platforms redeliver events on purpose, so a grant that is not idempotent eventually grants twice, as [[#platform-events]] shows. HTTP defines PUT, DELETE and the safe methods as idempotent and POST as not, which [[#http-semantics]] turns into rules for repeating a request, and chapter 9 carries the idea over HTTP with idempotency keys.
 
 ## IL2CPP {#il2cpp}
 
@@ -195,12 +209,19 @@ The Java Native Interface, through which native code and Java call each other in
 
 Each crossing looks classes and methods up by name and signature at run time, which is why a renamed Java method still compiles in C# and fails when it is called, and why [[R8]] can remove Java code that C# reaches by name. Objects that cross hold references someone has to release, and a thread Unity did not create has to be attached to the Java VM before it can make a call. [[#android-java-calls]] covers `AndroidJavaObject` and `AndroidJavaClass` on the C# side, and [[#android-callbacks]] covers `AndroidJavaProxy`.
 
+## JSON Web Token {#json-web-token}
+= JWT | JWTs
+
+A compact, URL-safe format for passing claims between two parties, defined in RFC 7519: the claims are a JSON object, signed or encrypted, and the token is a string of base64url parts separated by periods.
+
+The claims of a signed token can be read by anyone who holds it, while only the holder of the signing key can produce a valid one. Backends often issue access tokens in this format, and OAuth still treats an access token as opaque to the client, so a client relies on the lifetime its token response states rather than on claims it reads from the token, as [[#http-sessions]] explains.
+
 ## Keychain {#keychain}
 = iOS Keychain
 
 The encrypted database in which iOS apps keep small secrets, such as passwords, tokens and keys, through Keychain Services.
 
-Each item has an accessibility setting that says when it can be read, for example while the device is unlocked. [[#os-auth-callbacks]] keeps a pending sign-in attempt there, so that it survives the app's process.
+Each item has an accessibility setting that says when it can be read, for example while the device is unlocked, and a setting ending in `ThisDeviceOnly` keeps the item from migrating to a new device. [[#os-auth-callbacks]] keeps a pending sign-in attempt there, so that it survives the app's process, and [[#http-sessions]] keeps the session's tokens there.
 
 ## Logcat {#logcat}
 
@@ -213,7 +234,7 @@ Read it with `adb logcat` from a computer connected to the device, or in the Edi
 
 A build step that removes the C# a player build appears not to use, to make it smaller. It follows static references, so a type reached only by reflection, by a string name or from native code can be missing from the build while the Editor still has it.
 
-Unity sets how aggressive it is with the Managed Stripping Level in Player Settings. A `link.xml` file or the `[Preserve]` attribute keeps what the analysis cannot see, which the first book's testing and debugging chapter covers. Android release builds add a second stripper for Java, [[R8]], and a bridge can break under either one.
+Unity sets how aggressive it is with the Managed Stripping Level in Player Settings. A `link.xml` file or the `[Preserve]` attribute keeps what the analysis cannot see, which the first book's testing and debugging chapter covers. Android release builds add a second stripper for Java, [[R8]], and a bridge can break under either one. [[#http-dtos]] shows it reaching the DTOs that a JSON library fills through reflection.
 
 ## Maven coordinates {#maven-coordinates}
 = Maven coordinate
@@ -234,7 +255,7 @@ SDKs use it to hear what the application delegate hears without asking the game 
 
 The authorization framework of RFC 6749, in which a client obtains tokens from an authorization server, usually after the user signs in on the server's pages and approves.
 
-A native app uses the authorization code flow with PKCE through an external browser, as RFC 8252 sets out, and holds no client secret. [[#os-auth-callbacks]] covers the flow and its callbacks, and chapter 8 the session that follows it.
+A native app uses the authorization code flow with PKCE through an external browser, as RFC 8252 sets out, and holds no client secret. [[#os-auth-callbacks]] covers the flow and its callbacks, and [[#http-sessions]] the session that follows it.
 
 ## Observer {#observer}
 = observer pattern | observers
@@ -242,6 +263,13 @@ A native app uses the authorization code flow with PKCE through an external brow
 A source that announces facts, and listeners that react to them, with no reference from the source to any listener. At the platform boundary the source is the operating system or an SDK, announcing links, notifications, token changes and purchases.
 
 The pattern's usual risks are order, retention and reentrancy. Platform events add timing: an event can arrive before anyone listens, arrive twice, or arrive after its listener is gone. [[#platform-events]] handles those with buffering, identity and a router.
+
+## OpenAPI {#openapi}
+= OpenAPI Specification | OAS
+
+A standard, language-independent description of an HTTP API: its paths and operations, their parameters, and the schemas of their requests and responses, in a document written in JSON or YAML.
+
+One description can generate client code, DTOs included, server stubs and tests, so the client and the server read a field's name and type from the same source. [[#http-versioning]] names it among the ideas that keep an API's contract from drifting between versions.
 
 ## P/Invoke {#p-invoke}
 = platform invoke

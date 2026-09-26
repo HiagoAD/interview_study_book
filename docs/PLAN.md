@@ -457,3 +457,13 @@ Codex was blocked until its reset, so the session drafted the sections with each
 Options: correct option longest in 17% of 36 sets and shortest in 25%, medians 75 and 77, no word-list option; the detector found minimal signals.
 
 Next phase: Xcode 27 builds for iOS 15.0 and later, and four Firebase pods still declare 9.0 or 12.0, so an unsigned archive of an export with them failed; no fix was tried.
+
+### Phase 26: Chapter 08, backend clients
+
+Wrote `content/mobile-platform/08-backend-clients.md` (5 sections, 10 concepts, 42 variants, the outline's ids) and four glossary entries: Certificate pinning, Device attestation, JSON Web Token and OpenAPI; six older entries now link the new sections. `npm run check` reports the book as 8 chapters, 43 sections, 87 concepts, 294 variants, 49 terms and 128 links with no unlinked entry; `questions --allow new-chapters --base fad7b80` accepts this chapter alone; its 29 new links return 200; the no-brand search is empty. Evidence and runs: [evidence/08-backend-clients.md](evidence/08-backend-clients.md).
+
+Deviation, at the user's request: Codex was nearly out of its allowance, so the session took both delegated steps under the fallback: evidence under rule A, 190 receipts for 111 claims, none failed on re-fetch, and a teacher's read in place of the blind review. That read corrected the advice for stripped DTOs, since `[Preserve]` on a type keeps no members, replaced a distractor that the chapter's own code made correct, and removed seven overstatements. The chapter's C# compiled unchanged in Unity 6.3, ran against a local server, and passed 31 .NET 8 checks.
+
+Options: correct option longest in 19% of 42 sets and shortest in 19%, medians 77.5 and 77, no word-list option; the detector found minimal signals.
+
+Next phase: chapter 9 builds on this chapter's `IHttpTransport`, `ApiResponse.NoResponse` and `SessionClient`. The Editor applied `UnityWebRequest.timeout` to the whole transfer, while the iOS Trampoline hands it to an idle timeout, so the game keeps its own deadlines.
