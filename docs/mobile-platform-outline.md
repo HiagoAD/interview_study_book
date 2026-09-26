@@ -18,12 +18,32 @@ one operation's path is:
 game code -> game-owned interface -> adapter -> bridge (JNI or P/Invoke) -> native SDK -> OS -> network -> backend
 ```
 
-Every chapter works on one or two links of that path, and chapter 12 walks all of it. The reader
+Every chapter works on one or two links of that path, and chapter 15 walks all of it. The reader
 knows Unity and C# at the level of the first book, *The Game Layer*, and has little hands-on
 experience with Gradle, Xcode, native plugins or CI. The book teaches enough Java and Objective-C
 to read and write a thin bridge, not enough to be an Android or iOS app developer, and it goes as
 deep as an interview for a Unity mobile platform role goes: mechanisms, decisions, and how to
 debug across the boundary.
+
+Chapters 12 to 14 open the last box of the path, the backend. Platform engineers at game studios
+often own the game's services or share them with backend engineers, and their interviews include
+a system design round on game services: a leaderboard, matchmaking, a live event for millions of
+players, cloud save, purchases, chat. These chapters go to a firm middle ground, which means the reader can:
+
+- lead a 45-minute design from requirements and estimates to an API, a data model, a diagram
+  whose boxes each own something, and two deep dives;
+- name the standard building blocks correctly (load balancers, stateless services, relational and
+  key-value stores, sorted sets, caches, queues, pub/sub, CDNs, partitioning, replication) and say
+  what each costs;
+- state the consistency each feature needs and what the choice gives up;
+- say what happens at a synchronized spike, when a dependency fails, and while old clients are
+  still calling.
+
+They stop where a backend specialist goes further: consensus algorithms, storage engine internals,
+database replication internals, fleet capacity planning, container orchestration, and netcode
+implementation. Each is named where a design touches it, with the property the design needs from
+it. Chapter 12's first section teaches the answer an interviewer wants there: name the
+concept, state the property, and say how you would find out the rest.
 
 The worked example is an imaginary live mobile game with the integrations a platform team
 maintains: sign-in, purchases, push notifications, deep links, analytics, crash reporting, remote
@@ -37,10 +57,11 @@ The interview themes, by weight, and the chapters that carry them:
 | Third-party SDK integration | 7, building on 1, 5 and 6 |
 | Build and release pipeline | 5, 6, 10 |
 | Backend and API clients | 8, 9 |
-| Debugging across boundaries | 12, using everything before it |
+| System design for game services | 12, 13, 14, building on 8 and 9 |
+| Debugging across boundaries | 15, using everything before it |
 | C# architecture at the boundary | 1 |
 | CI/CD and Jenkins | 11 |
-| Interview practice | 13 |
+| Interview practice | 16 |
 
 ## Totals
 
@@ -57,9 +78,16 @@ The interview themes, by weight, and the chapters that carry them:
 | 09: Reliable requests on unreliable networks | `09-reliable-networking.md` | 5 | 10 |
 | 10: Build variants, environments, and releases | `10-variants-and-releases.md` | 5 | 10 |
 | 11: CI/CD and Jenkins for Unity mobile builds | `11-ci-and-jenkins.md` | 6 | 12 |
-| 12: Debugging across boundaries | `12-debugging-across-boundaries.md` | 5 | 10 |
-| 13: Interview practice for platform roles | `13-interview-practice.md` | 4 | 7 |
-| All | 13 files, plus `glossary.md` | 68 | 136 |
+| 12: System design for game services: method and building blocks | `12-system-design.md` | 6 | 12 |
+| 13: Designing core game services | `13-game-services.md` | 7 | 14 |
+| 14: Running game services at scale | `14-running-services.md` | 5 | 10 |
+| 15: Debugging across boundaries | `15-debugging-across-boundaries.md` | 5 | 10 |
+| 16: Interview practice for platform roles | `16-interview-practice.md` | 5 | 9 |
+| All | 16 files, plus `glossary.md` | 87 | 174 |
+
+Chapters 12 to 14 were added on 2026-09-26, after chapter 11 was written. Debugging across
+boundaries and interview practice, unwritten then, moved from 12 and 13 to 15 and 16 with their
+section and concept ids unchanged.
 
 The chapter titles are the front matter's `chapter:` values. Section and concept ids are
 proposals until the phase that writes them commits: a phase may rename or replace one, and says so
@@ -1032,7 +1060,365 @@ Test: `ci-build-once`; `ci-symbol-upload`.
 Exercise: trace a production crash back to its commit and symbols using only what your pipeline
 records today.
 
-## 12: Debugging across boundaries
+## 12: System design for game services: method and building blocks
+
+Evidence for the chapter: Redis's command reference for sorted-set operations and their stated
+complexity; PostgreSQL's documentation for transactions, isolation levels and constraints; one
+queue's documentation for its delivery guarantee; Google's SRE book for estimation and overload;
+Gilbert and Lynch's paper for the statement of CAP. SQLite (installed) and .NET 8 probes show
+transactions, unique constraints and version checks. The shape of the round comes from published
+interview guides, cited by category and never by studio, and the chapter says it is reported
+rather than guaranteed.
+
+### How a game system design round runs {#design-round-method}
+
+- The shape the guides report: 45 to 60 minutes; requirements and scope; estimates; the API and
+  data model; a diagram; two or three deep dives the interviewer picks; failures and trade-offs.
+  What gets graded: questions that change the design, a diagram whose boxes each own something,
+  reasoning about scale with numbers, and trade-offs stated with their cost.
+- The prompts game studios are reported to ask: a leaderboard, matchmaking, a session service, a
+  live event pushed to many clients, telemetry, chat and friends, an inventory or economy, cloud
+  save. The mobile form of the round asks the same prompt from the client's side: offline behavior,
+  sync, caching, and what the client sends. A platform engineer draws both sides and goes deepest
+  where they meet.
+- What makes a game prompt differ from a generic one: the client is untrusted; load arrives in
+  synchronized spikes (the daily reset, an event start, a push sent to everyone); old clients stay
+  installed for months (chapter 8); players are in every time zone; purchases and progress must
+  never be lost; and latency budgets differ by feature, since a leaderboard can lag by seconds and a
+  match cannot.
+- Where depth ends: asked about a storage engine or a consensus protocol, name it, state the
+  property the design needs from it (durability, a single leader, order within a partition), and
+  say how you would find out the rest. Recap the first book's “I have not shipped that” in a
+  sentence.
+
+Test: `design-first-questions` (which clarifying question changes a given design most);
+`design-untrusted-client` (what the design assumes about a value the client reports).
+Interview exercise: for “design a weekly leaderboard”, write the five questions you would ask
+first and how each answer would change the design.
+
+### Estimate before you draw {#design-estimation}
+
+- From daily active users to requests per second: players times sessions per player times requests
+  per session, over 86,400 seconds, is an average. The peak hour runs several times the average,
+  and a synchronized moment multiplies it again for a minute or two. Storage: bytes per player
+  times players, with growth and retention. Bandwidth for real-time play: state size times send
+  rate times players. Round to powers of ten and say each assumption aloud.
+- An estimate decides something: whether one database primary takes the writes, whether reads need
+  a cache or replicas, whether a leaderboard fits in one node's memory, how long a queue takes to
+  drain. Precision past one significant figure is wasted.
+- A worked estimate, computed by the phase: 2 million daily players, 3 sessions, 20 requests each;
+  the peak hour; and a 00:00 UTC event start at which a third of the players open the game within
+  five minutes.
+
+Test: `design-average-peak` (why the daily average undersizes the backend);
+`design-estimate-purpose` (which decision a figure settles).
+Exercise: estimate your game's peak writes per second at its daily reset, and name the component
+that fails first.
+
+### Stateless services and where state lives {#design-services-state}
+
+- Clients reach an API tier through a load balancer and a gateway, which terminates TLS, checks the
+  session token (chapter 8), applies rate limits per player, and routes by API version. A stateless
+  service scales by adding instances and survives losing one; state lives in databases, caches and
+  queues.
+- Persistent connections (WebSockets, long-lived HTTP/2 streams) are state: a connection tier
+  knows which node holds each player's connection, and a message reaches it through pub/sub or a
+  routing table. Sticky routing is for connections and game servers, not API calls.
+- One deployable or many: a modular monolith against separate services, decided by team size,
+  independent deploys and failure isolation. A small team runs a few larger services well. Each
+  service owns its data, and no two services write the same table.
+- Build or buy: a managed game backend (Unity Gaming Services by name, others by category) gives
+  accounts, cloud save, leaderboards, an economy and server functions, and constrains data models,
+  limits and cost. Name what you would check before choosing one. Verify what each Unity service is
+  called in its documentation when the chapter is written.
+
+Test: `design-stateless-scaling` (what makes an instance safe to add or remove);
+`design-connection-routing` (how a message reaches a player connected to another node).
+Exercise: draw the tiers of a game backend you know and mark where each kind of state lives.
+
+### Storage chosen by access pattern {#design-storage}
+
+- Start from the queries, not the product: by player id (profile, inventory, cloud save); by rank
+  (leaderboards); by time (telemetry, logs); by relationship (friends, guilds); and money that must
+  move atomically (the economy). Relational databases with transactions and constraints;
+  key-value or document stores keyed by player id; in-memory sorted sets; append-only logs and
+  object storage; graph stores named for social queries.
+- Partitioning by player id spreads the load and keeps one player's operations on one partition.
+  Operations across players (trades, gifts, guild banks) cross partitions and need a design: one
+  owner, or two idempotent steps. Hot keys: a global counter, one huge guild, the top of a global
+  board. Consistent hashing, named: adding a node moves a fraction of the keys, not most of them.
+- Replication: read replicas scale reads and lag behind the primary, so a player can fail to read
+  their own write; read a player's own data from the primary, or compare versions. Backups and
+  point-in-time recovery, named; a restore that has never been tried is not a backup.
+
+Test: `design-storage-access-pattern`; `design-read-your-writes` (a player saves, reloads and sees
+old data: why, and two fixes).
+Exercise: list the ten queries your game's backend runs most, with the store and key each needs.
+
+### Caches, queues, and events {#design-caches-queues}
+
+- Cache-aside with a time to live: what may be served stale (configuration, catalogs, leaderboard
+  pages, profiles other players see) and what may not (a balance before a spend). Invalidation on
+  write, and a stampede when a hot key expires, prevented by coalescing requests or refreshing
+  early. A CDN is a cache for static content (chapter 13).
+- A queue absorbs a spike and decouples a producer from a consumer: the consumer's rate sets the
+  drain time, and a backlog that grows faster than it drains is an outage in slow motion. Most
+  queues deliver at least once, so consumers are idempotent (recap chapter 9's keys; verify the
+  guarantee in one queue's documentation). Order holds within a partition, not across partitions.
+  A dead-letter queue keeps the messages that keep failing.
+- Pub/sub fans one message out to many subscribers. The outbox pattern, named: write the state
+  change and the event in one transaction and publish from that table, so a process that dies
+  between the two loses neither.
+
+Test: `design-cache-staleness` (which data a cache may serve stale); `design-at-least-once` (why a
+consumer must tolerate the same message twice).
+Lab exercise: write a consumer that grants a reward from a queue message and grants it once when
+the message arrives twice, with a unique constraint in SQLite.
+
+### Consistency, concurrency, and the trade-off said aloud {#design-consistency}
+
+- Strong and eventual consistency, chosen per feature: balances, purchases and inventory strong;
+  leaderboards, friend counts and presence eventual. CAP in a paragraph: during a network partition
+  a replicated store either answers or stays consistent, not both; PACELC, named, adds the latency
+  that consistency costs when nothing is broken.
+- Concurrent writes to one player's data from two devices, a server job and a support tool.
+  Optimistic concurrency with a version, the `ETag` and `If-Match` of chapter 8, as a conditional
+  write, and the lost update when it is missing. Pessimistic locks, named. A transaction covers one
+  database; across services, idempotent steps with compensations (a saga, named).
+- The sentence an interviewer listens for: “this choice costs X to protect Y”, with both concrete.
+
+Test: `design-consistency-per-feature`; `design-optimistic-concurrency` (the lost update, and what
+the version check does about it).
+Interview exercise: for three features of a game you know, state the consistency each needs, what
+it costs, and what the player sees where it is relaxed.
+
+## 13: Designing core game services
+
+Each section is a worked design at interview depth: requirements, the data model, the operations,
+the failure cases, and what a platform engineer adds from the client's side.
+
+Evidence for the chapter: Apple's App Store Server API and App Store Server Notifications pages,
+and Google Play's pages for the Developer API, real-time developer notifications and purchase
+acknowledgement; APNs's and FCM's pages for tokens and error responses; Apple's and Google Play's
+account deletion requirements; Redis's sorted-set reference; Unity's documentation for
+Addressables' remote catalogs, Netcode for GameObjects' topologies and Relay; Gabriel Gambetta's
+articles on client-server game architecture for prediction, interpolation and lag compensation.
+Where a figure is the point (bytes per leaderboard entry, a store's acknowledgement window), the
+prose carries it with its source and date, and no question asks for it.
+
+### Accounts, identity, and player data {#design-player-data}
+
+- A game account under the game's own id, with platform identities linked to it (chapter 4's
+  sign-in): a guest account made on first launch and linked later; the conflict when the identity
+  being linked already owns another account's progress, and the choice the player makes; recovery
+  when a device is lost; one player on two devices.
+- The player document: profile, progress, inventory, settings. A schema version with migration on
+  read, a size limit, and fields the server owns against fields the client may write. Cloud save
+  conflicts across devices are resolved as chapter 9 describes, with chapter 12's version check.
+- Account deletion: both stores require an app that lets players create an account to let them
+  delete it from inside the app (verify Apple's and Google Play's current wording and dates).
+  Deletion reaches analytics, backups on their schedule, and the third parties the data went to.
+  Export on request under privacy law, named.
+
+Test: `design-account-linking` (the merge conflict, and who decides); `design-account-deletion`
+(what deletion must reach).
+Exercise: draw the account model for a game with guest play and two platform sign-ins, then walk
+a player who reinstalls on a new phone.
+
+### Economy and purchases: the server owns the ledger {#design-economy}
+
+- Server authority: the client asks, and the server checks and grants. Balances come from an
+  append-only ledger whose entries each carry an operation id, a reason and a source, and every
+  grant is idempotent by its operation id. Recap the first book's single reward claim in a
+  sentence.
+- A store purchase: the client buys through the store's SDK and sends the signed transaction or
+  purchase token; the server verifies it with the store's server API, records the transaction id
+  under a unique constraint and grants; only then does the client finish the transaction
+  (StoreKit) or the purchase get acknowledged (Google Play, which refunds a purchase left
+  unacknowledged past a window; verify it). Both stores' server notifications report refunds,
+  revocations and renewals, and the ledger records a reversal under a policy the game chose.
+- Fraud the design stops: a replayed receipt, a receipt from another app or from the sandbox, a
+  client that claims a grant. Chapter 15's purchase case is this flow failing in production.
+
+Test: `design-purchase-grant-order` (verify, record, grant, then finish or acknowledge, and what
+each other order loses); `design-refund-notification`.
+Lab exercise: model the ledger in SQLite with a unique transaction id, and show that a replayed
+purchase grants nothing and a refund notification reverses the grant once.
+
+### Leaderboards {#design-leaderboards}
+
+- Operations: submit a score, the top N, a player's rank, the players around a player, a friends'
+  board. A sorted set updates and ranks in logarithmic time (verify each command's stated
+  complexity in Redis's reference); the durable scores live in a database, and the sorted set can
+  be rebuilt from them.
+- Periods: daily, weekly and seasonal boards as separate keys; a reset time in UTC and what it
+  means in each time zone; an end-of-period job that archives the board and pays its rewards once.
+- Scale: estimate one board's memory (the phase measures bytes per entry). Past one node, shard
+  and merge the tops, or put players in cohorts of fifty to a hundred, which bounds every board
+  and gives each player a race they can win. Approximate rank for the long tail (“top 12%”) from
+  score buckets.
+- A friends' board reads the friends' scores at request time, which works for lists in the
+  hundreds. Ties break by who reached the score first, encoded in the sorted value.
+- Trust: the server computes the score, or checks it against what the session allows; limits on
+  rate and on plausible values; a removed player leaves the board and its rewards.
+
+Test: `design-leaderboard-structure` (which structure answers rank queries, and where the durable
+copy lives); `design-leaderboard-cohorts` (why cohorts rather than one global board).
+Lab exercise: implement submit, top N, rank and around-me with a sorted set, or in .NET if no
+Redis is installed, with ties broken by time.
+
+### Matchmaking and game sessions {#design-matchmaking}
+
+- A ticket per player or party with a skill rating, latency to each region, a mode and a party
+  size. The matchmaker pools tickets, forms matches under rules, and widens its limits as a ticket
+  waits: wait time against fairness is the trade-off to state. Tickets time out and can be
+  cancelled, and the client learns of its match by polling or over its persistent connection.
+- Skill ratings, named (Elo, Glicko, TrueSkill): the design needs a rating and its uncertainty,
+  not a formula. Parties, and backfill into a match that lost a player.
+- After a match forms: allocate a server or a relay in the chosen region, give each client the
+  address and a join token, allow reconnection within a grace period, and have the authority
+  report the result to the backend, idempotent by match id.
+- Asynchronous multiplayer (turns, attacking a stored base) needs no real-time server: a snapshot
+  of the defender and a result the server checks. It is common on mobile, and cheaper to run.
+
+Test: `design-matchmaking-widening`; `design-match-results` (who reports the result, and why not
+the clients).
+Interview exercise: design matchmaking for a million daily players with parties of up to three,
+and say what you would relax first when queues grow.
+
+### Real-time multiplayer at the system level {#design-realtime-multiplayer}
+
+- Topologies: peer to peer; a client host, with a relay for players behind NAT; dedicated servers.
+  Compare cost, cheating, host migration and latency. Unity's Netcode for GameObjects and Relay as
+  the Unity options (verify what the documentation calls each topology).
+- Authority: the server simulates and clients send inputs. Tick rate and send rate, and bandwidth
+  estimated as state size times rate times players, as chapter 12 practises.
+- Named with a paragraph each, enough to explain why a shooter and a card game need different
+  servers: client-side prediction with reconciliation, entity interpolation, lag compensation,
+  and deterministic lockstep. Implementing them is out of scope.
+
+Test: `design-topology-choice`; `design-prediction-purpose` (what prediction hides and what
+reconciliation corrects).
+Exercise: choose a topology for a real-time shooter, a co-op builder and a turn-based card
+battler, and justify each in two sentences.
+
+### Social: friends, presence, chat, and notifications {#design-social}
+
+- Friends as relationships with states (requested, accepted, blocked) and limits.
+- Presence from heartbeats over the persistent connection, stored with a time to live and
+  published only to friends who are online; its fan-out grows with friends times status changes.
+- Chat: channels (global, guild, direct), order within a channel, history in a store, delivery
+  through the connection tier and pub/sub. Moderation by filter, report and rate limit; rules for
+  minors, named.
+- Push notifications: a token registry per device (chapter 4), a send service behind a queue,
+  APNs and FCM as the last hop, a token removed when the provider says it is no longer valid
+  (verify the responses each returns), and a cap per player. A send to millions is spread over
+  minutes, because everyone who taps it arrives at once (chapter 14).
+
+Test: `design-presence-ttl` (why presence expires rather than being cleared at logout);
+`design-push-fanout`.
+Exercise: design chat for guilds of fifty with a week of history, and estimate its messages per
+second at peak.
+
+### Live events, content, and telemetry {#design-live-events}
+
+- An event is data: a schedule with start and end in UTC, targeting, and configuration and content
+  versions, served through remote configuration (chapter 10). The client trusts server time, not
+  the device clock.
+- Content on a CDN as versioned, immutable files named by a catalog (Addressables' remote catalog,
+  named), downloaded before it is needed and verified; an old client receives only content it can
+  read.
+- The synchronized start: download the event ahead of time and unlock it by server time, spread
+  requests with jitter, and warm caches before the start.
+- A telemetry pipeline: the client batches events with ids and timestamps and sends them on a
+  timer and at pause; an ingestion endpoint writes them to a queue; consumers load a warehouse.
+  Duplicates are removed by event id, schemas carry versions, high-volume events are sampled, and
+  consent comes first (chapter 7).
+
+Test: `design-event-prefetch` (why download before the start rather than at it);
+`design-telemetry-dedup`.
+Exercise: trace one analytics event from a tap to a dashboard, marking where it can be lost or
+counted twice.
+
+## 14: Running game services at scale
+
+Evidence for the chapter: Google's SRE book, for service level objectives, monitoring, overload
+and cascading failures; a cloud vendor's published articles on timeouts, load shedding and queue
+backlogs, as evidence for the writer, while the book names cloud products by category; Apple's
+and Google Play's pages for what the stores require about data. Incidents from published
+postmortems are described without naming the game, studio or publisher.
+
+### Spikes: launches, resets, and event starts {#design-spikes}
+
+- Where synchronized load comes from: launch day, the daily reset, an event start, a push sent to
+  everyone, and every player returning after an outage. Autoscaling acts after a metric crosses a
+  threshold and new instances start, so a spike measured in seconds needs capacity in place
+  beforehand, or admission control.
+- Admission control: a login queue protects the database tier; rate limits per player and in total
+  (a token bucket); load shedding that drops the least valuable work first, telemetry before
+  purchases. After an outage, capacity returns in slices so that reconnecting clients do not take
+  it down again, and the client's jittered backoff (chapter 9) is the other half.
+- Load tests with clients that behave like the real ones, retries included, sized by chapter 12's
+  estimate.
+
+Test: `design-autoscaling-lag`; `design-restore-in-slices`.
+Exercise: list your game's synchronized moments and what protects the backend at each.
+
+### Failure isolation and graceful degradation {#design-degradation}
+
+- Every dependency fails at some point: decide per feature what the game does while leaderboards,
+  chat or events are down, and keep the core loop playable. Between services, chapter 9's
+  timeouts, retry budgets and circuit breakers apply again, and bulkheads keep one slow dependency
+  from taking every worker. A cascading failure, named: overload that moves to the next tier.
+- Redundancy: several instances across zones; a second region for latency or survival, with its
+  cost in replication and consistency.
+- Backups and restores, with recovery point and recovery time objectives named.
+
+Test: `design-degradation-plan`; `design-cascading-failure`.
+Exercise: take one service and write what each client feature does while it is down.
+
+### Deploying and evolving a live backend {#design-backend-deploys}
+
+- Rolling, blue-green and canary deploys, and flags on the server. A server can roll back where a
+  client cannot (chapter 10), provided the data written in between still reads.
+- Old and new servers, and clients of many versions, run together during a deploy, so a schema
+  change expands first, migrates, and contracts last, and never breaks while an old version can
+  still call (chapter 8's versioning). Data migrations run in the background, idempotent and
+  resumable.
+- A configuration change is a deploy: validated, staged and reversible.
+
+Test: `design-expand-contract`; `design-canary`.
+Exercise: plan renaming a field in the player document without breaking a client released six
+months ago.
+
+### Observability, service levels, and incidents {#design-slos}
+
+- Indicators from the player's side (login success, time to grant a purchase, match wait),
+  objectives as targets, and error budgets that decide between features and reliability. The four
+  golden signals, named: latency, traffic, errors, saturation.
+- Dashboards by endpoint, region and client version; alerts on symptoms players feel rather than
+  on causes; chapter 9's correlation ids joined across services.
+- An incident: detect, mitigate before diagnosing, then find the cause, and write a blameless
+  postmortem. The platform engineer's part: the client-side evidence, the kill switches, and the
+  forced update.
+
+Test: `design-sli-choice`; `design-alert-symptoms`.
+Exercise: write three indicators for your game's backend and the threshold at which each pages
+someone.
+
+### Abuse, cheating, and privacy at the service {#design-abuse-privacy}
+
+- The client is untrusted: each request is checked on the server for rate, plausible values and
+  ownership; limits per account and per device; device attestation as a signal (chapter 8);
+  suspicious results replayed on the server; bans, with removal from boards and rewards.
+- Privacy: collect what a feature needs, keep logs and telemetry for a stated period, and make
+  deletion reach backups and processors (chapter 13). Regional data rules and children's data,
+  named, with the stores' pages as the source for what the stores require.
+
+Test: `design-server-validation`; `design-data-retention`.
+Exercise: list the fields your backend stores per player and the retention each needs.
+
+## 15: Debugging across boundaries
 
 ### Follow one operation through every layer {#boundary-method}
 
@@ -1100,7 +1486,7 @@ after a release”.
 Test: `boundary-crash-cluster`; `boundary-vendor-repro`.
 Lab exercise: build a minimal reproduction project for one SDK problem you have seen.
 
-## 13: Interview practice for platform roles
+## 16: Interview practice for platform roles
 
 Each section practises answers aloud. The first book's chapter 15 covers project stories,
 honesty about metrics and study loops; this chapter recaps them in a paragraph and stays on
@@ -1126,7 +1512,7 @@ the structure.
   When a platform detail is unknown, say how you would find it.
 
 Test: `interview-debugging-narration`; `interview-unknown-detail`.
-Interview exercise: narrate chapter 12's purchase case in three minutes.
+Interview exercise: narrate chapter 15's purchase case in three minutes.
 
 ### A mock round with rubrics {#interview-platform-mock}
 
@@ -1140,11 +1526,31 @@ Interview exercise: narrate chapter 12's purchase case in three minutes.
 Test: `interview-mock-rubric`; `interview-mock-followup`.
 Interview exercise: run the round with a timer and score each answer against its rubric.
 
+### Run a system design round {#interview-system-design}
+
+- Drive the round rather than wait for it: the first ten minutes on requirements and an estimate,
+  then the API and the data model, then the diagram, and deep dives where the interviewer points.
+  Draw the client and the service, and go deepest where a platform engineer's evidence is: the
+  contract between them, retries and idempotency, offline behavior, purchases, and old clients.
+- The prompts, each with what a strong answer contains and the common weak answer: a weekly
+  leaderboard with rewards; matchmaking with parties; a live event for millions of players; cloud
+  save across devices; purchases and refunds; push notifications to a segment; guild chat. The
+  weak answer is usually a diagram of boxes with no numbers and no story for a failure.
+- Follow-ups that move the design: ten times the players, a second region, a store outage, a
+  cheater at the top of the board.
+
+Test: `interview-design-drive` (what to do in the first ten minutes, and why);
+`interview-design-depth` (where a platform engineer should go deepest).
+Interview exercise: run “design a weekly leaderboard with rewards” for 45 minutes against a timer,
+recorded, and grade it against the rubric.
+
 ### Build a practice project that gives you evidence {#interview-practice-project}
 
 - The smallest project that gives real experience to talk about: a plugin on both platforms with a
   call, a callback on another thread, a deep link, a post-processor, a keep rule, and a CI script
-  that builds both. Which parts to build first when time is short.
+  that builds both. For the design round, a small local service with a ledger and a leaderboard
+  that the project calls gives measured numbers to quote. Which parts to build first when time is
+  short.
 
 Test: `interview-practice-evidence` (which parts give the most to talk about per hour).
 Lab exercise: build the first two parts and write down what surprised you.
@@ -1165,3 +1571,9 @@ text leans on the term.
 - Network and backend: DTO, tolerant reader, bearer token, refresh token, PKCE, correlation id,
   exponential backoff, jitter, circuit breaker, captive portal.
 - CI: Jenkinsfile, agent, stash, credentials binding.
+- System design: load balancer, API gateway, stateless service, WebSocket, cache-aside, time to
+  live, CDN, message queue, dead-letter queue, pub/sub, outbox, partition, hot key, consistent
+  hashing, read replica, eventual consistency, CAP theorem, optimistic concurrency, saga, sorted
+  set, ledger, skill rating, relay, NAT traversal, tick rate, client-side prediction, lag
+  compensation, token bucket, load shedding, bulkhead, SLI, SLO, error budget, canary release,
+  expand and contract.

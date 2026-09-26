@@ -212,9 +212,9 @@ Sections:
 
 ## Feature: second book, The Platform Layer
 
-The site can hold several books, and this feature writes the second. It covers the layer between a Unity game and the platforms it ships on: native bridges on Android and iOS, the operating system's features, third-party SDKs, both build pipelines, backend clients, CI with Jenkins, and debugging across all of them. It prepares for interviews for Unity mobile platform roles, where native integration and SDK work carry the most weight. [mobile-platform-outline.md](mobile-platform-outline.md) is the specification: every chapter, section and concept, and what each chapter's claims are checked against.
+The site can hold several books, and this feature writes the second. It covers the layer between a Unity game and the platforms it ships on: native bridges on Android and iOS, the operating system's features, third-party SDKs, both build pipelines, backend clients, the design of the game's own services, CI with Jenkins, and debugging across all of them. It prepares for interviews for Unity mobile platform roles, where native integration and SDK work carry the most weight. [mobile-platform-outline.md](mobile-platform-outline.md) is the specification: every chapter, section and concept, and what each chapter's claims are checked against.
 
-It continues the numbering under the same rules as **How to run a phase**. Phase 18 prepares the tools, Phases 19 to 31 write one chapter each, and Phase 32 reads the finished book as a teacher. Everything in **Decisions** still holds.
+It continues the numbering under the same rules as **How to run a phase**. Phase 18 prepares the tools, Phases 19 to 34 write one chapter each, and Phase 35 reads the finished book as a teacher. Everything in **Decisions** still holds. The plan had thirteen chapters until 2026-09-26, when chapters 12 to 14 on system design were added (see **Decisions: system design**). The debugging and interview chapters moved from 12 and 13 to 15 and 16, and the teacher's read from Phase 32 to Phase 35. Log entries written before that date use the old numbers.
 
 Three things it leaves alone. **The product:** Home lists books by title, Review and the due count span books, and Data resets one book at a time, so a second book needs no change in `src/`. **PROJECT.md**, including its non-goal of links between books. **The Unity book:** every phase checks that its question blocks still match, and no phase edits its prose.
 
@@ -223,7 +223,7 @@ Three things it leaves alone. **The product:** Home lists books by title, Review
 | Decision | Default | Alternative |
 | --- | --- | --- |
 | Title and id | The Platform Layer, first titled Unity Mobile Platform Engineering; id `unity-mobile-platform-engineering` | Another title at any time: since **Book ids (after Phase 19)** the id is the `book:` line, so a new title keeps the progress |
-| Folder | `content/mobile-platform/`: `01-…md` to `13-…md`, and `glossary.md` | None |
+| Folder | `content/mobile-platform/`: `01-…md` to `16-…md`, and `glossary.md` | None |
 | Reference version | Unity 6.3 LTS (6000.3), the installed Editor that has both platform modules; Unity links pinned to `/6000.3/` | 6.0, the Unity book's version, which is not installed with iOS support, so its iOS claims could not be checked here |
 | The Unity book | The new book stands alone. It recaps what it needs from the first in a paragraph at most, naming the chapter in plain text | Links between books: a product change that amends PROJECT.md's non-goals |
 | Names | Platforms, their stores, services and first-party tools, Unity and its packages, Jenkins, EDM4U and open standards by name; third-party SDK vendors by category (“an analytics SDK”); never a game, studio or publisher | Naming vendors |
@@ -242,7 +242,7 @@ The Unity book's conventions hold from the first draft, and `npm run guard -- st
 - The distractor standard from the start. Each `-` is a mistake an engineer makes. The word-list heuristic (always, never, every, automatically, only, guarantees, cannot, forbids) gains nothing. Correct and wrong options have similar median lengths; the Unity book's are 73 and 65 characters. A yes-or-no set includes a “No” with a wrong reason. Each variant tests its own concept, and each explanation stands alone.
 - **Questions outlive facts.** Version numbers, API levels, dates, fees, quotas and limits may appear in prose, with the version or date they were checked against, but never as a correct answer. The review queue repeats a concept for a month and more, and would go on reinforcing a figure after it changed.
 - `[[term]]` at a term's first mention in a section, and `[[#id]]` back to an earlier section of this book; never inside a heading or a code span, or in a question block that has been committed. An external link is documentation the reader chooses to open, and returns HTTP 200 with no redirect when it is written.
-- Code fences: `csharp`, `java`, `objective-c`, `objective-cpp`, `swift`, `groovy` for `build.gradle` files and Jenkinsfiles, `kotlin` for `.kts` files, `xml` for manifests, property lists and entitlements, `ruby` for Podfiles, `properties`, `bash`, `json` and `http`. Shiki has no `gradle` or `plist`.
+- Code fences: `csharp`, `java`, `objective-c`, `objective-cpp`, `swift`, `groovy` for `build.gradle` files and Jenkinsfiles, `kotlin` for `.kts` files, `xml` for manifests, property lists and entitlements, `ruby` for Podfiles, `properties`, `bash`, `json`, `http`, `sql` for schemas and queries, and `text` for component diagrams. Shiki has no `gradle` or `plist`.
 - Every new sentence passes the avoid-ai-writing skill's detector, run one section at a time with `--context technical --source-mode rendered-markdown`, since it refuses a whole chapter as too long. It passes when it reports nothing beyond its known false positives: `{#id}` and `[[#id]]` read as hashtags, dotted names such as `Game.Features` read as verbs, low vocabulary diversity, which is an effect of length in technical prose, and the uniform punctuation of question blocks. Its judgment-only patterns still need a read.
 - Quotations from Unity's, Android's or Apple's documentation are evidence for the writer, contractions included, and never text for the book.
 
@@ -263,7 +263,7 @@ The Unity book was checked after it was written, and that read found thirty prob
 | HTTP or OAuth works this way | The RFC |
 | A device behaves this way | No device is assumed. State what the documentation says, and what a device check would show |
 
-**The evidence file.** Each chapter phase writes a file in `docs/evidence/` named like its chapter file, such as `04-os-integration.md`: what each claim was checked against, section by section; what rests on documentation alone; what was narrowed or cut; and where the outline fell short. Phase 32 reads it beside the chapter. The files for chapters 01 to 03 hold what the logs of Phases 19 to 21 recorded.
+**The evidence file.** Each chapter phase writes a file in `docs/evidence/` named like its chapter file, such as `04-os-integration.md`: what each claim was checked against, section by section; what rests on documentation alone; what was narrowed or cut; and where the outline fell short. Phase 35 reads it beside the chapter. The files for chapters 01 to 03 hold what the logs of Phases 19 to 21 recorded.
 
 **The probe project** is one Unity 6000.3 project outside the repo, created in Phase 20 and reused by the phases after it. It is never committed, and the Phase 20 log records its path. Other scratch programs stay outside the repo too.
 
@@ -289,6 +289,30 @@ The Unity book was checked after it was written, and that read found thirty prob
 - `npm run guard -- options [--book <id>]` gives the figures the distractor standard is measured by, per chapter file and per book: how often the correct option is the longest or the shortest of its set, the median lengths of correct and wrong options, and how often each holds a word from the list, with whether rejecting those options would gain anything. It counts every option a variant lists, through the site's own parser.
 - `npm run guard -- links [--base <rev> | --all]` checks each external link that is new since `<rev>`, or every link, for HTTP 200 with no redirect. It asks for English, because Node's default `Accept-Language: *` makes Google's documentation sites redirect to a locale picked at random. It is the only command that needs the network, and neither `npm test` nor `npm run build` runs it.
 
+### Decisions: system design
+
+Asked for by the user on 2026-09-26: platform engineers at game studios often own the game's services or share them with backend engineers, so the book covers system design for game services, to a firm middle ground rather than a backend specialist's depth. The outline's **Scope and reader** says what the reader can do after chapters 12 to 14 and where they stop, and that paragraph is binding.
+
+What the research found, and what the chapters are built from:
+
+- Guides to game studios' design rounds report the same prompts: a leaderboard for millions of players, matchmaking with low waits, a session service with disconnects, a live event pushed to every connected client, telemetry made queryable, chat and friends, an inventory or economy ([one guide](https://www.designgurus.io/answers/detail/what-to-expect-in-the-epic-games-system-design-interview), [another](https://www.systemdesignhandbook.com/guides/roblox-system-design-interview/), [a candidate's report](https://www.linkjob.ai/interview-questions/roblox-software-engineer-interview/)). They grade requirements gathering, a clear component diagram, reasoning about scale, and trade-offs stated honestly.
+- Mobile system design rounds ask the same kind of prompt from the client's side: offline behavior, sync and conflicts, pagination, real-time updates, push, idempotent requests, and rate limits so that a large client base does not overwhelm its own backend ([a framework](https://github.com/weeeBox/mobile-system-design)). That side is where a platform engineer goes deepest, and chapters 8 and 9 already cover it.
+- Published architectures agree on the pieces: stateless services, durable per-player data, a server-owned economy, leaderboards on in-memory sorted sets, matchmaking tickets in queues, persistent connections with pub/sub for presence and chat, and a stateless tier in front of them ([a cloud vendor's database guide for games](https://aws.amazon.com/blogs/gametech/player-profiles-to-leaderboards-choosing-the-right-aws-database-part-2/), [a large mobile studio's social backend](https://www.scylladb.com/2025/01/14/how-supercell-handles-real-time-persisted-events-with-scylladb/)). Purchases are verified and granted on the server before they are acknowledged ([Google Play](https://developer.android.com/google/play/billing/backend)). Launches and outages are survived with login queues, rate limits, and capacity restored in slices ([a survey of launch incidents](https://www.cgmagonline.com/articles/how-online-games-stay-up)).
+
+These links are for the plan's readers. The book's text never names the studios or games behind them, and each phase finds its own evidence.
+
+| Decision | Default | Alternative |
+| --- | --- | --- |
+| Where | Chapters 12 to 14, after the client chapters 8 and 9 and before debugging (15) and interview practice (16), so debugging walks a path whose backend the reader has designed | A third book, which would split one role's preparation across two books |
+| Depth | Mechanisms and trade-offs at interview depth, with numbers from estimates; consensus, storage engines, replication internals, orchestration and netcode implementation named, with the property a design needs from each | A backend specialist's depth, which would double the chapters |
+| Names | Open-source server software by name as one example of its category, where interviews name it: Redis and its sorted sets, PostgreSQL, SQLite. Unity Gaming Services by name, as Unity's own. Cloud vendors' products and third-party game backends by category. Algorithms and patterns by their names (Elo, Glicko, TrueSkill, CAP, saga, outbox). Never a game, studio or publisher, including in the incidents chapter 14 describes | Naming cloud products |
+| Worked example | The book's imaginary live game, now with its backend. Estimates use round, invented figures and say so | A real game's published figures, which the names rule forbids |
+| Diagrams | Component diagrams as `text` fences like chapter 01's call path, which fit any width. The book's limit of one SVG per chapter still holds | An SVG per section |
+| Evidence | The claims are about documented behavior rather than a Unity build, so **Rule A** applies with these sources: the software's own reference (Redis's commands and their stated complexity, PostgreSQL's transactions and isolation, one queue's delivery guarantee); the stores' server APIs and notifications; APNs's and FCM's pages; Google's SRE books; papers for CAP; Unity's pages for Addressables, Netcode for GameObjects, Relay and Unity Gaming Services. SQLite 3.51 (installed) and .NET 8 probes run the schema, transaction, constraint and version-check samples | A cloud account, which the project does not have |
+| A local Redis | Not installed. Phase 31's leaderboard lab runs against a Redis-compatible server from Homebrew only if the user agrees to install one when the phase starts; otherwise a .NET sorted structure stands in, and the evidence file says so | None |
+
+**Phase 30 also** edits chapter 01's prose, which still names debugging as chapter 12 and interview practice as chapter 13: the two plain-text mentions of chapter 12 at lines 38 and 475 become 15, and in the theme table debugging becomes 15, interview practice 16, and the row “System design for game services | 12–14, building on 8 and 9” follows “Backend and API clients”. No question block changes, so the strict question check still passes for chapter 01. It also adds the sources above to **Rule A** in `docs/evidence/codex/brief.md`, and the names rule above to the **Limits** of both briefs.
+
 ### Phase 18: Tools for a second book
 
 Build:
@@ -299,7 +323,7 @@ Build:
 
 Done when: `npm test`, `npm run typecheck`, `npm run check` and `npm run build` pass, `npm run guard -- style` and `npm run guard -- questions` pass, and the new option is shown to bite on the real content. A scratch file `content/mobile-platform/99-scratch.md` holding one section passes with `--allow new-chapters` and fails without it; a new section in an existing Unity chapter fails with it; a changed `*` line in the Unity book fails with it. Revert every mutation afterwards.
 
-### Phases 19 to 31: one chapter each
+### Phases 19 to 34: one chapter each
 
 | Phase | Chapter | Sections | Concepts | Also |
 | --- | --- | --- | --- | --- |
@@ -314,8 +338,11 @@ Done when: `npm test`, `npm run typecheck`, `npm run check` and `npm run build` 
 | 27 | 09: Reliable requests on unreliable networks | 5 | 10 | |
 | 28 | 10: Build variants, environments, and releases | 5 | 10 | |
 | 29 | 11: CI/CD and Jenkins for Unity mobile builds | 6 | 12 | |
-| 30 | 12: Debugging across boundaries | 5 | 10 | |
-| 31 | 13: Interview practice for platform roles | 4 | 7 | The link pass |
+| 30 | 12: System design for game services: method and building blocks | 6 | 12 | Edits chapter 01's chapter numbers and theme table, and the Codex briefs, as **Decisions: system design** says |
+| 31 | 13: Designing core game services | 7 | 14 | Asks the user about a local Redis before the leaderboard lab |
+| 32 | 14: Running game services at scale | 5 | 10 | |
+| 33 | 15: Debugging across boundaries | 5 | 10 | |
+| 34 | 16: Interview practice for platform roles | 5 | 9 | The link pass |
 
 Each phase, in order:
 
@@ -340,13 +367,13 @@ Manual check (user): read the chapter in `npm run dev` and answer its questions.
 
 **Phase 19 is a pilot.** The user reads chapter 1 before Phase 20 starts. A change to depth, length or tone goes into this section first, so the other twelve chapters are written to it rather than rewritten. The user read it on 2026-09-24: depth and tone stand, question counts and section lengths follow the content, as the writing rule above now says, and the layout works on phones.
 
-**Phase 31's link pass.** Earlier chapters mention later ones in plain text. Where a link helps the reader, the mention becomes a `[[#id]]` in prose, never in a question block.
+**Phase 34's link pass.** Earlier chapters mention later ones in plain text. Where a link helps the reader, the mention becomes a `[[#id]]` in prose, never in a question block.
 
 ### If time runs short
 
-If an interview comes before the book is done, run the phases in the order of what the interview weighs most: 19 to 22 (the boundary and native integration), 25 (SDKs) and 30 (debugging across boundaries), then 23, 24, 26 to 29, and 31. The book's order stays as it is, because the file names fix it. A chapter written early explains in place the little it needs from an unwritten one, names that chapter in plain text, and Phase 31's link pass connects them.
+If an interview comes before the book is done, run the phases in the order of what the interview weighs most. Phases 19 to 29 are done. For a round that includes system design, run 30 and 31 (the method and the core services), then 33 (debugging across boundaries), 32 and 34. Without a design round, run 33 first. The book's order stays as it is, because the file names fix it. A chapter written early explains in place the little it needs from an unwritten one, names that chapter in plain text, and Phase 34's link pass connects them.
 
-### Phase 32: A teacher's read
+### Phase 35: A teacher's read
 
 Read the whole book in order, as the Unity book's second read did: every claim, code sample, worked number and question, testing the doubtful ones against **Decisions: evidence**, with each chapter's evidence file beside it to show what was checked while it was written and what rests on documentation alone. Write one file per problem in `docs/review-requests/`, with the kinds and priorities its README defines. A later section of this plan orders them into phases, as Phases 11 to 17 did.
 
@@ -495,3 +522,9 @@ Without Codex, the Editor, Xcode or a Mac, the session gathered the evidence und
 Merged on the Mac from 9c67271, after chapter 10: 11 chapters, 59 sections, 119 concepts, 418 variants, 54 terms, 194 links, none unlinked; every check passes. Aligned with chapter 10, the build script builds its profiles in `StoreBuild`'s order, the Jenkinsfile takes one `VARIANT` parameter, the version paragraph keeps only the `VERSION` file and the base number, and `ci/check-store-hosts.sh` is the search that chapter 10 left to this chapter. The checks changed the rest: Jenkins has masked base64 since 2023, so the masking example uses hexadecimal; Unity writes R8's mapping file beside the bundle, which the archive now keeps, and the R8 variant agrees with chapter 5; the keychain lines sign with `apple:` alone. The probe built both platforms through `ci/unity.sh`, and a local Jenkins 2.568.3 linted the Jenkinsfile and ran its steps. Receipts: 136 pass, the container's 6 cannot. Astra (`xhigh`: 10 minutes, 182,259 tokens) found 12 problems; all held and are fixed. Options: longest in 20% of 41 sets, shortest in 20%, medians 68 and 66.
 
 Next phase: an IL2CPP Android player of the probe fails to link on chapter 3's `__Internal` samples, which have no `#if UNITY_IOS`, so set `Assets/Scripts/Samples/iOS` aside for such a build.
+
+### Plan: system design chapters (after Phase 29)
+
+Asked for by the user on 2026-09-26: platform engineers at game studios often own or share the game's services, so the book gains chapters 12 to 14 on system design for game services, to a firm middle ground. The outline has the three chapters (18 sections, 36 concepts), a new section in the interview chapter, `interview-system-design` (2 concepts), and a line of glossary candidates. Its scope now says what the reader can do after these chapters and where a backend specialist goes further. The book is now 16 chapters, 87 sections and 174 concepts. Debugging across boundaries and interview practice, both unwritten, moved to chapters 15 and 16 with their ids unchanged. Their phases are now 33 and 34, and the teacher's read is Phase 35. **Decisions: system design** records the research behind the chapters, where they sit and why, their depth, the names rule for server software, and their evidence sources.
+
+Next phase: Phase 30 starts with the edits to chapter 01 and to the Codex briefs that the decisions list. The outline's figures that change with time, such as the stores' acknowledgement and deletion rules, carry “verify”.
