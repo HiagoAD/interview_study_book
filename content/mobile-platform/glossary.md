@@ -162,13 +162,6 @@ The debug symbol file of one Apple binary: a bundle holding the information that
 
 A Unity iOS release build produces one for the app and one for `UnityFramework`, which covers the game's C# as IL2CPP compiled it, and the Xcode archive keeps both, as [[#xcode-build-flow]] shows. [[#ios-failure-evidence]] shows how to check a UUID and symbolicate with them, and chapter 11 archives them for each build.
 
-## EDM4U {#edm4u}
-= External Dependency Manager for Unity | Android Resolver
-
-Google's External Dependency Manager for Unity: a Unity package that reads the `*Dependencies.xml` files that SDKs ship in Editor folders and turns them into Android dependencies, and into CocoaPods for iOS.
-
-Its Android Resolver either resolves the dependencies itself and copies the libraries into `Assets/Plugins/Android`, or writes them into the custom main Gradle template for the build to resolve. Mixing the two modes duplicates classes, as [[#gradle-dependencies]] shows. Its iOS Resolver writes a Podfile into the Xcode project and runs `pod install`, as [[#xcode-cocoapods]] shows.
-
 ## Edit Mode and Play Mode tests {#play-mode-tests}
 = Edit Mode tests | Unity Test Framework
 
@@ -176,12 +169,26 @@ The two environments of Unity's Test Framework. Edit Mode tests run without ente
 
 Neither runs the native half of a platform integration in the Editor, which is why the contract suite in [[#platform-testing]] has a device run. Unity 6.3 ships version 1.6 of the framework, and from Unity 6.2 on its guide is part of the Unity Manual.
 
+## EDM4U {#edm4u}
+= External Dependency Manager for Unity | Android Resolver
+
+Google's External Dependency Manager for Unity: a Unity package that reads the `*Dependencies.xml` files that SDKs ship in Editor folders and turns them into Android dependencies, and into CocoaPods for iOS.
+
+Its Android Resolver either resolves the dependencies itself and copies the libraries into `Assets/Plugins/Android`, or writes them into the custom main Gradle template for the build to resolve. Mixing the two modes duplicates classes, as [[#gradle-dependencies]] shows. Its iOS Resolver writes a Podfile into the Xcode project and runs `pod install`, as [[#xcode-cocoapods]] shows.
+
 ## Entitlements {#entitlements}
 = entitlement | capability | capabilities
 
 Key-value pairs in an app's code signature that grant it the use of a service or technology, such as push notifications, associated domains or Sign in with Apple. Xcode adds them through a target's capabilities and records them in an `.entitlements` file.
 
 In a Unity export they belong to the `Unity-iPhone` target, whatever target holds the code that uses them, and a post-processor adds them with `ProjectCapabilityManager`, as [[#ios-xcode-postprocess]] shows. Each one that the app claims has to be on its provisioning profile's allowlist, as [[#xcode-signing-model]] shows.
+
+## Git LFS {#git-lfs}
+= Git Large File Storage | LFS
+
+Git Large File Storage: a Git extension that keeps large files, such as textures, audio and models, outside the repository. The repository holds a small pointer file in place of each one, and Git LFS downloads the real file when a checkout asks for it.
+
+A pointer is a text file under 1024 bytes whose first line names the LFS specification. A clone made without Git LFS installed, or a checkout that does not pull LFS files, keeps the pointers, and Unity fails to import them as the assets they stand for. [[#ci-pipeline-shape]] pulls them as part of the checkout, and [[#ci-only-failures]] traces the failure.
 
 ## Gradle {#gradle}
 
