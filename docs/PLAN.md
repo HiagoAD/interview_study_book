@@ -242,3 +242,13 @@ Options: correct option longest in 21% of 63 sets, shortest in 22%, medians 65 a
 
 Next phase: chapter 14 builds on this chapter's push pacing, the event start's prefetch and jitter, and the ledger's refunds. Redis stays installed, with no service running, for any run chapter 14 needs.
 
+
+### Phase 32: Chapter 14, running game services at scale
+
+Wrote `content/mobile-platform/14-running-services.md` (5 sections, 10 concepts, 52 variants, the outline's ids) and seven glossary entries: Canary release, Circuit breaker, Error budget, Expand and contract, Load shedding, Service level indicator and Service level objective. The book now has 14 chapters, 77 sections, 155 concepts, 583 variants, 73 terms and 266 links, with no unlinked entry. All 675 tests, content check, build and style pass; the question guard against `4c3b742` accepts this chapter alone; six new links return 200; the no-brand search is empty. Evidence: [evidence/14-running-services.md](evidence/14-running-services.md).
+
+Codex (GPT-6 Sol, `xhigh`) gathered 100 receipts in 26 minutes and 279,222 tokens; ten additional working receipts and the session's 38 also passed re-fetch. Completion rechecked those 148 against saved pages and fetched one new PostgreSQL receipt; none failed. The Astra review (`xhigh`, 189 minutes 33 seconds wall time, 207,032 tokens) finished after the writing session stopped. All ten findings held and were fixed, including stale migration values, unbounded ticket redemption and request/player canary exposure. Three off-concept variants now test indicator choice, preserving the outline's concept count. The corrected migration passes stale-value, restart, null and repeat-run checks.
+
+Options: correct longest in 17% of 52 sets, shortest in 23%, median lengths 66 and 66, no word-list option. The detector found contextual false positives alone.
+
+Next phase: Phase 33 writes chapter 15, using this chapter's mitigation order, client-version dashboards, correlation ids and incident roles. The user's manual chapter read remains.

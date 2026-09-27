@@ -99,6 +99,14 @@ Google's command-line tool for app bundles. It builds them, and it turns a bundl
 
 `build-apks` makes a set of APKs from a bundle, signed with the keystore it is given or with the debug key; `install-apks` installs the ones a connected phone needs; `dump manifest` prints the manifest a bundle carries. The APKs it makes reproduce Google Play's splits and not its signature, as [[#gradle-packaging-signing]] explains.
 
+## Canary release {#canary-release}
+= canary releases
+-> staged-rollout
+
+A deploy that gives a new version a small share of the traffic first, one instance or 1% of requests, and compares it with the old version serving at the same time before the rollout goes further.
+
+Comparing with a control at the same moment reduces the differences between one day and the next. The traffic assigned to each version must also be comparable for the comparison to isolate the change. It is the server's counterpart of a [[staged rollout]], and rolling it back moves its share to instances that are already serving. [[#design-backend-deploys]] compares it with rolling and blue-green deploys.
+
 ## CDN {#cdn}
 = content delivery network | content delivery networks | CDNs
 -> object-storage
@@ -113,6 +121,14 @@ A file is cached at a site the first time a player near it asks for it, and serv
 A client's rule that accepts a server's certificate only when the certificate, or a public key in its chain, matches one that the client carries, on top of the usual check that a trusted authority issued it.
 
 It keeps out a party that can make the device trust a certificate of its own choosing, such as a proxy whose authority someone installed on the device. The cost is that the pins ship in the build: a server key replaced by one that no pin matches cuts off each installed client pinned to the old one, so teams pin more than one key, one of them a backup, and plan the rotation before the first release that pins. In Unity, a `CertificateHandler` makes the check for `UnityWebRequest`, as [[#http-unity-clients]] shows.
+
+## Circuit breaker {#circuit-breaker}
+= circuit breakers
+-> load-shedding
+
+A guard in a caller that stops calling a failing dependency for a while: after a run of failures it opens and fails each call at once without making it, and after a cool-down it lets a trial call through, closing again if that call succeeds.
+
+It turns a dependency's failure into a quick answer that the caller can handle, such as a feature's offline state, and gives the dependency room to recover instead of a stream of calls that time out. [[#network-retries]] puts one in the game's HTTP layer, and [[#design-degradation]] on each call between the backend's services.
 
 ## CocoaPods {#cocoapods}
 = pods | Podfile
@@ -191,6 +207,20 @@ Key-value pairs in an app's code signature that grant it the use of a service or
 
 In a Unity export they belong to the `Unity-iPhone` target, whatever target holds the code that uses them, and a post-processor adds them with `ProjectCapabilityManager`, as [[#ios-xcode-postprocess]] shows. Each one that the app claims has to be on its provisioning profile's allowlist, as [[#xcode-signing-model]] shows.
 
+## Error budget {#error-budget}
+= error budgets
+-> service-level-objective
+
+What a service level objective allows to fail over its window: 1 minus the objective, such as 0.1% of sign-ins for an objective of 99.9%.
+
+While budget remains, a team ships changes and takes their risks; once it is spent, the team's policy can pause releases other than urgent and security fixes until the service is back within its objective. How fast it is being spent, its burn rate, decides when to page someone. [[#design-slos]] works one out for sign-in.
+
+## Expand and contract {#expand-and-contract}
+
+Making a breaking change to a schema or an API in three phases: expand, by adding the new form beside the old; migrate, by moving the data and its readers to the new form; and contract, by removing the old form once nothing uses it.
+
+Martin Fowler also calls it parallel change. Each phase works with each version still running: old servers during a rolling deploy, and old clients for months after a release. [[#design-backend-deploys]] renames a field this way, and its storage contracts long before its API does.
+
 ## Git LFS {#git-lfs}
 = Git Large File Storage | LFS
 
@@ -260,6 +290,13 @@ Entries are added and not edited, so a correction is a new entry that reverses a
 A server or managed service that spreads incoming connections or requests over a pool of instances, and stops sending to an instance that fails its health check.
 
 It works at one of two levels. A balancer that forwards TCP connections without reading them keeps each connection on the instance it chose; one that terminates HTTP can route each request by its path or headers. Taking an instance out of the pool while its open connections finish, called draining, is how a deploy replaces instances without cutting requests off. [[#design-services-state]] places it in front of the gateway.
+
+## Load shedding {#load-shedding}
+-> circuit-breaker | token-bucket
+
+Refusing some requests on purpose when a service nears its capacity, the least valuable first, so that it keeps serving the rest at normal speed instead of slowing down for all of them.
+
+A refusal has to cost less than serving, so the check comes before any costly work, and each request's priority comes from the server's own configuration rather than from the client. [[#design-spikes]] orders a game's requests from telemetry, refused first, to purchases, refused last.
 
 ## Logcat {#logcat}
 
@@ -402,6 +439,22 @@ A name that Unity passes to the C# compiler, so that code under `#if NAME` is co
 
 A define decides what a build contains, not what it does when it runs: code under a define that a build lacks is not in that build at all. [[#release-build-variants]] uses one to keep QA tools out of store builds, and [[#release-environments]] one to keep other environments' addresses out.
 
+## Service level indicator {#service-level-indicator}
+= SLI | SLIs | service level indicators
+-> service-level-objective
+
+A measure of one aspect of a service that its users feel, usually as the share of events that went well, such as sign-ins that succeeded out of those attempted.
+
+Measured by the clients, it also counts the failures that never reach a server. [[#design-slos]] chooses a game backend's indicators from the player's side.
+
+## Service level objective {#service-level-objective}
+= SLO | SLOs | service level objectives
+-> service-level-indicator | error-budget
+
+A target for a service level indicator over a window of time, such as 99.9% of sign-ins succeeding over 30 days.
+
+It is set below 100% on purpose, since past a point users do not feel the difference and each step of reliability costs more than the one before; the gap is the error budget. A service level agreement, SLA, is a contract with users that attaches consequences to meeting or missing its objectives. [[#design-slos]] sets the objectives of a game's backend.
+
 ## Sorted set {#sorted-set}
 = sorted sets
 
@@ -411,6 +464,7 @@ In Redis, adding or updating a member and finding a member's rank each take O(lo
 
 ## Staged rollout {#staged-rollout}
 = staged rollouts | phased release
+-> canary-release
 
 Releasing an update to a fraction of players first, and widening it while its metrics hold. Google Play calls it a staged rollout and the App Store a phased release.
 
