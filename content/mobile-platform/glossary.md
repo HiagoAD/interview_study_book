@@ -245,6 +245,14 @@ The encrypted database in which iOS apps keep small secrets, such as passwords, 
 
 Each item has an accessibility setting that says when it can be read, for example while the device is unlocked, and a setting ending in `ThisDeviceOnly` keeps the item from migrating to a new device. [[#os-auth-callbacks]] keeps a pending sign-in attempt there, so that it survives the app's process, and [[#http-sessions]] keeps the session's tokens there.
 
+## Ledger {#ledger}
+= ledgers
+-> idempotence
+
+An append-only record of changes to balances: each entry holds the account, the currency, a signed amount, the operation that made the change and why, and a balance is the sum of its entries.
+
+Entries are added and not edited, so a correction is a new entry that reverses an old one, and each balance can be explained entry by entry. A unique operation id on each entry makes each grant idempotent. [[#design-economy]] builds a game's economy on one.
+
 ## Load balancer {#load-balancer}
 = load balancers
 -> websocket
@@ -421,12 +429,26 @@ Apple's service for sending beta builds of an app to testers through App Store C
 
 The Crashes organizer in Xcode shows crash reports from TestFlight and App Store builds, with names where the build's dSYMs were uploaded with it, as [[#ios-failure-evidence]] describes. [[#release-rollouts]] covers internal and external testers, and [[#release-verification]] why a release candidate is tested from it.
 
+## Time to live {#time-to-live}
+= TTL
+
+A duration after which a stored entry expires and is removed, set when the entry is written and renewed by writing it again.
+
+A cache sets one to bound how stale an entry can get when an invalidation is missed, and presence sets one so that a player whose heartbeats stop goes offline without anyone sending a logout. In Redis, `EXPIRE` gives a key a time to live. [[#design-caches-queues]] and [[#design-social]] use it.
+
 ## TLS {#tls}
 = Transport Layer Security
 
 Transport Layer Security: the protocol that encrypts HTTPS and proves the server's identity. In its handshake the server presents a certificate for its host name, and the client refuses the connection unless the certificate chains to an authority it trusts and names the host it asked for.
 
 That check is why nothing between the device and the server can answer in the server's name without the connection failing. A captive portal that intercepts a game's HTTPS request produces a certificate for the wrong host, and the request ends as a connection error, as [[#network-offline]] describes.
+## Token bucket {#token-bucket}
+= token buckets
+
+A rate-limiting algorithm: a bucket holds up to a set number of tokens and refills at the allowed rate, and each request takes a token or is refused when none is left.
+
+The bucket's size is the burst that a client may send at once, and its refill rate is the rate it may keep up. [[#design-social]] gives each chat player one per channel, so that a few quick messages pass and a flood does not.
+
 ## Unity Gaming Services {#unity-gaming-services}
 = UGS
 

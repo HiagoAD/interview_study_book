@@ -538,3 +538,16 @@ Codex (GPT-6 Sol, `xhigh`) first stopped at 2.5 minutes and 29,940 tokens with â
 Options: correct option longest in 20% of 50 sets, shortest in 20%, medians 65 and 63, no word-list option (the first draft had 56% and 8%); the detector found minimal signals.
 
 Next phase: Redis is not installed, so Phase 31 asks the user about one before its leaderboard lab. Chapter 13 builds on this chapter's estimates, `GrantOnce` and version check, and Cloud Save's default player data is writable by the client.
+
+### Phase 31: Chapter 13, designing core game services
+
+Wrote `content/mobile-platform/13-game-services.md` (7 sections, 14 concepts, 63 variants, the outline's ids) and three glossary entries: Ledger, Time to live and Token bucket. `npm run check` reports the book as 13 chapters, 72 sections, 145 concepts, 531 variants, 66 terms and 240 links with no unlinked entry; `questions --allow new-chapters --base b86fad8` accepts this chapter alone; its 6 new links return 200; the no-brand search is empty. Evidence and runs: [evidence/13-game-services.md](evidence/13-game-services.md).
+
+The user chose to install Redis 8.10.2 from Homebrew. Homebrew's own post-install step failed, since Homebrew is older than the formula, and the server runs. A board of 10 million players measured 895 MB, 89 bytes per entry, which holds chapter 12's estimate.
+
+Codex (GPT-6 Sol, `xhigh`) hit the usage limit after 23 minutes and 278,177 tokens, before its final answer; its working file held 102 receipts, and all pass. The session added 76 under rule A, none failed; EUR-Lex refused connections, so the GDPR is cited from the Commission's page. The Astra review (`xhigh`, 12 minutes, 200,236 tokens) ran at the 01:23 reset from a background command started two hours before it, and found 13 problems; all held and are fixed, among them a wallet constraint that refused the refund's reversal.
+
+Options: correct option longest in 21% of 63 sets, shortest in 22%, medians 65 and 65, no word-list option (the first draft had 40% and 8%). The detector found known false positives alone.
+
+Next phase: chapter 14 builds on this chapter's push pacing, the event start's prefetch and jitter, and the ledger's refunds. Redis stays installed, with no service running, for any run chapter 14 needs.
+
