@@ -186,6 +186,13 @@ The debug symbol file of one Apple binary: a bundle holding the information that
 
 A Unity iOS release build produces one for the app and one for `UnityFramework`, which covers the game's C# as IL2CPP compiled it, and the Xcode archive keeps both, as [[#xcode-build-flow]] shows. [[#ios-failure-evidence]] shows how to check a UUID and symbolicate with them, and chapter 11 archives them for each build.
 
+## Dynamic linker {#dynamic-linker}
+= dynamic loader
+
+The operating system component that loads an executable's shared libraries and connects the functions and data they import. On Apple platforms it is called `dyld`; a missing framework or an unavailable imported symbol can stop an app before its game code runs.
+
+[[#boundary-editor-device]] uses the termination reason to distinguish a library-loading failure from a privacy or application error.
+
 ## Edit Mode and Play Mode tests {#play-mode-tests}
 = Edit Mode tests | Unity Test Framework
 
@@ -477,6 +484,14 @@ One interchangeable rule behind a small interface, so the code that runs the rul
 
 At the platform boundary it holds a rule that differs between platforms inside a capability that is otherwise shared, such as how purchases are restored, with the implementation chosen in the composition root that [[#platform-composition]] describes. A strategy with a single implementation is an interface nobody needed yet.
 
+## Symbolication {#symbolication}
+= symbolicate | symbolicated
+-> dsym
+
+Translating addresses in a crash report into function names and, when available, source files and line numbers using debug symbols that match the crashed binary. A readable stack helps locate the failing operation, though an earlier memory error may have caused it.
+
+[[#boundary-crash-case]] matches Android library build IDs and Apple binary UUIDs before interpreting the resulting frames.
+
 ## TestFlight {#testflight}
 
 Apple's service for sending beta builds of an app to testers through App Store Connect. Testers install the builds with the TestFlight app, and their crash reports reach the developer whatever their device's sharing settings.
@@ -496,6 +511,15 @@ A cache sets one to bound how stale an entry can get when an invalidation is mis
 Transport Layer Security: the protocol that encrypts HTTPS and proves the server's identity. In its handshake the server presents a certificate for its host name, and the client refuses the connection unless the certificate chains to an authority it trusts and names the host it asked for.
 
 That check is why nothing between the device and the server can answer in the server's name without the connection failing. A captive portal that intercepts a game's HTTPS request produces a certificate for the wrong host, and the request ends as a connection error, as [[#network-offline]] describes.
+
+## Tombstone {#tombstone}
+= tombstones
+-> logcat
+
+Android's detailed native crash report, containing the crashing thread's backtrace and additional process information such as other thread stacks and the memory map. It supplies context that an abbreviated crash log or dashboard frame may omit.
+
+Availability depends on how the report is collected and the access the device allows. [[#boundary-crash-case]] uses it alongside the shipped binary's matching symbols.
+
 ## Token bucket {#token-bucket}
 = token buckets
 

@@ -252,3 +252,13 @@ Codex (GPT-6 Sol, `xhigh`) gathered 100 receipts in 26 minutes and 279,222 token
 Options: correct longest in 17% of 52 sets, shortest in 23%, median lengths 66 and 66, no word-list option. The detector found contextual false positives alone.
 
 Next phase: Phase 33 writes chapter 15, using this chapter's mitigation order, client-version dashboards, correlation ids and incident roles. The user's manual chapter read remains.
+
+### Phase 33: Chapter 15, debugging across boundaries
+
+Wrote `content/mobile-platform/15-debugging-across-boundaries.md` (5 sections, 10 concepts, 50 variants, the outline's ids) and three glossary entries: Dynamic linker, Symbolication and Tombstone. The book now has 15 chapters, 82 sections, 165 concepts, 633 variants, 76 terms and 293 links, with no unlinked entry. All 675 tests, content check, build and style pass; the question guard against `1e0aced` accepts this chapter alone; five new links return 200 without redirects; the no-brand search is empty. Evidence: [evidence/15-debugging-across-boundaries.md](evidence/15-debugging-across-boundaries.md).
+
+The delegated CLI could not initialize in the sandbox, and automatic approval review rejected the external retry for exporting repository-derived prompt material. Both evidence and review used the plan's inline fallback; no successful delegated run or token usage was reported. All 72 receipts, 70 documentation and two local NDK command checks, pass, including a fresh source re-fetch. The teacher's read corrected an off-concept variant, implausible distractors in three variants, and a loose source cross-reference. Both incidents are explicitly invented; no device or store test is claimed.
+
+Options: correct longest in 18% of 50 sets, shortest in 28%, median lengths 64 and 65.5, no word-list option. The detector reports technical vocabulary repetition alone.
+
+Next phase: Phase 34 writes interview practice and performs the planned prose link pass. The user's manual chapter read remains.
