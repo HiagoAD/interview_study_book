@@ -1,0 +1,1188 @@
+[
+  {
+    "path": "content/mobile-platform/01-platform-layer.md",
+    "sections": [
+      {
+        "id": "platform-study-method",
+        "title": "How to study the platform layer",
+        "line": 7,
+        "concepts": 2,
+        "variants": 4
+      },
+      {
+        "id": "platform-interfaces",
+        "title": "Own the interface: adapters and facades at the SDK boundary",
+        "line": 107,
+        "concepts": 2,
+        "variants": 4
+      },
+      {
+        "id": "platform-composition",
+        "title": "Choose implementations at the composition root",
+        "line": 183,
+        "concepts": 2,
+        "variants": 5
+      },
+      {
+        "id": "platform-results-threads",
+        "title": "Results, errors, and threads at the boundary",
+        "line": 254,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "platform-events",
+        "title": "Events from the platform: early, repeated, and late",
+        "line": 359,
+        "concepts": 2,
+        "variants": 5
+      },
+      {
+        "id": "platform-testing",
+        "title": "Test the boundary without a device, then on one",
+        "line": 424,
+        "concepts": 2,
+        "variants": 4
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/02-android-bridge.md",
+    "sections": [
+      {
+        "id": "android-runtime-model",
+        "title": "What runs where in a Unity Android app",
+        "line": 6,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "android-java-calls",
+        "title": "AndroidJavaObject, AndroidJavaClass, and the cost of JNI",
+        "line": 103,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "android-callbacks",
+        "title": "Callbacks into C#: AndroidJavaProxy and UnitySendMessage",
+        "line": 241,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "android-plugin-forms",
+        "title": "Plugin forms: sources, AARs, library folders, and native libraries",
+        "line": 423,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "android-activity-integration",
+        "title": "Activities, intents, and results without subclassing Unity's activity",
+        "line": 515,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "android-failure-evidence",
+        "title": "When the Android side fails: exceptions, native crashes, and ANRs",
+        "line": 650,
+        "concepts": 2,
+        "variants": 7
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/03-ios-bridge.md",
+    "sections": [
+      {
+        "id": "ios-runtime-model",
+        "title": "What runs where in a Unity iOS app",
+        "line": 6,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "ios-native-calls",
+        "title": "DllImport, __Internal, and marshaling",
+        "line": 143,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "ios-callbacks",
+        "title": "Callbacks: MonoPInvokeCallback, function pointers, and UnitySendMessage",
+        "line": 333,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "ios-frameworks",
+        "title": "Frameworks, xcframeworks, Swift, and Objective-C++",
+        "line": 511,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "ios-xcode-postprocess",
+        "title": "Change the Xcode project from C#: post-processing and app delegate hooks",
+        "line": 651,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "ios-failure-evidence",
+        "title": "When the iOS side fails: crash reports, terminations, and symbols",
+        "line": 808,
+        "concepts": 2,
+        "variants": 8
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/04-os-integration.md",
+    "sections": [
+      {
+        "id": "os-lifecycle",
+        "title": "Two lifecycles: the OS's app states and Unity's callbacks",
+        "line": 6,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "os-permissions",
+        "title": "Permissions and usage descriptions",
+        "line": 126,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "os-deep-links",
+        "title": "Deep links and verified links",
+        "line": 237,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "os-notifications",
+        "title": "Local and push notifications",
+        "line": 437,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "os-auth-callbacks",
+        "title": "Sign-in callbacks and external authentication",
+        "line": 516,
+        "concepts": 2,
+        "variants": 7
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/05-android-builds.md",
+    "sections": [
+      {
+        "id": "gradle-project",
+        "title": "From Unity to an APK or AAB: the generated Gradle project",
+        "line": 6,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "gradle-manifest-merge",
+        "title": "Manifest merging and the permissions nobody asked for",
+        "line": 100,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "gradle-dependencies",
+        "title": "Dependencies, conflicts, and resolution",
+        "line": 204,
+        "concepts": 3,
+        "variants": 10
+      },
+      {
+        "id": "gradle-r8-symbols",
+        "title": "R8, keep rules, and symbol files",
+        "line": 327,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "gradle-packaging-signing",
+        "title": "APK, AAB, and the Play signing key",
+        "line": 461,
+        "concepts": 2,
+        "variants": 8
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/06-ios-builds.md",
+    "sections": [
+      {
+        "id": "xcode-build-flow",
+        "title": "From Unity to an IPA",
+        "line": 6,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "xcode-signing-model",
+        "title": "Certificates, identifiers, profiles, and entitlements",
+        "line": 140,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "xcode-build-settings",
+        "title": "Build settings and Info.plist keys that decide whether the app runs",
+        "line": 243,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "xcode-cocoapods",
+        "title": "CocoaPods and dependency resolution on iOS",
+        "line": 386,
+        "concepts": 2,
+        "variants": 7
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/07-sdk-integration.md",
+    "sections": [
+      {
+        "id": "sdk-evaluation",
+        "title": "Evaluate an SDK before it enters the build",
+        "line": 6,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "sdk-analytics-integration",
+        "title": "Integrate an analytics SDK into an existing project",
+        "line": 86,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "sdk-consent-init",
+        "title": "Consent, privacy, and initialization order",
+        "line": 265,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "sdk-platform-differences",
+        "title": "Different implementations on Android and iOS",
+        "line": 388,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "sdk-upgrades",
+        "title": "Upgrade an SDK safely",
+        "line": 609,
+        "concepts": 2,
+        "variants": 5
+      },
+      {
+        "id": "sdk-conflicts",
+        "title": "When SDKs collide",
+        "line": 664,
+        "concepts": 2,
+        "variants": 6
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/08-backend-clients.md",
+    "sections": [
+      {
+        "id": "http-semantics",
+        "title": "HTTP semantics a game client relies on",
+        "line": 6,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "http-unity-clients",
+        "title": "UnityWebRequest and HttpClient in a Unity client",
+        "line": 143,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "http-sessions",
+        "title": "Sessions and tokens",
+        "line": 376,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "http-dtos",
+        "title": "JSON, DTOs, and the game's domain",
+        "line": 614,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "http-versioning",
+        "title": "API versions and clients that never update",
+        "line": 803,
+        "concepts": 2,
+        "variants": 9
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/09-reliable-networking.md",
+    "sections": [
+      {
+        "id": "network-timeouts",
+        "title": "Deadlines, timeouts, and cancellation",
+        "line": 6,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "network-retries",
+        "title": "Retries that help instead of hurt",
+        "line": 126,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "network-idempotency",
+        "title": "Idempotency keys over HTTP",
+        "line": 260,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "network-offline",
+        "title": "Offline play and reconciliation",
+        "line": 385,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "network-observability",
+        "title": "Trace a request: ids, logs, and privacy",
+        "line": 479,
+        "concepts": 2,
+        "variants": 7
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/10-variants-and-releases.md",
+    "sections": [
+      {
+        "id": "release-build-variants",
+        "title": "Development and release builds differ on purpose",
+        "line": 6,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "release-environments",
+        "title": "Environment-specific configuration",
+        "line": 126,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "release-versioning",
+        "title": "Versions and build identity",
+        "line": 253,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "release-rollouts",
+        "title": "Store tracks and staged rollouts",
+        "line": 408,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "release-verification",
+        "title": "Verify the build the store will ship",
+        "line": 509,
+        "concepts": 2,
+        "variants": 9
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/11-ci-and-jenkins.md",
+    "sections": [
+      {
+        "id": "ci-pipeline-shape",
+        "title": "The shape of a mobile pipeline",
+        "line": 6,
+        "concepts": 2,
+        "variants": 6
+      },
+      {
+        "id": "ci-jenkins-pipeline",
+        "title": "Jenkins pipelines: Jenkinsfile, agents, stages, and parameters",
+        "line": 208,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "ci-secrets-signing",
+        "title": "Secrets, credentials, and signing in CI",
+        "line": 456,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "ci-caching",
+        "title": "Caching and build speed",
+        "line": 599,
+        "concepts": 2,
+        "variants": 5
+      },
+      {
+        "id": "ci-only-failures",
+        "title": "Failures that happen only in CI",
+        "line": 653,
+        "concepts": 2,
+        "variants": 7
+      },
+      {
+        "id": "ci-release-automation",
+        "title": "Automate versions and releases",
+        "line": 739,
+        "concepts": 2,
+        "variants": 6
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/12-system-design.md",
+    "sections": [
+      {
+        "id": "design-round-method",
+        "title": "How a game system design round runs",
+        "line": 6,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "design-estimation",
+        "title": "Estimate before you draw",
+        "line": 118,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "design-services-state",
+        "title": "Stateless services and where state lives",
+        "line": 216,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "design-storage",
+        "title": "Storage chosen by access pattern",
+        "line": 334,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "design-caches-queues",
+        "title": "Caches, queues, and events",
+        "line": 426,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "design-consistency",
+        "title": "Consistency, concurrency, and the trade-off said aloud",
+        "line": 563,
+        "concepts": 2,
+        "variants": 10
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/13-game-services.md",
+    "sections": [
+      {
+        "id": "design-player-data",
+        "title": "Accounts, identity, and player data",
+        "line": 6,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "design-economy",
+        "title": "Economy and purchases: the server owns the ledger",
+        "line": 130,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "design-leaderboards",
+        "title": "Leaderboards",
+        "line": 277,
+        "concepts": 2,
+        "variants": 9
+      },
+      {
+        "id": "design-matchmaking",
+        "title": "Matchmaking and game sessions",
+        "line": 397,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "design-realtime-multiplayer",
+        "title": "Real-time multiplayer at the system level",
+        "line": 497,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "design-social",
+        "title": "Social: friends, presence, chat, and notifications",
+        "line": 607,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "design-live-events",
+        "title": "Live events, content, and telemetry",
+        "line": 691,
+        "concepts": 2,
+        "variants": 8
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/14-running-services.md",
+    "sections": [
+      {
+        "id": "design-spikes",
+        "title": "Spikes: launches, resets, and event starts",
+        "line": 6,
+        "concepts": 2,
+        "variants": 11
+      },
+      {
+        "id": "design-degradation",
+        "title": "Failure isolation and graceful degradation",
+        "line": 182,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "design-backend-deploys",
+        "title": "Deploying and evolving a live backend",
+        "line": 294,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "design-slos",
+        "title": "Observability, service levels, and incidents",
+        "line": 425,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "design-abuse-privacy",
+        "title": "Abuse, cheating, and privacy at the service",
+        "line": 523,
+        "concepts": 2,
+        "variants": 11
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/15-debugging-across-boundaries.md",
+    "sections": [
+      {
+        "id": "boundary-method",
+        "title": "Follow one operation through every layer",
+        "line": 6,
+        "concepts": 2,
+        "variants": 10
+      },
+      {
+        "id": "boundary-editor-device",
+        "title": "Works in the Editor, fails on the device",
+        "line": 119,
+        "concepts": 1,
+        "variants": 8
+      },
+      {
+        "id": "boundary-dev-prod",
+        "title": "Works in development, fails in production",
+        "line": 210,
+        "concepts": 2,
+        "variants": 8
+      },
+      {
+        "id": "boundary-purchase-case",
+        "title": "Worked case: purchases fail in production after an SDK update",
+        "line": 298,
+        "concepts": 3,
+        "variants": 14
+      },
+      {
+        "id": "boundary-crash-case",
+        "title": "Native crashes after an SDK update: a second case",
+        "line": 462,
+        "concepts": 2,
+        "variants": 10
+      }
+    ]
+  },
+  {
+    "path": "content/mobile-platform/glossary.md",
+    "sections": [
+      {
+        "id": "aab",
+        "title": "AAB",
+        "line": 6,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "abi",
+        "title": "ABI",
+        "line": 13,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "advertising-identifier",
+        "title": "Advertising identifier",
+        "line": 20,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "android-gradle-plugin",
+        "title": "Android Gradle Plugin",
+        "line": 27,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "android-keystore",
+        "title": "Android Keystore",
+        "line": 34,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "android-vitals",
+        "title": "Android vitals",
+        "line": 41,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "anr",
+        "title": "ANR",
+        "line": 48,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "app-extension",
+        "title": "App extension",
+        "line": 55,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "app-store-connect",
+        "title": "App Store Connect",
+        "line": 62,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "app-tracking-transparency",
+        "title": "App Tracking Transparency",
+        "line": 68,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "app-transport-security",
+        "title": "App Transport Security",
+        "line": 75,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "arc",
+        "title": "ARC",
+        "line": 82,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "assembly-definition",
+        "title": "Assembly definition",
+        "line": 89,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "bundletool",
+        "title": "bundletool",
+        "line": 96,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "canary-release",
+        "title": "Canary release",
+        "line": 102,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "cdn",
+        "title": "CDN",
+        "line": 110,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "certificate-pinning",
+        "title": "Certificate pinning",
+        "line": 118,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "circuit-breaker",
+        "title": "Circuit breaker",
+        "line": 125,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "cocoapods",
+        "title": "CocoaPods",
+        "line": 133,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "content-provider",
+        "title": "Content provider",
+        "line": 140,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "crash-free-users",
+        "title": "Crash-free users",
+        "line": 147,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "custom-tabs",
+        "title": "Custom Tabs",
+        "line": 154,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "deep-link",
+        "title": "Deep link",
+        "line": 161,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "device-attestation",
+        "title": "Device attestation",
+        "line": 168,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "dispatch-queue",
+        "title": "Dispatch queue",
+        "line": 175,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "dsym",
+        "title": "dSYM",
+        "line": 182,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "dynamic-linker",
+        "title": "Dynamic linker",
+        "line": 189,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "play-mode-tests",
+        "title": "Edit Mode and Play Mode tests",
+        "line": 196,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "edm4u",
+        "title": "EDM4U",
+        "line": 203,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "entitlements",
+        "title": "Entitlements",
+        "line": 210,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "error-budget",
+        "title": "Error budget",
+        "line": 217,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "expand-and-contract",
+        "title": "Expand and contract",
+        "line": 225,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "git-lfs",
+        "title": "Git LFS",
+        "line": 231,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "gradle",
+        "title": "Gradle",
+        "line": 238,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "idempotence",
+        "title": "Idempotence",
+        "line": 244,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "il2cpp",
+        "title": "IL2CPP",
+        "line": 251,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "info-plist",
+        "title": "Info.plist",
+        "line": 257,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "jni",
+        "title": "JNI",
+        "line": 264,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "json-web-token",
+        "title": "JSON Web Token",
+        "line": 271,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "keychain",
+        "title": "Keychain",
+        "line": 278,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "ledger",
+        "title": "Ledger",
+        "line": 285,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "load-balancer",
+        "title": "Load balancer",
+        "line": 293,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "load-shedding",
+        "title": "Load shedding",
+        "line": 301,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "logcat",
+        "title": "Logcat",
+        "line": 308,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "managed-code-stripping",
+        "title": "Managed code stripping",
+        "line": 314,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "maven-coordinates",
+        "title": "Maven coordinates",
+        "line": 321,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "method-swizzling",
+        "title": "Method swizzling",
+        "line": 328,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "oauth",
+        "title": "OAuth",
+        "line": 335,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "object-storage",
+        "title": "Object storage",
+        "line": 342,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "observer",
+        "title": "Observer",
+        "line": 350,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "openapi",
+        "title": "OpenAPI",
+        "line": 357,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "p-invoke",
+        "title": "P/Invoke",
+        "line": 364,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "play-app-signing",
+        "title": "Play App Signing",
+        "line": 371,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "privacy-manifest",
+        "title": "Privacy manifest",
+        "line": 378,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "provisioning-profile",
+        "title": "Provisioning profile",
+        "line": 385,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "pub-sub",
+        "title": "Pub/sub",
+        "line": 392,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "push-token",
+        "title": "Push token",
+        "line": 400,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "r8",
+        "title": "R8",
+        "line": 407,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "read-replica",
+        "title": "Read replica",
+        "line": 413,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "remote-configuration",
+        "title": "Remote configuration",
+        "line": 420,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "saga",
+        "title": "Saga",
+        "line": 427,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "scene-delegate",
+        "title": "Scene delegate",
+        "line": 435,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "scripting-define-symbol",
+        "title": "Scripting define symbol",
+        "line": 442,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "service-level-indicator",
+        "title": "Service level indicator",
+        "line": 449,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "service-level-objective",
+        "title": "Service level objective",
+        "line": 457,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "sorted-set",
+        "title": "Sorted set",
+        "line": 465,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "staged-rollout",
+        "title": "Staged rollout",
+        "line": 472,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "strategy",
+        "title": "Strategy",
+        "line": 480,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "symbolication",
+        "title": "Symbolication",
+        "line": 487,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "testflight",
+        "title": "TestFlight",
+        "line": 495,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "time-to-live",
+        "title": "Time to live",
+        "line": 501,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "tls",
+        "title": "TLS",
+        "line": 508,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "tombstone",
+        "title": "Tombstone",
+        "line": 515,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "token-bucket",
+        "title": "Token bucket",
+        "line": 523,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "unity-gaming-services",
+        "title": "Unity Gaming Services",
+        "line": 530,
+        "concepts": 0,
+        "variants": 0
+      },
+      {
+        "id": "websocket",
+        "title": "WebSocket",
+        "line": 537,
+        "concepts": 0,
+        "variants": 0
+      }
+    ]
+  }
+]

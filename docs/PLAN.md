@@ -210,6 +210,20 @@ Read the whole book in order, as the Unity book's second read did: every claim, 
 
 Done when: every chapter has been read in order, each problem has its file and its row in the README, and the phase log counts the requests by kind and priority.
 
+### Companion review: learner experience and writing
+
+After the book is finished, run [the reader review plan](reader-review-plan.md)
+with `$review-platform-book` in Codex or `/review-platform-book` in Claude Code.
+It assesses every section as a learner and rates readability, structure,
+conciseness and style consistency, then compares the whole book and proposes
+ordered editing batches. It has chapter checkpoints for work across sessions.
+
+This is a report-only companion to Phase 35. Its reports live under
+`docs/reader-reviews/`; it does not replace the technical teacher's read, edit
+content, change committed questions or commit automatically. Its detailed
+completion checks and rating anchors are in the linked plan. Implementation of
+its editing plan is a later task, subject to the existing question-history rules.
+
 ## Phase log
 
 Phases 1 to 29 are logged in [plan-history.md](plan-history.md).
