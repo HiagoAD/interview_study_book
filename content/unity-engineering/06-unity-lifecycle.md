@@ -1,5 +1,5 @@
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 chapter: 06: Unity lifecycle, scenes, prefabs, and serialization
 ---
 

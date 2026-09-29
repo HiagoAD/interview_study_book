@@ -3,7 +3,7 @@ import { assembleBooks, summarize } from './load.ts'
 import { SUMMARY_LIMIT, parseContentFile } from './parse.ts'
 import { docExample } from './test-helpers.ts'
 
-const FM = ['---', 'book: Test', 'kind: glossary', '---'] // lines 1-4
+const FM = ['---', 'book: test', 'kind: glossary', '---'] // lines 1-4
 /** A valid entry, starting on line 5. */
 const ENTRY = ['## Term {#term}', 'Summary.']
 
@@ -115,8 +115,8 @@ test('a summary of exactly the limit is allowed, and one character more is not',
 type Case = [name: string, lines: string[], expected: [line: number, fragment: string][]]
 
 const cases: Case[] = [
-  ['unknown kind', ['---', 'book: Test', 'kind: notes', '---', ...ENTRY], [[3, 'unknown kind "notes"']]],
-  ['kind beside chapter', ['---', 'book: Test', 'chapter: Intro', 'kind: glossary', '---', '## Term {#term}', 'Summary.'], [[3, 'a glossary file has no chapters, so "chapter" cannot be set beside']]],
+  ['unknown kind', ['---', 'book: test', 'kind: notes', '---', ...ENTRY], [[3, 'unknown kind "notes"']]],
+  ['kind beside chapter', ['---', 'book: test', 'chapter: Intro', 'kind: glossary', '---', '## Term {#term}', 'Summary.'], [[3, 'a glossary file has no chapters, so "chapter" cannot be set beside']]],
   ['glossary file with no entries', FM, [[1, 'this glossary file has no entries']]],
   ['text before the first entry', [...FM, 'Stray.', ...ENTRY], [[5, 'text before the first entry']]],
   ['fence before the first entry', [...FM, '```', 'x', '```', ...ENTRY], [[5, 'text before the first entry']]],
@@ -155,7 +155,7 @@ const book = (...lines: string[]) => source('content/g.md', ...FM, ...lines)
 
 test('a book takes its entries from every glossary file, and keeps its chapters', () => {
   const { books, errors } = assembleBooks([
-    source('content/a.md', '---', 'book: Test', 'chapter: Intro', '---', '## Sec {#sec}', 'Text.', '?? q1 Q?', '* right', '- wrong', '> because'),
+    source('content/a.md', '---', 'book: test', 'chapter: Intro', '---', '## Sec {#sec}', 'Text.', '?? q1 Q?', '* right', '- wrong', '> because'),
     source('content/g1.md', ...FM, '## One {#one}', 'First.'),
     source('content/g2.md', ...FM, '## Two {#two}', 'Second.'),
   ])
@@ -203,7 +203,7 @@ test('-> cannot point at its own entry', () => {
 
 test('a section and an entry may share an id, because they are separate namespaces', () => {
   const { errors } = assembleBooks([
-    source('content/a.md', '---', 'book: Test', 'chapter: Intro', '---', '## Sec {#pool}', 'Text.', '?? q1 Q?', '* right', '- wrong', '> because'),
+    source('content/a.md', '---', 'book: test', 'chapter: Intro', '---', '## Sec {#pool}', 'Text.', '?? q1 Q?', '* right', '- wrong', '> because'),
     source('content/g.md', ...FM, '## Pool {#pool}', 'Reused instances.'),
   ])
   expect(errors).toEqual([])

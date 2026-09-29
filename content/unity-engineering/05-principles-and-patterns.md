@@ -1,5 +1,5 @@
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 chapter: 05: OOP, principles, and patterns with tradeoffs
 ---
 

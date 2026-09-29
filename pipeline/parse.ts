@@ -58,7 +58,9 @@ export interface RawEntry {
 
 export interface RawFile {
   path: string
-  book: { title: string; line: number } | null
+  book: { id: string; line: number } | null
+  /** The book's title, which one file of the book gives. */
+  title: { text: string; line: number } | null
   /** A file holds chapters or glossary entries, never both: `kind: glossary` decides which. */
   chapters: RawChapter[]
   entries: RawEntry[]
@@ -151,7 +153,8 @@ function block(lines: string[], firstLine: number): Text {
 }
 
 interface FrontMatter {
-  book: { title: string; line: number } | null
+  book: { id: string; line: number } | null
+  title: { text: string; line: number } | null
   chapter: { title: string; line: number } | null
   /** `kind: glossary`: the file holds glossary entries instead of chapters. */
   glossary: boolean
@@ -161,9 +164,9 @@ interface FrontMatter {
 }
 
 function parseFrontMatter(lines: string[], err: Report): FrontMatter {
-  const result: FrontMatter = { book: null, chapter: null, glossary: false, unknownKind: false, bodyStart: 0 }
+  const result: FrontMatter = { book: null, title: null, chapter: null, glossary: false, unknownKind: false, bodyStart: 0 }
   if (lines[0].trim() !== '---') {
-    err(1, 'front matter is required: the first line must be "---", then "book: <title>", then a closing "---"')
+    err(1, 'front matter is required: the first line must be "---", then "book: <book-id>", then a closing "---"')
     return result
   }
   const close = lines.findIndex((text, i) => i > 0 && text.trim() === '---')
@@ -184,8 +187,8 @@ function parseFrontMatter(lines: string[], err: Report): FrontMatter {
       err(i + 1, `expected "key: value" in the front matter, got "${clip(text)}"`)
       continue
     }
-    if (key !== 'book' && key !== 'chapter' && key !== 'kind') {
-      err(i + 1, `unknown front matter key "${key}": the only keys are "book" (required), "chapter" and "kind" (optional)`)
+    if (key !== 'book' && key !== 'title' && key !== 'chapter' && key !== 'kind') {
+      err(i + 1, `unknown front matter key "${key}": the only keys are "book" (required), "title", "chapter" and "kind" (optional)`)
       continue
     }
     if (seen.has(key)) {
@@ -195,7 +198,7 @@ function parseFrontMatter(lines: string[], err: Report): FrontMatter {
     seen.add(key)
     const value = text.slice(colon + 1).trim()
     if (!value) {
-      err(i + 1, `front matter key "${key}" has no value: write "${key}: <title>"`)
+      err(i + 1, `front matter key "${key}" has no value: write "${key}: ${key === 'book' ? '<book-id>' : '<title>'}"`)
     } else if (key === 'kind') {
       if (value === 'glossary') {
         result.glossary = true
@@ -203,13 +206,18 @@ function parseFrontMatter(lines: string[], err: Report): FrontMatter {
         result.unknownKind = true
         err(i + 1, `unknown kind "${value}": the only kind is "glossary", which makes the file a glossary; leave "kind" out for a file of chapters and sections`)
       }
+    } else if (key === 'book') {
+      if (ID_PATTERN.test(value)) result.book = { id: value, line: i + 1 }
+      else err(i + 1, `invalid book id "${value}": use lowercase letters, digits and single hyphens; write "book: ${slug(value) || '<book-id>'}", and give the name the site shows as "title: <book title>" in one file of the book`)
+    } else if (key === 'title') {
+      result.title = { text: value, line: i + 1 }
     } else if (!slug(value)) {
-      err(i + 1, `"${key}" needs at least one letter or digit (a-z, 0-9), because its id is made from it`)
+      err(i + 1, '"chapter" needs at least one letter or digit (a-z, 0-9), because its id is made from it')
     } else {
-      result[key] = { title: value, line: i + 1 }
+      result.chapter = { title: value, line: i + 1 }
     }
   }
-  if (!seen.has('book')) err(1, 'front matter is missing "book": add "book: <book title>"')
+  if (!seen.has('book')) err(1, 'front matter is missing "book": add "book: <book-id>"')
   if (result.glossary && result.chapter) {
     err(result.chapter.line, 'a glossary file has no chapters, so "chapter" cannot be set beside "kind: glossary": remove whichever of the two is wrong')
   }
@@ -520,7 +528,7 @@ export function parseContentFile(path: string, source: string): ParseResult {
   const front = parseFrontMatter(lines, err)
 
   // Reading the body would only pile guesses on top of the one real error, which names the key to fix.
-  if (front.unknownKind) return { file: { path, book: front.book, chapters: [], entries: [] }, errors }
+  if (front.unknownKind) return { file: { path, book: front.book, title: front.title, chapters: [], entries: [] }, errors }
 
   if (front.glossary) {
     const entries = parseGlossaryBody(path, lines, front.bodyStart, err)
@@ -528,7 +536,7 @@ export function parseContentFile(path: string, source: string): ParseResult {
       err(1, 'this glossary file has no entries: add "## Term {#term-id}" headings, each with a summary paragraph under it')
     }
     errors.sort((a, b) => a.line - b.line)
-    return { file: { path, book: front.book, chapters: [], entries }, errors }
+    return { file: { path, book: front.book, title: front.title, chapters: [], entries }, errors }
   }
 
   const chapters: RawChapter[] = []
@@ -789,5 +797,5 @@ export function parseContentFile(path: string, source: string): ParseResult {
     err(1, 'the file has no sections: add "# Chapter title" and "## Title {#section-id}" after the front matter')
   }
   errors.sort((a, b) => a.line - b.line)
-  return { file: { path, book: front.book, chapters, entries: [] }, errors }
+  return { file: { path, book: front.book, title: front.title, chapters, entries: [] }, errors }
 }

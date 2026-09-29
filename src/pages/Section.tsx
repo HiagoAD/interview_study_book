@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { books } from 'virtual:content'
 import type { Book, Chapter } from '../types/content'
 import { Breadcrumb } from '../components/Breadcrumb'
+import { ChapterPosition } from '../components/ChapterPosition'
 import { Html } from '../components/Html'
 import { isSectionUnlocked } from '../engine/sections'
 import { useProgress, useProgressActions } from '../storage/useProgress'
@@ -57,6 +58,7 @@ function SectionView({ book, chapter, index }: { book: Book; chapter: Chapter; i
     return (
       <main>
         <Breadcrumb trail={trail} />
+        <ChapterPosition book={book} chapter={chapter} index={index} />
         <h1>{section.title}</h1>
         <div className="notice" role="note">
           <p>
@@ -74,6 +76,7 @@ function SectionView({ book, chapter, index }: { book: Book; chapter: Chapter; i
   return (
     <main>
       <Breadcrumb trail={trail} />
+      <ChapterPosition book={book} chapter={chapter} index={index} content={contentRef} />
       <h1>{section.title}</h1>
       <section ref={contentRef} className="content" tabIndex={-1} aria-label="Content">
         <Html html={section.html} className="prose" />

@@ -1,5 +1,5 @@
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 chapter: 14: Working with designers, artists, and engineers
 ---
 

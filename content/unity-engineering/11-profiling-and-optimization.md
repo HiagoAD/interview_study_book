@@ -1,5 +1,5 @@
 ---
-book: Unity Game Engineering
+book: unity-game-engineering
 chapter: 11: Profiling CPU, GPU, and managed memory
 ---
 

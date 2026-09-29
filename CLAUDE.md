@@ -22,26 +22,29 @@ Vite, React and TypeScript (strict mode), with `vite-plugin-singlefile` so `npm 
 - `npm run preview` — serves the production build.
 - `npm test` — runs the Vitest suite.
 - `npm run typecheck` — type-checks without emitting.
-- `npm run check` — parses and renders everything under `content/` (Markdown, KaTeX, Shiki, images) and prints each problem as `file:line: message`.
-- `npm run guard -- questions` — fails if any question block differs from `HEAD`, or from `--base <rev>`, ignoring line numbers; `--allow distractors` accepts changed `-` options, and `--allow structure --changes <file>` accepts the new concepts, moved or added variants, and added answers a JSON file lists. `npm run guard -- style` checks the book's prose conventions: no em dashes, no contractions, no straight double quotes in prose, and each section closing with its exercise.
+- `npm run check` — parses and renders everything under `content/` (Markdown, KaTeX, Shiki, images) and prints each problem as `file:line: message`; on success it prints the totals, summed and per book.
+- `npm run guard -- questions` — fails if any question block differs from `HEAD`, or from `--base <rev>`, ignoring line numbers; `--allow distractors` accepts changed `-` options, `--allow new-chapters` accepts every chapter none of whose sections is at the base and names each one, and `--allow structure --changes <file>` accepts the new concepts, moved or added variants, and added answers a JSON file lists. `npm run guard -- style` checks the book's prose conventions: no em dashes, no contractions, no straight double quotes in prose, and each section closing with its exercise.
+- `npm run guard -- options` — prints the figures the distractor standard is measured by, per chapter file and per book: how often the correct option is the longest or the shortest, the median option lengths, and the word list. `npm run guard -- links --base <rev>` checks each external link that is new since `<rev>`, or every link with `--all`, for HTTP 200 with no redirect; it is the only command that needs the network, and nothing else runs it.
 
 ## Layout
 
 ```
 content/        study material: *.md files and their images (format: docs/content-format.md)
+  unity-engineering/   The Game Layer, the first book
+  mobile-platform/     The Platform Layer, the second, written from docs/mobile-platform-outline.md
 pipeline/       build-time Node code (parser, renderer, loader, Vite plugin, guard); never imported by src/
 src/
   types/        content model types, and the declaration of the virtual:content module
   engine/       pure rules: option sampling, grading, local dates, scheduling, unlocking, the due list, preparing a question or a whole review (variant + options). Takes today, now and an rng as parameters; never reads the clock or Math.random
   storage/      progress: IndexedDB layer, the in-memory store written through to it, export/import, ProgressProvider and its hooks. Opening the database is given up on after 3 seconds and progress stays in memory (`persistent` is false)
-  components/   QuestionCard (study and review), Html (rendered content; handles in-page links and previews), Preview (the one hover card, drawn into the body), StorageBanner (shown while progress isn't being saved), and the small pieces they use
+  components/   QuestionCard (study and review), Html (rendered content; handles in-page links and previews), Preview (the one hover card, drawn into the body), StorageBanner (shown while progress isn't being saved), ChapterPosition (the bar pinned to a section page: section N of M and how far through it), and the small pieces they use
   pages/        Home, Book, Chapter, Section, Glossary, Term, Review, Data and Not found; they read the books from virtual:content and progress from useProgress
   router.ts     hash router (#/...)
   styles.css
 scripts/verify-dist.mjs   checks dist/ has only index.html, no external references and none of the dev-only UI
 ```
 
-The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 applied the review requests a teacher's read of the book left in `docs/review-requests/`; the folder keeps its README and `structure-changes.json`, the record of which concept each moved question came from. [docs/PLAN.md](docs/PLAN.md) holds the implementation decisions, the phases and a log of what each phase delivered; read it for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
+The site was built in six phases, all done. Phases 7 to 10 added the glossary, its preview cards and the Unity book's entries. Phases 11 to 17 applied the review requests a teacher's read of the book left in `docs/review-requests/`; the folder keeps its README and `structure-changes.json`, the record of which concept each moved question came from. Phases 18 to 35 write the second book, The Platform Layer, from [docs/mobile-platform-outline.md](docs/mobile-platform-outline.md): Phase 18 the tools, Phases 19 to 34 one chapter each (chapters 12 to 14, Phases 30 to 32, on system design for game services), and Phase 35 a teacher's read. All 35 phases are done. [docs/PLAN.md](docs/PLAN.md) holds how a phase runs and the open work: the requests Phase 35 left in `docs/review-requests/` and the reader review's editing plan in `docs/reader-reviews/`. [docs/plan-history.md](docs/plan-history.md) holds every phase's decisions, specification and log, including the second book's writing and evidence rules, which still bind edits to it, and `docs/evidence/` what each chapter of the second book was checked against. Read them for why something is the way it is. [README.md](README.md) is for using the site; this file is for changing it.
 
 ## Notes
 

@@ -10,7 +10,7 @@ function parseOk(...lines: string[]) {
   return file
 }
 
-const FM = ['---', 'book: Test', 'chapter: Intro', '---']
+const FM = ['---', 'book: test', 'chapter: Intro', '---']
 const MC = ['?? q1 Question?', '* right', '- wrong', '> because']
 
 test('the PROJECT.md example parses to the expected structure', () => {
@@ -18,15 +18,16 @@ test('the PROJECT.md example parses to the expected structure', () => {
   const { file, errors } = parseContentFile('content/example.md', example)
 
   expect(errors).toEqual([])
-  expect(file.book).toEqual({ title: 'System Design', line: 2 })
+  expect(file.book).toEqual({ id: 'system-design', line: 2 })
+  expect(file.title).toEqual({ text: 'System Design', line: 3 })
   expect(file.chapters).toHaveLength(1)
   const [chapter] = file.chapters
-  expect(chapter).toMatchObject({ id: 'caching', title: 'Caching', line: 3 })
+  expect(chapter).toMatchObject({ id: 'caching', title: 'Caching', line: 4 })
   expect(chapter.sections).toHaveLength(1)
   const [section] = chapter.sections
-  expect(section).toMatchObject({ id: 'cache-eviction', title: 'Cache eviction', line: 6 })
+  expect(section).toMatchObject({ id: 'cache-eviction', title: 'Cache eviction', line: 7 })
   expect(section.content).toEqual({
-    line: 8,
+    line: 9,
     md: [
       'Content in plain Markdown. Inline math $O(1)$, display math:',
       '',
@@ -41,56 +42,56 @@ test('the PROJECT.md example parses to the expected structure', () => {
   })
 
   expect(section.concepts.map((c) => [c.id, c.line, c.variants.length])).toEqual([
-    ['lru-evict', 18, 2],
-    ['lru-cost', 33, 1],
-    ['fifo-name', 37, 1],
+    ['lru-evict', 19, 2],
+    ['lru-cost', 34, 1],
+    ['fifo-name', 38, 1],
   ])
   const [evict, cost, fifo] = section.concepts
   expect(evict.variants[0]).toEqual({
     type: 'mc',
     n: 4,
-    line: 18,
-    prompt: { md: 'Which entry does an LRU cache evict first?', line: 18 },
+    line: 19,
+    prompt: { md: 'Which entry does an LRU cache evict first?', line: 19 },
     correct: [
-      { md: 'The least recently used entry', line: 19 },
-      { md: 'The entry that has gone longest without being read', line: 20 },
+      { md: 'The least recently used entry', line: 20 },
+      { md: 'The entry that has gone longest without being read', line: 21 },
     ],
     wrong: [
-      { md: 'The most recently used entry', line: 21 },
-      { md: 'The largest entry', line: 22 },
-      { md: 'The oldest inserted entry', line: 23 },
-      { md: 'A random entry', line: 24 },
+      { md: 'The most recently used entry', line: 22 },
+      { md: 'The largest entry', line: 23 },
+      { md: 'The oldest inserted entry', line: 24 },
+      { md: 'A random entry', line: 25 },
     ],
     explanation: {
       md: 'LRU tracks access order and removes the entry that has gone longest without being read.',
-      line: 25,
+      line: 26,
     },
   })
   expect(evict.variants[1]).toEqual({
     type: 'mc',
     n: 4,
-    line: 27,
-    prompt: { md: 'Keys A, B and C are inserted in that order, then A is read. Which key does LRU evict next?', line: 27 },
-    correct: [{ md: 'B', line: 28 }],
+    line: 28,
+    prompt: { md: 'Keys A, B and C are inserted in that order, then A is read. Which key does LRU evict next?', line: 28 },
+    correct: [{ md: 'B', line: 29 }],
     wrong: [
-      { md: 'A', line: 29 },
-      { md: 'C', line: 30 },
+      { md: 'A', line: 30 },
+      { md: 'C', line: 31 },
     ],
-    explanation: { md: 'After A is read, B is the least recently used key.', line: 31 },
+    explanation: { md: 'After A is read, B is the least recently used key.', line: 32 },
   })
   expect(cost.variants[0]).toEqual({
     type: 'tf',
-    line: 33,
-    prompt: { md: 'LRU lookups are O(n).', line: 33 },
+    line: 34,
+    prompt: { md: 'LRU lookups are O(n).', line: 34 },
     answer: false,
-    explanation: { md: 'With a hash map plus a doubly linked list, both lookup and eviction are O(1).', line: 35 },
+    explanation: { md: 'With a hash map plus a doubly linked list, both lookup and eviction are O(1).', line: 36 },
   })
   expect(fifo.variants[0]).toEqual({
     type: 'short',
-    line: 37,
-    prompt: { md: 'Name the eviction policy that removes the oldest inserted entry.', line: 37 },
+    line: 38,
+    prompt: { md: 'Name the eviction policy that removes the oldest inserted entry.', line: 38 },
     accepted: ['FIFO', 'first in first out'],
-    explanation: { md: 'FIFO ignores access; it evicts by insertion order.', line: 39 },
+    explanation: { md: 'FIFO ignores access; it evicts by insertion order.', line: 40 },
   })
 })
 
@@ -217,7 +218,7 @@ test('one file can hold several chapters, and front matter can name the first', 
 })
 
 test('a file without a chapter key starts its first chapter with a # heading', () => {
-  const file = parseOk('---', 'book: Test', '---', '# One', '## A {#a}', 'Content.', ...MC)
+  const file = parseOk('---', 'book: test', '---', '# One', '## A {#a}', 'Content.', ...MC)
   expect(file.chapters.map((c) => c.title)).toEqual(['One'])
 })
 
@@ -267,7 +268,7 @@ test('accepted answers are split on |, trimmed, and empty ones dropped, across s
 })
 
 test('Windows line endings and a byte order mark change nothing', () => {
-  const text = ['---', 'book: Test', 'chapter: Intro', '---', '## A {#a}', 'Content.', ...MC].join('\r\n')
+  const text = ['---', 'book: test', 'chapter: Intro', '---', '## A {#a}', 'Content.', ...MC].join('\r\n')
   const plain = parseContentFile('content/t.md', text.replaceAll('\r\n', '\n'))
   const crlf = parseContentFile('content/t.md', `﻿${text}`)
   expect(crlf.errors).toEqual([])

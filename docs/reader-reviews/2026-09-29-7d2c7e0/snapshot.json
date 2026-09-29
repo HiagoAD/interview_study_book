@@ -1,0 +1,31 @@
+{
+  "commit": "7d2c7e029c52f6db5cb1df5008485971dac9e880",
+  "scope": "chapter 16 only (content/mobile-platform/16-interview-practice.md), learner and writing",
+  "initial_status": " M content/mobile-platform/01-platform-layer.md\n M content/mobile-platform/02-android-bridge.md\n M content/mobile-platform/03-ios-bridge.md\n M content/mobile-platform/04-os-integration.md\n M content/mobile-platform/06-ios-builds.md\n M content/mobile-platform/08-backend-clients.md\n M content/mobile-platform/10-variants-and-releases.md\n M content/mobile-platform/12-system-design.md\n M content/mobile-platform/13-game-services.md\n M content/mobile-platform/14-running-services.md\n?? content/mobile-platform/16-interview-practice.md\n",
+  "concurrent_changes_seen": [
+    "docs/evidence/16-interview-practice.md appeared (untracked) during this run; not written by this review and not read as review input",
+    "content/mobile-platform/16-interview-practice.md changed during the run (mtime 10:13): SHA-256 at start dec0b864...777f, at end 684fce8befedfe1bb1bbaf12d6fbd43e8b0dcfb4f75a998eab45be6df48fa445. Still 444 lines; the explanations at lines 47 and 436 were rewritten. All other explanation lines and every excerpt cited in chapter-16.md were rechecked at the same line numbers. RR-16-02 is partly and RR-16-11 fully addressed by that edit."
+  ],
+  "sha256": {
+    "content/mobile-platform/16-interview-practice.md": "dec0b8641ccf687cad340db7b8a9df30a85499501f1ecb8257f967559819777f",
+    "content/mobile-platform/glossary.md": "29d61c1090be187a306cb74939cfb0d53935302871024c5eaed6e8d6d708deb8",
+    "docs/mobile-platform-outline.md": "e7d79deb0ff420d20661e7f16bb64dadf3daf5ff5c698239dd58db87fba6fbd5",
+    "docs/PLAN.md": "46a5a803587797152dffae60bca25c0f327f008f220e5c57089ab1967c7b59b6",
+    "docs/reader-review-plan.md": "28f88917b5aa4443ac7ea87d15deadc312236e106406138e5cfa6a922d5168fa",
+    "CLAUDE.md": "1322dda53e7e4ec519e4656a200a902758922ca1ca8a5d50bd34588dcd59a126",
+    "PROJECT.md": "c2dcbe5a5b2e50e7b4e7e6dd6e32cd5459895585f6b7651bd60f1bbd8a22ec90",
+    "content/unity-engineering/15-interview-practice.md": "430230ce76a354f8ffd633eeebb5efa959ec974e567907a6c832c4fdc2b265b2",
+    "content/mobile-platform/05-android-builds.md": "9b265a984494cc7a277277ef8c2b2c9c92263be91408c0ee1f900b0e56829297",
+    "content/mobile-platform/07-sdk-integration.md": "4f9d0148bd160f14552a4aa0767cd475dacaa40b9779340a19ae1b526d1022d0",
+    "content/mobile-platform/08-backend-clients.md": "aa6647b8fddf103653dec3abff59a6d0b173f8e61362fac3907b5f1aaddce8bc",
+    "content/mobile-platform/09-reliable-networking.md": "fdff641a333a28629bed227dc6e4e818bbfdba8661ea66f71082fd1a4dde0cd4",
+    "content/mobile-platform/10-variants-and-releases.md": "4a7ec726bb01f8347c7d48e5486fae5c3bef9b02e3231d672ca152487b985617",
+    "content/mobile-platform/12-system-design.md": "9a52e0a73ec62ba4301ba9385d4cd2c9c489a034e22196d449f160e4aa1217c2",
+    "content/mobile-platform/13-game-services.md": "686073cee097aad1e618a28fa11326878055ba5ac5cb3a6733bf2fdd06cdd7e0",
+    "content/mobile-platform/15-debugging-across-boundaries.md": "5dbd85be985eae433e62d0499e152d958afb80e990328eab02ae9e72be0e0903"
+  },
+  "sha256_note": "Chapters 05, 07 to 10, 12, 13 and 15 and the first book's chapter 15 were consulted only to check what chapter 16 recaps or links; they are not in scope.",
+  "sha256_end": {
+    "content/mobile-platform/16-interview-practice.md": "684fce8befedfe1bb1bbaf12d6fbd43e8b0dcfb4f75a998eab45be6df48fa445"
+  }
+}

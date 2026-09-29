@@ -8,7 +8,7 @@ const lineOf = (lines: string[], needle: string) => lines.findIndex((line) => li
 test('renderer errors land on the file line of each kind of chunk', async () => {
   const lines = [
     '---',
-    'book: T',
+    'book: t',
     'chapter: C',
     '---',
     '## S {#s}',
@@ -55,10 +55,10 @@ test('renderer errors land on the file line of each kind of chunk', async () => 
 
 test('errors in files that parse cleanly are reported next to the parse errors of other files', async () => {
   const root = tempRepo({
-    'content/a.md': ['---', 'book: T', 'chapter: One', '---', '## A {#a}', 'Math $\\nope$.', '?? qa Q?', '* r', '- w', '> e'].join('\n'),
+    'content/a.md': ['---', 'book: t', 'chapter: One', '---', '## A {#a}', 'Math $\\nope$.', '?? qa Q?', '* r', '- w', '> e'].join('\n'),
     'content/b.md': [
       '---',
-      'book: T',
+      'book: t',
       'chapter: Two',
       '---',
       '## No id',
@@ -86,7 +86,8 @@ test('the rendered books have HTML in every field but titles, ids and accepted a
   const root = tempRepo({
     'content/shape.md': [
       '---',
-      'book: Shape',
+      'book: shape',
+      'title: Shape',
       'chapter: One',
       '---',
       '## R&D notes {#rd}',
@@ -147,9 +148,9 @@ test('images resolve from the folder of the file that names them, so two books c
   const svg = (color: string) => `<svg xmlns="http://www.w3.org/2000/svg"><rect fill="${color}"/></svg>`
   const file = (book: string) => ['---', `book: ${book}`, 'chapter: C', '---', '## S {#s}', '![x](images/pic.svg)', '?? q Q?', '* r', '- w', '> e'].join('\n')
   const root = tempRepo({
-    'content/one/a.md': file('One'),
+    'content/one/a.md': file('one'),
     'content/one/images/pic.svg': svg('red'),
-    'content/two/b.md': file('Two'),
+    'content/two/b.md': file('two'),
     'content/two/images/pic.svg': svg('blue'),
   })
   const { books, errors } = await loadContent(root)

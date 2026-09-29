@@ -1,5 +1,5 @@
 {
-  "about": "The question-structure changes of Phase 17 in docs/PLAN.md, and the record of which concept each moved question came from. npm run guard -- questions --base <the commit before them> --allow structure --changes docs/review-requests/structure-changes.json checks them. Variants are numbered from 1: a source variant by its place before the change, an added variant by its place after it.",
+  "about": "The question-structure changes of Phase 17 in docs/plan-history.md, and the record of which concept each moved question came from. npm run guard -- questions --base <the commit before them> --allow structure --changes docs/review-requests/structure-changes.json checks them. Variants are numbered from 1: a source variant by its place before the change, an added variant by its place after it.",
   "newConcepts": [
     { "id": "architecture-inject-time", "section": "architecture-dependencies", "variants": [{ "from": "architecture-lifetime", "variant": 2 }] },
     { "id": "powerup-pause-clock", "section": "powerup-expiration", "variants": [{ "from": "powerup-deadline-boundary", "variant": 2 }] },

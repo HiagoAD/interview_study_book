@@ -3,8 +3,8 @@ import { loadContent, summarize } from './load.ts'
 import { tempRepo } from './test-helpers.ts'
 
 // Both templates put their first body line on line 6, so a section's heading is line 6 and its content line 7.
-const page = (...body: string[]) => ['---', 'book: Test', 'chapter: Intro', '---', '', ...body].join('\n')
-const glossary = (...body: string[]) => ['---', 'book: Test', 'kind: glossary', '---', '', ...body].join('\n')
+const page = (...body: string[]) => ['---', 'book: test', 'chapter: Intro', '---', '', ...body].join('\n')
+const glossary = (...body: string[]) => ['---', 'book: test', 'kind: glossary', '---', '', ...body].join('\n')
 
 /** One section, its heading on line 6 and its content on line 7. */
 const section = (content: string) => page('## Sec {#sec}', content, '', '?? q1 Q?', '* right', '- wrong', '> because')

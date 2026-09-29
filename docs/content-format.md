@@ -7,20 +7,23 @@ The complete rules for writing study content. `npm run check` enforces them and 
 - Every `.md` file under `content/` (any subfolder) is a content file. Images sit next to the Markdown.
 - A file holds either chapters and sections or glossary entries, never both. `kind: glossary` in the front matter makes it a glossary file.
 - Files are read in path order (plain string sort of the relative path, so `B` sorts before `a`). Name them `01-caching.md`, `02-queues.md`.
-- A book is every file with the same `book:` title: one file or many. Books are listed by title. Its id is the title lowercased, accents removed, each run of other characters turned into `-`, dashes trimmed (`System Design` becomes `system-design`). Two different titles with the same id are an error.
-- Progress is stored under book id, section id and concept id. **Renaming a book title, a section id or a concept id loses that progress.** Titles of chapters and sections can change freely.
+- A book is every file with the same `book:` id: one file or many. Books are listed by title, and two books with the same title are an error.
+- Progress is stored under book id, section id and concept id. **Changing a book id, a section id or a concept id loses that progress.** Titles of books, chapters and sections can change freely.
 
 ## Front matter (required)
 
 ```
 ---
-book: System Design
+book: system-design
+title: System Design
 chapter: Caching
 ---
 ```
 
-- Line 1 is `---`, then `key: value` lines (blank lines ignored), then `---`. Values are literal text: no quotes, no YAML features.
-- `book` is required. `chapter` is optional; with it, the file starts inside that chapter. An unknown or repeated key, an empty value, or a value with no letter or digit (a-z, 0-9) is an error.
+- Line 1 is `---`, then `key: value` lines (blank lines ignored), then `---`. Values are literal text: no quotes, no YAML features. An unknown or repeated key, or an empty value, is an error.
+- `book` is required in every file: the book's id, matching `[a-z0-9]+(-[a-z0-9]+)*`.
+- `title` is the book's name on the site. Give it in one file of the book, usually the first; a second `title` in the same book is an error, and a book without one shows its id.
+- `chapter` is optional; with it, the file starts inside that chapter. It needs a letter or digit (a-z, 0-9).
 - `kind` is optional and its only value is `glossary`. It cannot be set beside `chapter`, because a glossary file has no chapters.
 
 ## Structure
@@ -76,7 +79,7 @@ A file whose front matter says `kind: glossary` holds terms the book uses withou
 
 ````markdown
 ---
-book: System Design
+book: system-design
 kind: glossary
 ---
 
@@ -134,7 +137,8 @@ The body continues here, with as many paragraphs, fences, tables and images as t
 
 ````markdown
 ---
-book: System Design
+book: system-design
+title: System Design
 chapter: Caching
 ---
 
@@ -197,6 +201,7 @@ print(r + w > n)
 
 ## Common mistakes
 
+- `book: System Design`: `book` takes the id. Write `book: system-design` in every file of the book, and `title: System Design` in one of them.
 - `## Cache eviction` or `{#Cache_Eviction}` becomes `## Cache eviction {#cache-eviction}`.
 - Repeating `?? lru-evict` for a second question: use `?+`. Concept ids are unique per book.
 - Prose, lists, tables or `###` headings after the first `??`: move them above it. Text and questions cannot interleave; start a new section instead.
