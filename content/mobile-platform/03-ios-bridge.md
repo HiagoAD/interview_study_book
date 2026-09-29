@@ -5,7 +5,7 @@ chapter: 03: Calling iOS from C# and back
 
 ## What runs where in a Unity iOS app {#ios-runtime-model}
 
-An iOS app is a bundle: a folder that iOS treats as one app, holding the executable, its [[Info.plist]], its resources and the frameworks it loads. A Unity iOS build does not produce that bundle. It produces an Xcode project, which Xcode then compiles, links and signs; chapter 6 covers that build. The project that Unity 6.3 writes has four targets, and the target a file belongs to decides whether it works:
+An iOS app is a bundle: a folder that iOS treats as one app, holding the executable, its [[Info.plist]], its resources and the frameworks it loads. A Unity iOS build does not produce that bundle. It produces an Xcode project, which Xcode then compiles, links and signs; [[#xcode-build-flow | chapter 6]] covers that build. The project that Unity 6.3 writes has four targets, and the target a file belongs to decides whether it works:
 
 | Target | Produces | What it holds |
 | --- | --- | --- |
@@ -741,7 +741,7 @@ static NSMutableDictionary<NSString*, NSData*>* sThumbnails;
 @end
 ```
 
-A listener hears what the delegate is told, and no more, and two gaps showed in 6000.3.11f1. The controller's method that posts the push token notification compiles only when `UNITY_USES_REMOTE_NOTIFICATIONS` is set in the Trampoline's `Preprocessor.h`, which the export leaves at 0 until something sets it. And with the scene delegate that Unity 6.3 declares, iOS delivers a link that opens the running app to the scene delegate, not to the application delegate: in a Simulator test, a link reached a `scene:openURLContexts:` method added to `UnityScene` for the test, and without that method it reached neither `onOpenURL:` nor `Application.deepLinkActivated`. Chapter 4 follows links and push tokens along those paths.
+A listener hears what the delegate is told, and no more, and two gaps showed in 6000.3.11f1. The controller's method that posts the push token notification compiles only when `UNITY_USES_REMOTE_NOTIFICATIONS` is set in the Trampoline's `Preprocessor.h`, which the export leaves at 0 until something sets it. And with the scene delegate that Unity 6.3 declares, iOS delivers a link that opens the running app to the scene delegate, not to the application delegate: in a Simulator test, a link reached a `scene:openURLContexts:` method added to `UnityScene` for the test, and without that method it reached neither `onOpenURL:` nor `Application.deepLinkActivated`. Chapter 4 follows [[#os-deep-links | links]] and [[#os-notifications | push tokens]] along those paths.
 
 The subclass is the option with one slot. `IMPL_APP_CONTROLLER_SUBCLASS` stores the subclass's name in a single global variable from the subclass's `+load`, and `main` creates the class that the variable names. When two plugins each ship a subclass, the one whose `+load` runs last wins, and the other's overrides do not run, with no error from anything. In a test with two subclasses, one became the delegate and the other's `application:didFinishLaunchingWithOptions:` was not called once. It is the iOS form of the two SDKs that each subclass Unity's activity in [[#android-activity-integration]], and listeners are the way around it.
 
@@ -857,7 +857,7 @@ Two terminations come from the app's configuration. A protected resource, such a
 This app has crashed because it attempted to access privacy-sensitive data without a usage description. The app's Info.plist must contain an NSContactsUsageDescription key with a string value explaining to the user how the app uses this data.
 ```
 
-Chapter 4 covers permissions and their descriptions. A missing dynamic framework closes a Unity game at launch without a report, as the previous section showed.
+[[#os-permissions | Chapter 4]] covers permissions and their descriptions. A missing dynamic framework closes a Unity game at launch without a report, as the previous section showed.
 
 Symbols turn the addresses in a report into names, and on iOS they come in a [[dSYM]], one for each binary. [Apple's article on debugging information](https://developer.apple.com/documentation/xcode/building-your-app-to-include-debugging-information) states the rule that decides which one fits: a binary and its dSYM share a build UUID, and they are compatible only when the UUIDs are identical, which even a rebuild of the same source with other settings breaks. A Unity release build produces a dSYM for the app and `UnityFramework.framework.dSYM`, which covers everything linked into `UnityFramework`. The Xcode archive keeps both, and uploading them with the build lets the Crashes organizer show [[TestFlight]] and App Store reports with names.
 

@@ -35,7 +35,7 @@ Each layer can give you its own evidence, and a symptom rarely says which one to
 | Network | Captured requests and responses, with their timings |
 | Backend | Server logs and records, joined to the client by an operation id |
 
-“The purchase never arrived” can start in any row. What this book practises is choosing the row whose evidence splits the possibilities, and looking there first; chapter 15 turns that into a method for the whole path.
+“The purchase never arrived” can start in any row. What this book practises is choosing the row whose evidence splits the possibilities, and looking there first; [[#boundary-method | chapter 15]] turns that into a method for the whole path.
 
 The topics do not carry equal weight in an interview for a Unity mobile platform role. This table lists them from heaviest to lightest, with the chapters that cover each:
 
@@ -255,7 +255,7 @@ Exercise: Find a platform conditional outside a composition root or an adapter i
 
 The first book's mobile chapter gave purchases a result with five cases: succeeded, cancelled, unavailable, failed with a reason, and unknown. The same five fit most platform operations. Sign-in can be cancelled by the player, unavailable on a device without the platform's account service, failed with a reason, or unknown when the process died while the platform's sheet was open. Unknown needs the most care, because the operation may have happened: it cannot be retried as a new one or reported as a failure. It is recorded and reconciled later with whatever holds the truth, which for a purchase is the store and the backend.
 
-Exceptions do not cross the boundary as exceptions. When a Java method throws during a call made through Unity's `AndroidJavaObject`, Unity clears the Java exception and throws an `AndroidJavaException` in C#, carrying the Java message and stack trace, and the adapter catches it and maps it like any other failure. The opposite direction has no such conversion. If a C# method throws while Java is calling it through Unity's `AndroidJavaProxy`, Unity catches the exception, logs it, and returns `null` to the Java caller, which never learns that your code stopped halfway. Under [[IL2CPP]], a C# exception is a C++ exception, and the wrapper IL2CPP generates for a callback that native code calls through a function pointer has no handler, so the exception unwinds into native code that was not written to expect it. Chapters 2 and 3 return to both. The rule for the adapter is the same on each platform: catch everything inside a callback, and turn it into a result.
+Exceptions do not cross the boundary as exceptions. When a Java method throws during a call made through Unity's `AndroidJavaObject`, Unity clears the Java exception and throws an `AndroidJavaException` in C#, carrying the Java message and stack trace, and the adapter catches it and maps it like any other failure. The opposite direction has no such conversion. If a C# method throws while Java is calling it through Unity's `AndroidJavaProxy`, Unity catches the exception, logs it, and returns `null` to the Java caller, which never learns that your code stopped halfway. Under [[IL2CPP]], a C# exception is a C++ exception, and the wrapper IL2CPP generates for a callback that native code calls through a function pointer has no handler, so the exception unwinds into native code that was not written to expect it. [[#android-callbacks | Chapter 2]] and [[#ios-callbacks | chapter 3]] return to both. The rule for the adapter is the same on each platform: catch everything inside a callback, and turn it into a result.
 
 Most SDK operations report through a callback, and the adapter turns each one into an awaitable operation. `TaskCompletionSource<T>` is the standard tool, and Unity's `AwaitableCompletionSource<T>` does the same for its own `Awaitable`. The completion source is also where three edge cases are handled: a callback that arrives twice, one that never arrives, and a caller that stops waiting.
 
@@ -473,7 +473,7 @@ The device run matters because the Editor never executes part of the path:
 - the real lifecycle: backgrounding, process death, and a launch started by a link or a notification;
 - the callback threads, which a simulator reproduces only if it is written to.
 
-The smoke test is a short scripted run on a build configured like the release: start-up, sign-in, a purchase in the store's test environment, a push, a link, and a background and resume. Chapters 5, 10 and 15 come back to why that configuration matters.
+The smoke test is a short scripted run on a build configured like the release: start-up, sign-in, a purchase in the store's test environment, a push, a link, and a background and resume. [[#gradle-project | Chapter 5]], [[#release-build-variants | chapter 10]] and [[#boundary-dev-prod | chapter 15]] come back to why that configuration matters.
 
 Exercise: Pick a fake in a project you know and write down one behavior of the real SDK that it does not model. Then decide which of the four kinds of test would catch the difference.
 

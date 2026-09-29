@@ -276,3 +276,15 @@ The delegated CLI could not initialize in the sandbox, and automatic approval re
 Options: correct longest in 18% of 50 sets, shortest in 28%, median lengths 64 and 65.5, no word-list option. The detector reports technical vocabulary repetition alone.
 
 Next phase: Phase 34 writes interview practice and performs the planned prose link pass. The user's manual chapter read remains.
+
+### Phase 34: Chapter 16, interview practice for platform roles
+
+Wrote `content/mobile-platform/16-interview-practice.md` (5 sections, 9 concepts, 35 variants, the outline's ids), and no glossary entries, since the chapter leans on terms earlier chapters define. The book now has 16 chapters, 87 sections, 183 concepts, 676 variants, 76 terms and 306 links, with no unlinked entry. The outline says 174 concepts; the reader-review commit `7d2c7e0` added nine to chapters 8, 9, 13, 14 and 15. All 675 tests, content check, build and style pass; the question guard against `7d2c7e0` accepts this chapter alone; no external link was added; the chapter names no game, studio, publisher or SDK vendor. Evidence: [evidence/16-interview-practice.md](evidence/16-interview-practice.md).
+
+The link pass turned 28 plain-text forward mentions in chapters 1 to 14 into `[[#id]]` links, in prose only; no question block changed. It was done by a Sonnet agent and checked here.
+
+At the user's request, agents replaced Codex: Sonnet for writing, Opus for review. A Sonnet blind read found 9 problems, 8 held; an Opus technical read found 14, all held, among them crash entries that do not close the app and a P/Invoke call described as Objective-C. The Opus reader review ([reader-reviews/2026-09-29-7d2c7e0](reader-reviews/2026-09-29-7d2c7e0/index.md)) rated the chapter 8 for learning and 8 for writing with 12 findings, all applied before the commit except a deliberate off-thread call in the lab, which is unverified.
+
+Options: correct longest in 26% of 35 sets, shortest in 14%, medians 72 and 69, no word-list option. The detector found known false positives alone.
+
+Next phase: Phase 35, the teacher's read of the whole book. The user's manual read of chapters 15 and 16 remains.
