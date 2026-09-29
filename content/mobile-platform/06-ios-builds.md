@@ -15,8 +15,6 @@ From a Unity project to a build on [[App Store Connect]], Apple's service for te
 4. `xcodebuild -exportArchive` re-signs the archived app for one distribution method and packages it as an IPA, the `.ipa` file in which an iOS app is installed or uploaded.
 5. The IPA reaches App Store Connect through Xcode, Apple's Transporter app, the `altool` command-line tool, or the export itself.
 
-The second step explains where some warnings come from. In a test archive of a Unity 6.3 export, built with Xcode 27, the targets that Xcode compiled itself built for iOS 15.0, the export's deployment target, while IL2CPP's driver compiled for iOS 11.0. All 56 warnings in which Xcode's C++ library said that it no longer supported the chosen iOS version came from the `GameAssembly` phase. A warning or an error there comes from IL2CPP's build, whose flags the target's build settings do not show: `xcodebuild -showBuildSettings` gives `GameAssembly` a deployment target of 15.0.
-
 Unity's project has four build configurations: Debug, Release, ReleaseForRunning and ReleaseForProfiling. Its `Unity-iPhone` scheme archives with Release, and in Release the build writes debug symbols into [[dSYM]] files rather than into the binaries (`DEBUG_INFORMATION_FORMAT = dwarf-with-dsym`): one for the app's executable, and one for `UnityFramework` that covers everything linked into it, `GameAssembly` included. That is how Apple's release builds keep the distributed app small. The two commands that follow Unity's export:
 
 ```bash
@@ -75,9 +73,13 @@ The method decides where the build can go, because it decides what the app is si
 
 Xcode 27 still accepts the older names `app-store`, `ad-hoc` and `development`, and its `xcodebuild -help` marks them deprecated. With `destination` set to `upload`, the export sends the app to App Store Connect instead of writing an IPA.
 
-The export takes its team from the archive: the `teamID` option defaults to the team the archive was built with. The test archive had none, and each export of it, for two methods and both signing styles, stopped with `No Team Found in Archive` before looking for a certificate. Given a made-up `teamID`, the export went one step further and stopped at the certificate: `No "iOS Distribution" signing certificate matching team ID "ABCDE12345" with a private key was found.` An unsigned archive records no team even when the build names one: archived again with `CODE_SIGNING_ALLOWED=NO` and a team in `DEVELOPMENT_TEAM`, the test project's archive still had an empty team, and its export stopped the same way. A pipeline that archives without signing therefore names the team in the export options, and signs at export with the identity that the next section describes.
+Unless `teamID` is set in the export options, the export uses the team recorded in the archive. In this probe the test archive recorded none, and each export of it, for two methods and both signing styles, stopped with `No Team Found in Archive` before looking for a certificate. Given a made-up `teamID`, the export went one step further and stopped at the certificate: `No "iOS Distribution" signing certificate matching team ID "ABCDE12345" with a private key was found.` An unsigned archive records no team even when the build names one: archived again with `CODE_SIGNING_ALLOWED=NO` and a team in `DEVELOPMENT_TEAM`, the test project's archive still had an empty team, and its export stopped the same way. A pipeline that archives without signing therefore names the team in the export options, and signs at export with the identity that the next section describes, which also covers the failures a missing certificate causes.
 
 App Store Connect accepts uploads from Xcode's Organizer, from Transporter, from `altool`, and from an export whose destination is `upload`, and its API has resources for build uploads as well ([Apple's upload guide](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds)). The same page lists the Xcode versions that App Store Connect accepts builds from. As read in September 2026, an iOS app had to be built with Xcode 26 or later, a higher bar than the Xcode 16 that Unity 6.3 requires, so the Mac that builds the game follows the store's minimum rather than the engine's.
+
+### Where some build warnings come from
+
+Step 2 also explains where some warnings come from. The figures here are from this probe, not output to expect from every project. In a test archive of a Unity 6.3 export, built with Xcode 27, the targets that Xcode compiled itself built for iOS 15.0, the export's deployment target, while IL2CPP's driver compiled for iOS 11.0. All 56 warnings in which Xcode's C++ library said that it no longer supported the chosen iOS version came from the `GameAssembly` phase. A warning or an error there comes from IL2CPP's build, whose flags the target's build settings do not show: `xcodebuild -showBuildSettings` gives `GameAssembly` a deployment target of 15.0.
 
 Lab exercise: Archive a Unity iOS export from the command line, list the archive's folders, and compare the UUIDs of the app, `UnityFramework` and the two dSYMs with `dwarfdump --uuid`. Then export the archive with `-exportArchive`. With a team and its certificates, export it twice, for `debugging` and for `app-store-connect`, and compare the two IPAs; without them, read which step stops the export, and with what message.
 
@@ -311,7 +313,11 @@ class TestServerAtsException : IPostprocessBuildWithReport
 #endif
 ```
 
-Two more keys fail quietly. `LSApplicationQueriesSchemes`, which [[#ios-xcode-postprocess]] edited, lists the URL schemes that the app may test with `canOpenURL`, and for a scheme missing from the list that method returns false, whether or not an app for it is installed. Opening a URL does not need the list. The list has a limit, and each SDK that adds its schemes counts against it: Apple's reference, as read in September 2026, gives 50 entries for apps linked on or after iOS 15, and 25 for apps linked on or after iOS 27. `UIBackgroundModes` declares the kinds of work the app does in the background, such as `audio` or `remote-notification`. Xcode adds a value for each mode chosen under the Background Modes capability, and Unity 6.3's default export declares none.
+### URL-scheme queries and background modes
+
+Two other settings affect URL queries and background work. `LSApplicationQueriesSchemes`, which [[#ios-xcode-postprocess]] edited, lists the URL schemes that the app may test with `canOpenURL`, and for a scheme missing from the list that method returns false, whether or not an app for it is installed, so a game that hides a button when it returns false hides it on every device. Opening a URL does not need the list. The list has a limit, and each SDK that adds its schemes counts against it: Apple's reference, as read in September 2026, gives 50 entries for apps linked on or after iOS 15, and 25 for apps linked on or after iOS 27. `UIBackgroundModes` declares the kinds of work the app does in the background, such as `audio` or `remote-notification`. Xcode adds a value for each mode chosen under the Background Modes capability, and Unity 6.3's default export declares none. A missing mode is not an error the build reports: the app is simply not allowed that kind of background work, so a game that expects to keep playing audio or receive a silent push while suspended does not. That is a different failure from `canOpenURL` returning false, which is a wrong answer to a question.
+
+### The privacy manifest
 
 The last file decides whether App Store Connect accepts the build. A [[privacy manifest]], `PrivacyInfo.xcprivacy`, declares the data that an app or SDK collects, whether it tracks, the domains it tracks through, and its reasons for calling the APIs that Apple lists as required-reason APIs, such as those that read the system's boot time or the free disk space ([Apple's reference](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files)). Since May 1, 2024, App Store Connect has refused apps that do not describe their use of those APIs ([Apple's requirement](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api)).
 
@@ -410,13 +416,54 @@ end
 
 `Podfile.lock` records what resolved: each installed pod with its version, a checksum of each spec and one of the Podfile, and the CocoaPods version. `pod install` installs the versions that the lock names for the pods it lists, while `pod update` looks for newer versions within the Podfile's ranges ([CocoaPods' guide](https://guides.cocoapods.org/using/pod-install-vs-update.html)), and CocoaPods recommends keeping the lock under version control. A Unity export is regenerated, and its lock with it, so each build that runs `pod install` in a fresh export resolves again, and a range such as `~> 4.2` can bring in a newer version than the last build had. Keeping each build's `Podfile.lock` with its archive answers later which versions shipped. For a pipeline that runs `pod install` itself, `--deployment` makes the install fail rather than change the Podfile or the lock.
 
+The archived lock records what shipped, but it does not by itself reproduce the next clean build, because the next export starts without it. Chapter 7 asks for pinned resolutions, and the missing steps are these:
+
+1. Keep the reviewed `Podfile.lock` in version control, outside the generated export folder.
+2. After Unity writes the export and the Podfile exists, copy the lock into the export before any install runs.
+3. Run `pod install --deployment`. The install fails if the Podfile no longer matches the lock, so a changed SDK range shows up as a build failure instead of a different build.
+4. Update on purpose, in a separate change: run `pod update` for the pods concerned, review the new lock, and commit it.
+
+Ownership is the catch when EDM4U runs `pod install` itself. EDM4U writes the Podfile and installs in one step, so a lock cannot be restored between the two; in that setup the install can resolve fresh ranges before the pipeline gets a chance to pin them. A pipeline that needs the sequence above turns off EDM4U's automatic installation, if its version offers that, or runs the install itself after the export. Check which one the project does before relying on the lock. This is the operational bridge, and it does not mean that a range such as `~> 4.2` is wrong: it is the normal way to declare a dependency, and the lock is what turns it into one build.
+
 When two SDKs need incompatible versions of a shared pod, CocoaPods stops. Gradle, in the same situation, picks the highest version requested and builds; CocoaPods' resolver instead reports that it “could not find compatible versions” for the shared pod, prints the chain of requirements behind each version, and installs nothing, so the failure appears at `pod install`, before anything compiles. The fix is a pair of SDK versions whose ranges overlap, found in their release notes or their specs. The generated Podfile is the wrong place for it, since the next build writes the Podfile again.
 
 A second kind of collision passes `pod install`, because CocoaPods sees two different pods: two SDKs that are static libraries or static frameworks, each with its own copy of the same library inside. The linker meets the copies, and what it does depends on `-ObjC`. In a test, two static libraries each held the same object file, with an Objective-C class and a C function in it, and one program used both libraries. Without `-ObjC`, the link succeeded and silently kept the copy from the library listed first, so code from the second SDK ran the first one's copy. With `-ObjC`, which loads each member that holds Objective-C code, the linker loaded both copies and failed with three `duplicate symbol` errors, each naming both libraries. Unity's `UnityFramework` links with `-ObjC`, and CocoaPods added the flag for the static pod in the workspace test, so in a Unity build, copies that hold Objective-C code fail the link. The fix belongs to the SDKs: a build of one without the embedded copy, or versions that take the shared code as a pod of its own.
 
 CI adds three needs. The CocoaPods version is pinned, with a Gemfile that Bundler, Ruby's dependency tool, installs and `bundle exec pod install` runs ([CocoaPods' Gemfile guide](https://guides.cocoapods.org/using/a-gemfile.html)). The agent reaches the spec source, by default CocoaPods' CDN, or has its downloads cached. And the lock is kept, as above. The spec source itself is changing: the CocoaPods maintainers plan to make trunk, the central repository of pod specs, read-only, accepting no new specs from December 2, 2026, while existing builds keep working ([the plan](https://blog.cocoapods.org/CocoaPods-Specs-Repo/), posted in November 2024 and updated in 2025). SDKs also come as Swift packages, which a project references by URL and version: Unity 6.3's `PBXProject` can add one with `AddRemotePackageReferenceAtVersion` and link its product with `AddRemotePackageFrameworkToProject`, and EDM4U's iOS Resolver reads `remoteSwiftPackage` entries beside `iosPod` ones.
 
-Lab exercise: In a copy of a Unity iOS export, write a Podfile with two pods that depend on a third, run `pod install`, and read in `Podfile.lock` which version of the shared pod was installed. Narrow one pod's version range until the two no longer overlap, and read the resolver's message. Then build the export once through the project and once through the workspace, and compare where each build stops.
+A vendor's transitive pods cannot be narrowed from a top-level declaration, so the lab uses three tiny local pods. `Shared` has version 1.2.0, and `PodA` and `PodB` each depend on it. Each folder holds a podspec and a source file, and the podspecs are:
+
+```ruby
+# Shared/Shared.podspec
+Pod::Spec.new do |s|
+  s.name = 'Shared'
+  s.version = '1.2.0'
+  s.summary = 'Lab fixture'
+  s.homepage = 'https://example.invalid'
+  s.license = { :type => 'MIT' }
+  s.author = 'Lab'
+  s.source = { :git => 'https://example.invalid/shared.git', :tag => '1.2.0' }
+  s.source_files = '*.{h,m}'
+  s.ios.deployment_target = '15.0'
+end
+
+# PodA/PodA.podspec: same fields with name 'PodA', version '1.0.0', plus
+  s.dependency 'Shared', '~> 1.0'
+
+# PodB/PodB.podspec: same fields with name 'PodB', version '1.0.0', plus
+  s.dependency 'Shared', '~> 1.1'
+```
+
+```ruby
+platform :ios, '15.0'
+target 'Unity-iPhone' do
+  pod 'Shared', :path => 'Shared'
+  pod 'PodA', :path => 'PodA'
+  pod 'PodB', :path => 'PodB'
+end
+```
+
+Lab exercise: In a copy of a Unity iOS export, or in an empty Xcode project whose app target is named `Unity-iPhone` if you have no export, create the three pods and the Podfile above, run `pod install`, and read in `Podfile.lock` that `Shared` resolved to 1.2.0. Then change `PodB`'s dependency to `'~> 2.0'`, run `pod install` again, and read the resolver's message, which should name `Shared` and the requirements behind each version. Then, in the export, build once through the project and once through the workspace, and compare where each build stops. The lab needs no account and no signing credentials.
 
 ?? xcode-workspace After EDM4U runs `pod install`, CI builds `Unity-iPhone.xcodeproj`, and linking `UnityFramework` fails because a pod's framework is not found. Why?
 * The pods are built by the Pods project, which the workspace adds

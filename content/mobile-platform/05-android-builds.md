@@ -25,7 +25,15 @@ The project has two modules, and Unity as a Library, Unity's support for embeddi
 
 The application id, the version and the signature belong to the app that gets installed, so they live in `launcher`, and `launcher` is the module whose tasks build the game: `:launcher:assembleRelease` makes an APK and `:launcher:bundleRelease` an app bundle, both under `launcher/build/outputs/`. A team that embeds the game in its own Android app keeps `unityLibrary` and lets its app take the place of `launcher`.
 
-Unity generates this project from its own templates, from Player Settings and from the plugins in the project. The generated files are output, like a compiler's: an edit made to them, or to an exported copy, is not part of the Unity project, and the next generated project does not have it. Changes have to live in the Unity project, and Unity 6.3 has three mechanisms for making them.
+Unity generates this project from its own templates, from Player Settings and from the plugins in the project. The generated files are output, like a compiler's: an edit made to them, or to an exported copy, is not part of the Unity project, and the next generated project does not have it. Changes have to live in the Unity project, and Unity 6.3 has three mechanisms for making them. Choose by what the change needs:
+
+| The change needs | Prefer | Why |
+| --- | --- | --- |
+| A vendor's template edits, or a whole file such as `settingsTemplate.gradle` reshaped | A custom template | The file is the unit of change, and the copy is one Unity keeps filling in |
+| An edit to a manifest or another generated file, made in C# from Unity project data | `AndroidProjectFilesModifier` | It works on typed objects and declares what it produces, so it fits the incremental build |
+| A fix that neither of the others can express, or code that predates them | `IPostGenerateGradleAndroidProject` | It can edit anything on disk, at the cost of nothing checking the edit |
+
+The three are described in this order below, with the drift each one risks.
 
 The first is a custom template. A checkbox in Publishing Settings, such as Custom Main Gradle Template, copies one of Unity's templates into `Assets/Plugins/Android/`, and from then on Unity writes the matching file from that copy, filling in placeholders such as `**DEPS**`:
 
@@ -99,7 +107,7 @@ Lab exercise: Export the Gradle project of a Unity project you know, and build `
 
 ## Manifest merging and the permissions nobody asked for {#gradle-manifest-merge}
 
-An installed app has one manifest, and nobody writes it by hand. The build assembles it from every manifest in the project, with a tool that [Android's documentation](https://developer.android.com/build/manage-manifests) calls the manifest merger. In Unity's project those manifests are, from the highest priority to the lowest:
+An installed app has one manifest, and the build assembles it from the source manifests in the project rather than from one file anyone maintains. It does so with a tool that [Android's documentation](https://developer.android.com/build/manage-manifests) calls the manifest merger. In Unity's project those manifests are, from the highest priority to the lowest:
 
 1. The main manifest of the `launcher` module, the app module.
 2. Unity's manifest in `unityLibrary`, the one that declares Unity's activity, which the team can take over as a custom main manifest in `Assets/Plugins/Android/AndroidManifest.xml`.
@@ -240,13 +248,13 @@ Of Gradle's tools for steering resolution by hand, four come up in SDK conflicts
 | An exclusion | Removes a transitive dependency from one path | Whether the SDK finds its classes at run time; if not, `NoClassDefFoundError` |
 | Dependency locking | Records the resolved versions in `gradle.lockfile` and fails when one moves | That version changes arrive as a diff someone reviews |
 
-The first three are compatibility decisions made on someone else's behalf. `strictly` on the lower version chooses which SDK breaks, and an exclusion bets that the SDK never loads what was excluded. Before using one, read the release notes of the versions involved, and afterwards test a release build on a device through the features of both SDKs.
+The first three are compatibility decisions made on someone else's behalf. `strictly` on the lower version makes the SDK that requested the newer version run against the older one, and that is safe only if the older release still has every API that SDK calls; an exclusion bets that the SDK never loads what was excluded. Before using one, read the release notes of the versions involved for removed or changed APIs, and afterwards test a release build on a device through the features of both SDKs.
 
 Many SDKs for Unity never ask the team to edit Gradle files. They ship an XML file named like `*Dependencies.xml` in an Editor folder, and [[EDM4U]], Google's External Dependency Manager for Unity, turns those files into Android dependencies with its Android Resolver. The resolver works in one of two modes. By default it runs Gradle itself, resolves the combined graph and copies the resulting AARs and JARs into `Assets/Plugins/Android`. With its Patch mainTemplate.gradle setting on, which needs a custom main Gradle template, it writes the dependencies into the template between `// Android Resolver Dependencies Start` and `// Android Resolver Dependencies End`, and the build resolves them. The second mode keeps the POMs in play, so the build's own resolution and `dependencyInsight` see everything. Mixing the two duplicates classes: AARs that an earlier resolution copied into `Assets/Plugins/Android` stay there after the template starts declaring the same libraries. The resolver's Delete Resolved Libraries command removes the copies it made, and one mode per project keeps them from coming back.
 
 Sometimes no single version satisfies two SDKs, because one needs an API that the other's version removed. Try the options in this order. Update the SDK that lags, since its newer releases often move to the newer library. Look for one version that both accept, and prove it with a release build on a device. Ask both vendors, with the `dependencyInsight` output that shows the conflict. Drop one of the SDKs. Repackaging one SDK's copy of the library under another package name comes last: it creates a private fork that the team carries through every update of that SDK, and it breaks wherever the library's classes are found by name, in reflection, in keep rules and through JNI.
 
-Lab exercise: Export a Unity project that uses at least two SDKs, print the release runtime graph of `launcher` with `dependencies`, and find a library requested at two versions. Explain the winner with `dependencyInsight`, then check whether the SDK that asked for the lower version has a release built against the higher one.
+Lab exercise: Export a Unity project that uses at least two SDKs, or, if your SDKs do not conflict, a fixture of two small libraries with a `dependencies` block each, one requesting `netcore` 1.2.0 and the other 2.0.0, both from a local Maven folder. Print the release runtime graph of `launcher` with `dependencies`, and find a library requested at two versions. Explain the winner with `dependencyInsight`, then check whether the SDK that asked for the lower version has a release built against the higher one.
 
 ?? gradle-highest-version An analytics SDK depends on `netcore` 1.2.0 and an ads SDK on `netcore` 2.0.0. Which `netcore` does the game ship with?
 * 2.0.0, for both SDKs, since Gradle picks the highest version requested
@@ -399,7 +407,7 @@ Native code has the same problem with a different key. [[#android-failure-eviden
 
 [[Managed code stripping]] is the same problem on the C# side, with a different tool. Unity's linker removes C# that nothing references statically, so a C# member that only native code or reflection reaches looks unused to it, as a Java method that only C# reaches looks unused to R8. `link.xml` and `[Preserve]`, which the first book's chapter on testing and debugging covers, keep it. A release build with a bridge in it needs rules for both strippers.
 
-Lab exercise: In a Unity project with a Java bridge, turn on minify for development builds, call the bridge from C# on a device, and read the exception. Fix it with consumer rules in the bridge's own library folder, then throw an exception inside the bridge and retrace the stack trace with that build's mapping file, and once more with the next build's.
+Lab exercise: Use a small Java bridge with no consumer rules, written for the lab with one class that C# creates by name; a bridge that already carries rules may not fail. Turn on minify for development builds, call the bridge from C# on a device, and read the exception. If you have no device, take a stack trace and its mapping file from a build of that bridge and do the retrace steps below offline. Fix it with consumer rules in the bridge's own library folder, then throw an exception inside the bridge and retrace the stack trace with that build's mapping file, and once more with the next build's.
 
 ?? gradle-r8-reflection A release build throws an `AndroidJavaException` saying that the class `com.example.game.StoreBridge` was not found, and the development build works. What is the likely cause?
 * R8 removed or renamed the class, since C# reaches it by name alone
@@ -500,7 +508,9 @@ adb pull /data/app/.../base.apk          # the path that pm printed
 apksigner verify --print-certs base.apk
 ```
 
-The last part of a build's identity is three [API levels](https://developer.android.com/build), and they are easy to confuse:
+### API levels: minimum, target and compile
+
+The last part of a build's identity is three [API levels](https://developer.android.com/build), and they are easy to confuse. Which level a build targets decides how the game behaves on newer phones, so a build that is meant to be reproducible has to name it:
 
 | Setting | What it decides |
 | --- | --- |
@@ -512,7 +522,7 @@ In Unity, `PlayerSettings.Android.minSdkVersion` and `targetSdkVersion` set the 
 
 Unity's target level can also be left at `AndroidApiLevelAuto`, which means the highest SDK platform installed on the machine that builds. Two machines with different SDKs then build the same commit with different targets, and so with different behavior on newer phones. Set the level explicitly, and raise it on purpose.
 
-Exercise: List every place your project has registered a signing certificate: sign-in clients, `assetlinks.json`, and any SDK or service dashboard that asked for a fingerprint. For each one, check that it includes the fingerprint of the app signing key from the Play Console, and note which feature would fail first if it did not.
+Exercise: If you have no Play Console access, use this mock inventory: an OAuth client with the upload key's fingerprint, an `assetlinks.json` with the app signing key's, and a crash reporter dashboard with none. Otherwise, list every place your project has registered a signing certificate: sign-in clients, `assetlinks.json`, and any SDK or service dashboard that asked for a fingerprint. For each one, check that it includes the fingerprint of the app signing key from the Play Console, and note which feature would fail first if it did not.
 
 ?? gradle-play-signing Sign-in works on builds the team installs from CI and fails for players who installed the game from Google Play. What is the likely cause?
 * The sign-in client knows the upload key's fingerprint and not the app signing key's

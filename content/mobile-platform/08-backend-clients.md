@@ -144,7 +144,11 @@ Exercise: List the status codes that each endpoint your game calls can return, a
 
 A Unity game has two HTTP clients to choose from. `UnityWebRequest` is Unity's own, available on each platform Unity builds for, and it is the client Unity's documentation and most of Unity's packages use. `HttpClient` is .NET's, from the class libraries that ship with the scripting runtime. Both can talk to a game's backend, and they differ in threads, in cancellation, and in what stands between them and the network.
 
+### Threads and starting a request
+
 `UnityWebRequest` belongs to the main thread. The transfer itself runs elsewhere, but the object is created, started and read on the main thread. In a test with Unity 6.3, creating one on a worker thread threw a `UnityException` saying that `Create` can only be called from the main thread, and reading `result` from a worker thread after the request had finished failed the same way for `get_result`. `SendWebRequest` starts the transfer, once per object, since a second call throws, and returns an asynchronous operation. A coroutine yields on it, and in Unity 6.3 `await` works on it too: an extension method that the reference leaves out turns any `AsyncOperation` into an `Awaitable`, and each awaiting method in the tests resumed on the main thread. `Awaitable.FromAsyncOperation` does the same and takes a cancellation token, and cancelling that token aborted the request itself, not only the wait.
+
+### Reading the result
 
 When the transfer ends, `result` says how it ended, and it is read before `responseCode`:
 
@@ -159,13 +163,19 @@ Three details in the table decide how an adapter reads it. A 304 is a `Success` 
 
 `timeout` is a number of seconds, and 0, the default, sets no limit. [Unity's reference](https://docs.unity3d.com/6000.3/Documentation/ScriptReference/Networking.UnityWebRequest-timeout.html) describes it as the time after which the request is aborted if no response has been received, and the error then reads “Request timeout”. In the Editor, Unity 6.3 applied it to the whole transfer: a body that arrived ten bytes a second was cut off at two seconds with `timeout` set to 2. On iOS, the Trampoline's request code hands the same number to the `timeoutInterval` of an `NSURLRequest`, which [Apple defines](https://developer.apple.com/documentation/foundation/nsurlrequest/timeoutinterval) as how long the request may stay idle. The property is then a guard against a stalled request rather than a deadline, and it may not bound the same interval on each platform; the game measures its deadlines itself, as chapter 9 shows.
 
+### Lifetime and cancellation
+
 `Abort` stops a request at any point. In the tests, its result became a `ConnectionError` whose error read “Request aborted”, and an `await` on the aborted request threw an `OperationCanceledException`. `Dispose` releases the request's native resources, and [the reference for `Dispose`](https://docs.unity3d.com/6000.3/Documentation/ScriptReference/Networking.UnityWebRequest.Dispose.html) says to call it once the request is finished with, whether it succeeded or failed, in a `using` statement so that an exception cannot skip it. A request that is never disposed is not leaked for good: its finalizer, read in the module's IL, disposes its handlers and destroys the native request. That happens when the garbage collector gets to it, though, and a game that polls every few seconds accumulates native requests between collections. Disposing also destroys the download handler, since `disposeDownloadHandlerOnDispose` defaults to true, and in the tests, reading `downloadHandler.text` after the `using` block threw a `NullReferenceException` saying that the handler had already been destroyed. Copy the text or the bytes out inside the block.
+
+### Pinning
 
 `CertificateHandler` is where [[certificate pinning]] goes. Unity calls its `ValidateCertificate` with each leaf certificate the server presents, and the request continues if it returns true; [Unity's reference](https://docs.unity3d.com/6000.3/Documentation/ScriptReference/Networking.CertificateHandler.html) lists Android, iOS and desktop platforms among those where custom validation is implemented. Pinning is a promise that installed clients keep. A client pinned to a key that the backend later retires stops connecting until it updates, so teams pin more than one key, one of them a backup that is not yet in use, and plan the rotation before the first release that pins.
 
+### Choosing HttpClient, and what it bypasses
+
 `HttpClient` works another way. It is not tied to the main thread, its methods take a `CancellationToken`, and one instance is meant to serve many requests: [Microsoft's guidelines](https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines) say to reuse instances for as many requests as possible, so as not to exhaust ports. Its `Timeout` defaults to 100 seconds, and a timeout arrives as a `TaskCanceledException`, the same type that the caller's own cancellation raises, so code that must tell them apart checks the caller's token. An `await` that starts on the main thread resumes there, through Unity's synchronization context, and `ConfigureAwait(false)` gives that up, after which the rest of the method runs on a worker thread and Unity's main-thread APIs are out of reach.
 
-Two facts about `HttpClient` in Unity come from Unity's class libraries. The first is that the Editor and a device do not run the same code under it. In the Unity 6.3 Editor, `HttpClientHandler` hands requests to `SocketsHttpHandler`, while in the class libraries that [[IL2CPP]] builds use, for Android and iOS alike, it creates a `MonoWebRequestHandler`, built on the older `HttpWebRequest`, so a test in the Editor exercises other code than a phone runs. The second is that neither handler is the platform's HTTP stack, so the rules that stand in front of `UnityWebRequest` do not reach it:
+Unity's class libraries reveal two limits to what an Editor test of `HttpClient` can establish. The first is that the Editor and a device do not run the same code under it. In the Unity 6.3 Editor, `HttpClientHandler` hands requests to `SocketsHttpHandler`, while in the class libraries that [[IL2CPP]] builds use, for Android and iOS alike, it creates a `MonoWebRequestHandler`, built on the older `HttpWebRequest`, so a test in the Editor exercises other code than a phone runs. The second is that neither handler is the platform's HTTP stack, so the rules that stand in front of `UnityWebRequest` do not reach it:
 
 - Unity's “Allow downloads over HTTP” setting is a check inside `UnityWebRequest`. In the Editor, with the setting at its default, `NotAllowed`, `UnityWebRequest` refused a plain HTTP address on the local network with an `InvalidOperationException` reading “Insecure connection not allowed”, and `HttpClient` fetched the same address.
 - [[App Transport Security]] governs the URL Loading System, and [Apple's page on insecure connections](https://developer.apple.com/documentation/security/preventing-insecure-network-connections) says that it does not apply to lower-level networking interfaces.
@@ -175,7 +185,9 @@ A game that uses `HttpClient` therefore enforces HTTPS itself, in the one place 
 
 The same Editor test explains how plain HTTP can work in the Editor and fail on a phone. With the setting at `NotAllowed`, the check let `127.0.0.1` and `localhost` through and refused the machine's network address. A development server on the developer's own machine is reachable at `localhost` from the Editor, and a phone has to use the network address, which the check refuses. [[#xcode-build-settings]] covers the setting's other values and what each one writes into the iOS and Android projects. On Android, Unity's player sends `UnityWebRequest` through libcurl, compiled into `libunity.so`, and neither that library nor Unity's Java classes refers to Android's cleartext policy; whether the policy stops it on a device was not tested for this book.
 
-Whichever client the game uses, it sits behind an interface the game owns, like any platform capability in [[#platform-interfaces]]. The rest of the client, the session layer included, sees requests and responses in its own types, and tests use a fake transport:
+### The game's transport
+
+Whichever client the game uses, it sits behind an interface the game owns, like any platform capability in [[#platform-interfaces]]. The rest of the client, the session layer included, sees requests and responses in its own types, and tests use a fake transport. The interface keeps one invariant: `SendAsync` returns a response for anything the network or the server does, with status 0 standing for no usable response, and throws only when the caller cancels. The types below follow from it.
 
 ```csharp
 // Game-owned: a request as the rest of the client describes it.
@@ -306,9 +318,9 @@ public sealed class FakeTransport : IHttpTransport
 }
 ```
 
-The adapter decides the one question every later layer depends on: did the server answer? A `ProtocolError` is an answer, with a status the caller maps through `HttpStatusMapping`. A `ConnectionError` is not, even with a status set, and neither is a `DataProcessingError`, whose data the game could not read. The fake lets an [[Edit Mode tests|Edit Mode test]] script a 401 followed by a 200, or no response at all, and check what the session layer of the next section does with them, with no server and no network.
+The adapter decides whether the exchange produced a complete response the game can use, and every later layer depends on that. A `ProtocolError` is one, with a status the caller maps through `HttpStatusMapping`. A `ConnectionError` is not, even with a status set, and neither is a `DataProcessingError`: the server did answer, but the data could not be read, so `NoResponse` here means no usable response, not that the server was silent. The fake lets an [[Edit Mode tests|Edit Mode test]] script a 401 followed by a 200, or no response at all, and check what the session layer of the next section does with them, with no server and no network.
 
-Lab exercise: Wrap one request of your game in a function that returns a game-owned result for each `result` value and for a timeout. Test the timeout against a local server that waits before it answers, and a second time against one that sends its body slowly.
+Lab exercise: Wrap one request of your game in a function that returns a game-owned result for each `result` value and for a timeout. Test the timeout against a local server that waits before it answers, and a second time against one that sends its body slowly. Two small Node handlers on localhost will do: `setTimeout(() => res.end('{}'), 5000)` for the first, and a loop that writes one byte per second with `res.write('x')` after `res.writeHead(200)` for the second, stopped with `res.on('close', ...)` once the client gives up. With `stallSeconds` at 2, compare what `result` and `responseCode` say in each case.
 
 ?? http-request-result A POST that grants a reward finishes with `ConnectionError`. What does that mean for a retry?
 * The server may have applied it, so the client checks first or repeats it with its key
@@ -502,6 +514,10 @@ public sealed class SessionClient
             new ApiRequest("POST", "/v1/session/refresh", body), CancellationToken.None);
         clock.Observe(response);
 
+        // The refresh took time. If the player signed out meanwhile, or another account
+        // signed in, this answer belongs to a session that no longer exists: drop it.
+        if (store.Current?.RefreshToken != refreshToken) return Refresh.Rejected;
+
         if (response.Status == 200)
         {
             var dto = JsonUtility.FromJson<TokenResponseDto>(response.Body);
@@ -522,6 +538,14 @@ public sealed class SessionClient
 ```
 
 Everything in this class runs on the main thread, as `UnityWebRequest` requires, so a plain field shares the refresh without a lock: the code that checks the field and the code that sets it never run at the same moment. A session layer built on `HttpClient`, whose continuations can run on worker threads, puts a lock or a `SemaphoreSlim` around it. The check for a task that has already completed matters as well. A refresh that finishes at once, as one does against the fake transport, would otherwise stay in the field and answer each later refresh with its old result.
+
+A refresh takes time, and the player can sign out while it is in flight. `RefreshOnceAsync` sends with `CancellationToken.None` because one waiter's cancellation must not abort a refresh that other requests share, and that is a different operation from ending the account. So it checks, after the await, that the stored session still holds the refresh token it started with. Without the check, this order of events restores the old player:
+
+1. The access token expires and a request starts a refresh with refresh token A.
+2. The player signs out. The store is cleared.
+3. The refresh response arrives with a new pair. Saved unconditionally, it puts the signed-out player's session back, or overwrites a new player's who signed in during step 2.
+
+With the check, step 3 finds no session, or one with a different refresh token, and discards the response. A game that keeps an explicit account or generation number on the session can compare that instead; the point is that the answer is only applied to the session that asked. The requests that were in flight still need cancelling on sign-out, as the list below says, so that none of them resumes with the next player's token.
 
 A refresh that gets no response, because the device lost its connection during it, leaves the session as it was. Nothing says that the refresh token is bad, and signing the player out because of a tunnel would throw away a session that works again a minute later. The server's refusal of the refresh ends the session: a 400, the status OAuth gives its `invalid_grant` error for a spent or revoked refresh token, or a 401 from the refresh endpoint.
 
@@ -560,7 +584,7 @@ Signing out, or switching accounts on a shared device, undoes what the session s
 - Reset the analytics user id that chapter 7's service set on each adapter after sign-in.
 - Clear the caches kept per player: stored responses and their ETags, the local copy of the save, anything keyed by the old account.
 
-Exercise: Trace what happens to three requests in flight when the access token expires between them: which ones get a 401, how many refreshes the backend receives, and what each request's caller finally sees. Then trace it again with the device losing its connection during the refresh.
+Exercise: Trace what happens to three requests in flight when the access token expires between them: which ones get a 401, how many refreshes the backend receives, and what each request's caller finally sees. Then trace it again with the device losing its connection during the refresh, and a third time with a late 401: a fourth request that was sent with the old token and gets its 401 after the refresh finished. Finally, add a sign-out and a sign-in as another player while the refresh is in flight, and say what the store holds when the refresh response arrives.
 
 ?? http-single-flight-refresh Three requests come back 401 at once, and the backend rotates refresh tokens. What happens if each starts its own refresh?
 * The second refresh presents a spent token, and the server may revoke the whole session
@@ -597,14 +621,14 @@ Exercise: Trace what happens to three requests in flight when the access token e
 - That the traffic is private, since the key encrypts each request on the wire
 > A key in the build ships in every copy, and anyone who unpacks one copy has it; OAuth's guidance for native apps says that such secrets are not to be treated as confidential. The key can say which app a request claims to come from, and nothing about whether the client was modified or who the player is. The backend decides with the player's session and its own rules.
 
-?+ Why should the refresh token not be kept in `PlayerPrefs`?
+?? http-token-storage Why should the refresh token not be kept in `PlayerPrefs`?
 * Unity stores `PlayerPrefs` unencrypted, and Android's Auto Backup copies them by default
 - `PlayerPrefs` values are limited to a few hundred characters, which is too short for tokens
 - `PlayerPrefs` is cleared at each update of the app, which would sign the player out
 - Other apps on the device can read `PlayerPrefs`, which the device shares between apps
 > Unity's reference says `PlayerPrefs` data is stored without encryption and is not for sensitive data. On Android it is a shared preferences file, which Auto Backup includes by default, so the token would travel to another device in a backup. The Keychain on iOS, and a file encrypted with an Android Keystore key, keep it out of both.
 
-?+ The backend checks a Play Integrity verdict or an App Attest assertion with each purchase request. What can it conclude from a check that passes?
+?? http-client-attestation The backend checks a Play Integrity verdict or an App Attest assertion with each purchase request. What can it conclude from a check that passes?
 * That the request more likely comes from the genuine app on a genuine device
 - That the player is the account's owner, since the platform signed the request
 - That the values in the request are correct, since a genuine app sends correct values
@@ -616,9 +640,9 @@ Exercise: Trace what happens to three requests in flight when the access token e
 A backend's JSON and the game's model of the same thing change for different reasons. The JSON changes when the backend team adds a field, renames one in a new API version or splits a response; the game's model changes when the game's rules do. Keeping them as two types lets each change without the other:
 
 - A data transfer object, a DTO, mirrors one response or request on the wire. Its field names are the JSON's, its types are ones the serializer handles, it has no behavior, and it belongs to one version of the API.
-- A domain type holds what the game means. Its names are the game's, its invariants are checked when it is built, such as an amount that is positive or a reward kind the game knows, and gameplay uses it and nothing else.
+- A domain type holds what the game means. Its names are the game's, its invariants are checked where it is built, such as an amount that is positive or a reward kind the game knows, and gameplay uses it and nothing else.
 
-A mapper turns one into the other at the boundary. It is the adapter of [[#platform-interfaces]] applied to the backend: the backend's vocabulary stays on the backend's side, and a change on the wire changes the DTO and the mapper, not gameplay.
+A mapper turns one into the other at the boundary, and it is the one place that enforces those invariants. The domain type's constructor below only assigns, so the design assumes that callers build offers through the mapper; a game that cannot rely on that restricts the constructor to the assembly that holds the mapper. The mapper is the adapter of [[#platform-interfaces]] applied to the backend: the backend's vocabulary stays on the backend's side, and a change on the wire changes the DTO and the mapper, not gameplay.
 
 ```csharp
 // The wire: GET /v1/offers/daily, version 1, named and typed as the JSON has it.
@@ -639,7 +663,8 @@ public sealed class DailyOfferDto
     public string endsAt;     // UTC, in RFC 3339 form: "2026-10-01T00:00:00Z"
 }
 
-// The game's own types: its vocabulary, with invariants checked once.
+// The game's own types: its vocabulary. The constructor only assigns; the mapper below
+// is the one place that checks, so every offer is built through it.
 public enum RewardKind { Unknown, Coins, Gems, Item }
 
 public sealed class DailyOffer
@@ -706,7 +731,15 @@ The DTO's shape follows from its serializer. Unity's `JsonUtility` uses the seri
 - An object at the top level. In a test for this chapter, `JsonUtility.FromJson` refused a top-level array with an `ArgumentException` saying the JSON must represent an object type, and `ToJson` given an array wrote `{}`. The response wraps its list in an object, which also leaves room for a field the backend adds later.
 - No polymorphism from the wire. A field whose type is a base class keeps only the base class's fields and comes back as an instance of the base class, and `[SerializeReference]` writes a format of Unity's own, with reference ids and type names, which a backend would have to produce on purpose. For a response whose shape depends on a type field, [Unity's page on JSON serialization](https://docs.unity3d.com/6000.3/Documentation/Manual/json-serialization.html) suggests reading the common fields first, then reading the JSON again into the type they name.
 
-`JsonUtility` can be called from a background thread, so a large response can be parsed off the main thread once its text has been copied out of the request. It is also forgiving in ways that hide mistakes. In the same test, fields missing from the JSON kept the values their initializers had set, as [the reference for `FromJson`](https://docs.unity3d.com/6000.3/Documentation/ScriptReference/JsonUtility.FromJson.html) documents; fields the DTO did not have were skipped; a JSON `null` became 0 in an `int` and an empty string in a `string`, so a DTO cannot tell a `null` from a 0 or an empty string; the string `"12"` filled an `int`, and 5.7 filled it with 5; and names matched only in the same case, so `"Id"` left `id` untouched.
+`JsonUtility` can be called from a background thread, so a large response can be parsed off the main thread once its text has been copied out of the request. It is also forgiving in ways that hide mistakes. In the same test, it behaved as the table shows:
+
+| The JSON has | `JsonUtility` gives | What the mapper does |
+| --- | --- | --- |
+| A field missing | The value the DTO's initializer set, as [the reference for `FromJson`](https://docs.unity3d.com/6000.3/Documentation/ScriptReference/JsonUtility.FromJson.html) documents | Chooses the default itself, or rejects the value |
+| A field the DTO does not have | It is skipped | Nothing; a newer server's field is ignored |
+| `null` for an `int` or a `string` | 0, or an empty string, so a DTO cannot tell a `null` from either | Treats 0 or empty as invalid where the domain requires a value |
+| The string `"12"` for an `int`, or 5.7 | 12, and 5 | Keeps the wire type a string where exactness matters, and parses it |
+| `"Id"` for a field named `id` | `id` untouched, since names match only in the same case | Checks the values that must be present, as `TryMap` does |
 
 Json.NET, which Unity packages as `com.unity.nuget.newtonsoft-json`, covers what `JsonUtility` does not: properties, dictionaries, nullable values, custom converters, and type information when both sides agree on a format for it. [Version 3.2.2 of the package](https://docs.unity3d.com/Packages/com.unity.nuget.newtonsoft-json@3.2/manual/index.html) corresponds to Newtonsoft.Json 13.0.2 and carries a second build of the library for AOT platforms. Its defaults differ from `JsonUtility`'s. In a .NET 8 test with the package's own assembly, it ignored fields it did not know, matched member names in any case, and threw on a `null` for an `int` instead of making it 0.
 
@@ -744,7 +777,7 @@ Exercise: Take one response from your game's backend. Write its DTO and its doma
 - The domain type is what the backend sends, and the DTO is a copy made for the Inspector
 > A DTO has the backend's names, the serializer's types and no invariants, and it changes with each API version. The domain type is built once, by the mapper, which checks its invariants and translates the backend's values into the game's, so gameplay never holds a half-valid object or a wire format. DTOs are ordinary objects, with no special rules for their memory.
 
-?+ A DTO parsed with `JsonUtility` has a `Dictionary<string, int>` field, and the field is always empty. Why?
+?? http-json-serializer-limits A DTO parsed with `JsonUtility` has a `Dictionary<string, int>` field, and the field is always empty. Why?
 * `JsonUtility` uses Unity's serializer, which does not serialize dictionaries
 - The JSON object's keys need a different quoting to become dictionary keys
 - `JsonUtility` fills dictionaries on the frame after the parse has finished
@@ -758,7 +791,7 @@ Exercise: Take one response from your game's backend. Write its DTO and its doma
 - At the backend, which sends release builds a different JSON format than the Editor
 > Unity's linker removes code that its static analysis finds unused, and at High it searches the game's own assemblies; Unity's manual warns that it does not always detect uses of reflection. A member that Json.NET alone reaches can be stripped, while the Editor, which strips nothing, keeps it. A `link.xml` entry with `preserve="all"` for each DTO type, or `[Preserve]` on each member Json.NET fills, keeps them; the attribute on a type alone keeps its default constructor and not its members.
 
-?+ A backend stores account ids as 64-bit integers. How should they travel in JSON?
+?? http-wire-numbers A backend stores account ids as 64-bit integers. How should they travel in JSON?
 * As strings, since readers that hold numbers as doubles lose integers above $2^{53}$
 - As numbers, since JSON sets no limit on a number's size and readers keep them whole
 - As numbers split into two 32-bit halves, which each JSON reader can hold exactly
@@ -883,6 +916,19 @@ The check is the one part of the API that each client version depends on, the ol
 The backstop is on the server. When a version must stop at once, say for a security flaw, the backend refuses each API request from it with an error that the client has known how to show since its first release: a response that means “update required” and nothing else, which the client routes to the update screen. That response has to exist in the first release that shipped. A client runs the code it was built with, so a way of stopping it that arrives in a later build does not reach the builds that need stopping.
 
 Two ideas keep the contract from drifting, and they are named here as ideas. A shared schema, such as an [[OpenAPI]] document, can generate the client's DTOs and the server's handlers from one description, so the two sides read a field's name and type from the same place. Contract tests record what each supported client version sends and expects, and replay those expectations against each server build, so a change that would break an old client fails the server's build instead of reaching players.
+
+If your game has no API history for the exercise below, use these six changes to a daily-offers response, for a client that must keep working at version 1:
+
+```json
+[
+  {"change": 1, "what": "added field \"badge\": \"new\" to each offer"},
+  {"change": 2, "what": "renamed \"priceGems\" to \"price\""},
+  {"change": 3, "what": "added rewardKind \"chest\""},
+  {"change": 4, "what": "\"endsAt\" now sent as Unix seconds, not RFC 3339 text"},
+  {"change": 5, "what": "\"amount\" may be omitted when it is 1"},
+  {"change": 6, "what": "made \"itemId\" required for every offer"}
+]
+```
 
 Exercise: Take the last ten changes to an API your game uses. Mark each one that would break the oldest client version still supported, and say what would have made it additive.
 

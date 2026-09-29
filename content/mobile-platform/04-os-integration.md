@@ -37,7 +37,7 @@ Native code stops with the app. A suspended app runs no code at all, so its time
 
 What the game does at each edge follows from these limits:
 
-- On pause, it saves. It persists the operations still pending at the boundary, such as a purchase waiting for its grant or a score not yet sent, writes the save file, and moves queued analytics events to storage for the next session to send. A network flush may not finish before the app is suspended, so it is a bonus and not the plan.
+- On pause, it saves. A normal move to the background is the game's usual chance to save, and a crash or a forced end gives none, so progress that matters is also written to durable storage as it happens, in small checkpoints. On pause it persists the operations still pending at the boundary, such as a purchase waiting for its grant or a score not yet sent, writes the save file, and moves queued analytics events to storage for the next session to send. A network flush may not finish before the app is suspended, so it is a bonus and not the plan.
 - On resume, it checks what may have changed while it was away: the permissions that the player can change in the system settings, tokens that expired, purchases that completed in the store (the query on resume from [[#platform-events]]), and the [[push token]], which it sends again.
 
 A small component turns the callbacks into those two signals, raised once per change whatever order the platform uses:
@@ -105,7 +105,7 @@ Lab exercise: Log every lifecycle callback on both platforms, with the frame num
 - `Application.quitting`, which Unity raises when the system reclaims the process
 - `OnDestroy` on a persistent object, which runs as the process shuts down
 - `Application.lowMemory`, which arrives before the system reclaims a background app
-> A suspended iOS app and a cached Android process are ended without running more code, so the quit callbacks do not arrive, and `lowMemory` is raised in the foreground and not otherwise. The pause is the last moment the game can count on, so it saves there.
+> A suspended iOS app and a cached Android process are ended without running more code, so the quit callbacks do not arrive, and `lowMemory` is raised in the foreground and not otherwise. On a normal move to the background, the pause is the last moment the game can count on, so it saves there; a crash or forced end gives none, so progress that matters is also checkpointed as it happens.
 
 ?+ On Android, a game opens its pause menu and saves whenever `OnApplicationFocus(false)` arrives, and players report that opening the chat keyboard pauses the match. Why?
 * The on-screen keyboard takes focus from the game while it stays on screen
@@ -167,7 +167,15 @@ public static class CameraPermission
 
 On iOS, each protected resource needs a purpose string: a key in the [[Info.plist]] whose text the system shows in its prompt, such as `NSCameraUsageDescription` for the camera and `NSMicrophoneUsageDescription` for the microphone. Apple's guide to [requesting capture authorization](https://developer.apple.com/documentation/avfoundation/requesting-authorization-to-capture-and-save-media) says that without the key, the system terminates the app. That is the failure in which a feature works on Android and closes the game on iOS: the Android build shows its dialog, and the iOS build ends the first time it touches the camera, with the evidence that [[#ios-failure-evidence]] describes. Unity writes the camera, microphone and location keys from the Camera Usage Description, Microphone Usage Description and Location Usage Description fields of the iOS Player Settings, and a key that a plugin needs is set by a post-processor, as in [[#ios-xcode-postprocess]].
 
-For notifications and location, iOS asks once: after the player answers, a new notification request returns the recorded answer without a prompt, as [Apple's notification guide](https://developer.apple.com/documentation/usernotifications/asking-permission-to-use-notifications) says, and a new location request does nothing. The rules belong to each API, and two of them soften that. Location's Allow Once grants a temporary authorization that ends when the app is no longer in use, after which the app can ask again. Provisional notification authorization skips the prompt and delivers notifications quietly, so the player decides with a real notification in front of them. App Tracking Transparency has a prompt of its own and requires its own purpose string, `NSUserTrackingUsageDescription`, and in the European Union, Apple's reference lets an app ask again after a year (checked in September 2026). After a denial, the game can open its page in Settings through `UIApplication.openSettingsURLString` when the player asks to, and checks the authorization again when the player returns. In C#, `Application.RequestUserAuthorization` asks for the camera or the microphone on iOS, and `Application.HasUserAuthorization` reads the answer.
+The rules for repeating an iOS permission request depend on the resource:
+
+| Resource | A new request after the player answered | Exception |
+| --- | --- | --- |
+| Notifications | Returns the recorded answer, with no prompt | Provisional authorization skips the prompt and delivers quietly |
+| Location | Does nothing | Allow Once ends when the app is no longer in use, after which the app can ask again |
+| Tracking (App Tracking Transparency) | Uses its own prompt and its own purpose string, `NSUserTrackingUsageDescription` | In the European Union, Apple's reference lets an app ask again after a year (checked in September 2026) |
+
+Notifications follow [Apple's notification guide](https://developer.apple.com/documentation/usernotifications/asking-permission-to-use-notifications): after the player answers, a new request returns the recorded answer without a prompt. A new location request after an answer does nothing. The rules belong to each API, and the table shows where they differ. Provisional notification authorization skips the prompt and delivers notifications quietly, so the player decides with a real notification in front of them. After a denial, the game can open its page in Settings through `UIApplication.openSettingsURLString` when the player asks to, and checks the authorization again when the player returns. In C#, `Application.RequestUserAuthorization` asks for the camera or the microphone on iOS, and `Application.HasUserAuthorization` reads the answer.
 
 The rules that follow are the same on both platforms:
 
@@ -283,9 +291,56 @@ The three pieces, for invites on `play.example.com`:
 
 What verification protects is the destination: the link reaches the app that the domain names and no other, and a player without the game lands on the web page instead, which a custom scheme has no way to offer. It says nothing about the sender. Anyone can post a verified link with any path and parameters.
 
-Unity receives links through `Application.absoluteURL`, which holds the URL that launched or activated the app, and `Application.deepLinkActivated`, raised when a link arrives while the app runs, with `absoluteURL` updated. On Android, a link reaches the running activity through `onNewIntent`, as [[#android-activity-integration]] showed. On iOS, `UnityAppController` sets the URL from `application:openURL:options:` for a custom scheme, from `application:continueUserActivity:restorationHandler:` for a universal link, and at launch from the options passed to `application:willFinishLaunchingWithOptions:`.
+Unity receives links through `Application.absoluteURL`, which holds the URL that launched or activated the app, and `Application.deepLinkActivated`, raised when a link arrives while the app runs, with `absoluteURL` updated. On Android, a link reaches the running activity through `onNewIntent`, as [[#android-activity-integration]] showed. On iOS, `UnityAppController` sets the URL from `application:openURL:options:` for a custom scheme, from `application:continueUserActivity:restorationHandler:` for a universal link, and at launch from the options passed to `application:willFinishLaunchingWithOptions:`. On iOS in Unity 6000.3.11f1 these never fire until a patch adds the missing scene methods, which the note after the parser describes.
 
-In Unity 6000.3.11f1, iOS calls none of them. The exported [[Info.plist]] declares a scene manifest with `UnityScene` as the [[scene delegate]], and for an app with scenes, iOS delivers links to the scene: at launch in the connection options of `scene:willConnectToSession:options:`, and while the app runs or is suspended to `scene:openURLContexts:` for a custom scheme and `scene:continueUserActivity:` for a universal link. The launch options that the application delegate receives are nil. `UnityScene` implements four lifecycle methods and none of those three. In the probe project, custom-scheme links sent in the iOS Simulator reached nothing: at a cold start `absoluteURL` was empty and stayed empty, and while the game ran, no `deepLinkActivated` was raised and no listener's `onOpenURL:` was called. Apple's [TN3187](https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle) says the scene life cycle will be required in the next major release after iOS 26, for apps built with the latest SDK.
+A link is untrusted input, whichever kind it is and however it arrives. Anyone can put one in a chat message, on a web page or in another app, with the path and parameters they like, and [Android's guidance on deep links](https://developer.android.com/privacy-and-security/risks/unsafe-use-of-deeplinks) asks apps to validate them. So the game:
+
+- Accepts known routes. A parser turns the URL into one of the routes the game knows, with parameters of the expected form, and drops everything else.
+- Grants nothing from a link. A gift link carries the id of a gift, and the game asks its server whether this player may claim it; an amount in a link is a request the server ignores.
+- Routes when the game can act, through the inbox of [[#platform-events]]. A link that opened the running game can reach C# while the player is still paused, before `OnApplicationPause(false)`.
+- Expects the same link twice. A player taps twice, or a link read at launch is read again after a scene reload, and an invite accepted once stays accepted once, which takes the server's record of the invite's id: an [[idempotence|idempotent]] claim.
+
+```csharp
+using System;
+using System.Collections.Generic;
+
+// Maps an untrusted link to a route the game knows, or rejects it. It grants nothing:
+// the router asks the server what an invite or a gift id is worth.
+public static class GameLinks
+{
+    static readonly HashSet<string> Routes = new HashSet<string> { "invite", "event", "gift" };
+
+    public static bool TryParse(string url, out string route, out string id)
+    {
+        route = id = null;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri)) return false;
+
+        // examplegame://invite/K7Q2 and https://play.example.com/invite/K7Q2 name the same place.
+        string path;
+        if (uri.Scheme == "examplegame") path = uri.Host + uri.AbsolutePath;
+        else if (uri.Scheme == "https" && uri.Host == "play.example.com") path = uri.AbsolutePath.TrimStart('/');
+        else return false;
+
+        string[] parts = path.Split('/');
+        if (parts.Length != 2 || !Routes.Contains(parts[0])) return false;
+        if (parts[1].Length < 1 || parts[1].Length > 16) return false;
+        foreach (char c in parts[1])
+            if (!(c >= 'A' && c <= 'Z') && !(c >= '0' && c <= '9')) return false;
+
+        route = parts[0];
+        id = parts[1];
+        return true;
+    }
+}
+```
+
+To test, `adb shell am start -W -a android.intent.action.VIEW -d "<url>" <package>` sends a link to a package, at a cold start or while it runs. Since it names the package, it proves the routing and not the verification, which `adb shell pm get-app-links <package>` shows and `adb shell pm verify-app-links --re-verify <package>` runs again. On iOS, `xcrun simctl openurl <device> <url>` sends a link in the Simulator, which asks for confirmation before it opens the app, as it does when one app opens another's custom scheme; a UI test can tap Open. A universal link needs a signed build with its entitlement.
+
+### Unity 6000.3.11f1 on iOS: a patch for link delivery
+
+This note is specific to that version and to custom-scheme links, which the probe project tested. Signed universal links were not tested. The rest of this section holds whatever the Unity version.
+
+Unity 6000.3.11f1 on iOS calls none of the application-delegate methods named above. The exported [[Info.plist]] declares a scene manifest with `UnityScene` as the [[scene delegate]], and for an app with scenes, iOS delivers links to the scene: at launch in the connection options of `scene:willConnectToSession:options:`, and while the app runs or is suspended to `scene:openURLContexts:` for a custom scheme and `scene:continueUserActivity:` for a universal link. The launch options that the application delegate receives are nil. `UnityScene` implements four lifecycle methods and none of those three. In the probe project, custom-scheme links sent in the iOS Simulator reached nothing: at a cold start `absoluteURL` was empty and stayed empty, and while the game ran, no `deepLinkActivated` was raised and no listener's `onOpenURL:` was called. Apple's [TN3187](https://developer.apple.com/documentation/technotes/tn3187-migrating-to-the-uikit-scene-based-life-cycle) says the scene life cycle will be required in the next major release after iOS 26, for apps built with the latest SDK.
 
 A category on `UnityScene` closes the gap. It adds the three methods and hands each link to the controller, which sets `absoluteURL`, raises `deepLinkActivated` and notifies listeners as it does for links that reach it:
 
@@ -332,49 +387,6 @@ A category on `UnityScene` closes the gap. It adds the three methods and hands e
 ```
 
 With the category, a cold link was in `absoluteURL` before the first `RuntimeInitializeOnLoadMethod` ran, and a link sent to the running game raised `deepLinkActivated` with `absoluteURL` updated. Universal links take the controller method that the Trampoline already implements, and were not run, since they need a signed build with the entitlement. The category patches Unity's code, at two costs. It calls `initUnityApplicationNoGraphics`, which the controller's header does not declare. And if a later Unity version implements these methods in `UnityScene`, [Apple's guide to categories](https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/ProgrammingWithObjectiveC/CustomizingExistingClasses/CustomizingExistingClasses.html) says it is undefined which implementation runs. So each Unity upgrade starts with a look at `Classes/UI/UnityScene.mm` in the export, and the category goes when Unity's own methods arrive.
-
-A link is untrusted input, whichever kind it is and however it arrives. Anyone can put one in a chat message, on a web page or in another app, with the path and parameters they like, and [Android's guidance on deep links](https://developer.android.com/privacy-and-security/risks/unsafe-use-of-deeplinks) asks apps to validate them. So the game:
-
-- Accepts known routes. A parser turns the URL into one of the routes the game knows, with parameters of the expected form, and drops everything else.
-- Grants nothing from a link. A gift link carries the id of a gift, and the game asks its server whether this player may claim it; an amount in a link is a request the server ignores.
-- Routes when the game can act, through the inbox of [[#platform-events]]. With the category above, a link that opened the running game reached C# while the player was still paused, before `OnApplicationPause(false)`.
-- Expects the same link twice. A player taps twice, or a link read at launch is read again after a scene reload, and an invite accepted once stays accepted once, which takes the server's record of the invite's id: an [[idempotence|idempotent]] claim.
-
-```csharp
-using System;
-using System.Collections.Generic;
-
-// Maps an untrusted link to a route the game knows, or rejects it. It grants nothing:
-// the router asks the server what an invite or a gift id is worth.
-public static class GameLinks
-{
-    static readonly HashSet<string> Routes = new HashSet<string> { "invite", "event", "gift" };
-
-    public static bool TryParse(string url, out string route, out string id)
-    {
-        route = id = null;
-        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri)) return false;
-
-        // examplegame://invite/K7Q2 and https://play.example.com/invite/K7Q2 name the same place.
-        string path;
-        if (uri.Scheme == "examplegame") path = uri.Host + uri.AbsolutePath;
-        else if (uri.Scheme == "https" && uri.Host == "play.example.com") path = uri.AbsolutePath.TrimStart('/');
-        else return false;
-
-        string[] parts = path.Split('/');
-        if (parts.Length != 2 || !Routes.Contains(parts[0])) return false;
-        if (parts[1].Length < 1 || parts[1].Length > 16) return false;
-        foreach (char c in parts[1])
-            if (!(c >= 'A' && c <= 'Z') && !(c >= '0' && c <= '9')) return false;
-
-        route = parts[0];
-        id = parts[1];
-        return true;
-    }
-}
-```
-
-To test, `adb shell am start -W -a android.intent.action.VIEW -d "<url>" <package>` sends a link to a package, at a cold start or while it runs. Since it names the package, it proves the routing and not the verification, which `adb shell pm get-app-links <package>` shows and `adb shell pm verify-app-links --re-verify <package>` runs again. On iOS, `xcrun simctl openurl <device> <url>` sends a link in the Simulator, which asks for confirmation before it opens the app, as it does when one app opens another's custom scheme; a UI test can tap Open. A universal link needs a signed build with its entitlement.
 
 Exercise: Send your game a link at a cold start, in a menu, and during a run, on both platforms, and record where each one lands and when the game acts on it. On iOS, first check that a link reaches C# at all.
 
@@ -447,7 +459,15 @@ Tokens change. FCM's documentation lists a new token when the app is restored on
 
 The backend keeps the latest token for each device and player, and drops a token that the push service rejects.
 
-On Android, every notification belongs to a channel from Android 8.0 (API level 26), and the player controls each channel's behavior once the game has created it; notifications need the `POST_NOTIFICATIONS` permission of [[#os-permissions]]. FCM delivers two kinds of message, and [its guide to receiving them](https://firebase.google.com/docs/cloud-messaging/android/receive-messages) sets out where each goes. With the app in the foreground, notification messages, data messages and messages carrying both reach `onMessageReceived`. In the background, a notification message goes to the system tray, a data message still reaches `onMessageReceived`, and the data of a message carrying both arrives in the extras of the launcher activity's intent when the player taps it. A game that reads payloads in its listener alone misses each notification tapped while it was in the background.
+On Android, every notification belongs to a channel from Android 8.0 (API level 26), and the player controls each channel's behavior once the game has created it; notifications need the `POST_NOTIFICATIONS` permission of [[#os-permissions]]. FCM delivers two kinds of message, and [its guide to receiving them](https://firebase.google.com/docs/cloud-messaging/android/receive-messages) sets out where each goes:
+
+| Payload | App in the foreground | App in the background | Tap on the notification |
+| --- | --- | --- | --- |
+| Notification message | `onMessageReceived` | System tray | Opens the launcher activity |
+| Data message | `onMessageReceived` | `onMessageReceived` | Not applicable, since the system shows nothing |
+| Both | `onMessageReceived` | System tray, and the data waits | The data arrives in the extras of the launcher activity's intent |
+
+A game that reads payloads in its listener alone misses each notification tapped while it was in the background.
 
 On iOS, APNs has two environments, development, the sandbox at `api.sandbox.push.apple.com`, and production at `api.push.apple.com`, and a token belongs to one of them. The `aps-environment` entitlement decides which: its value is `development` or `production`, and Xcode sets it from the [[provisioning profile]] that the build is signed with. A build signed for development gets a sandbox token, and Unity's Development Build checkbox, which changes the player and not the signature, has no say in it. A token sent to the other environment's host fails with `BadDeviceToken`, whose description in [Apple's list of APNs responses](https://developer.apple.com/documentation/usernotifications/handling-notification-responses-from-apns) asks to check that the token matches the environment. The backend stores the environment with each token and sends to the matching host.
 
@@ -529,7 +549,7 @@ Web sign-in in a native app follows [RFC 8252](https://www.rfc-editor.org/rfc/rf
 
 State and PKCE protect against different things. PKCE protects the code: another app that registered the same private-use scheme, or saw the redirect some other way, holds a code it has no way to redeem without the verifier, which never left the game. State protects the game: a response that does not carry the state of an attempt the game started is not an answer to anything it asked, and the game discards it, which is the protection against cross-site request forgery that [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749.html) requires of a redirect endpoint.
 
-One attempt's secrets fit in a small class. For RFC 7636's sample verifier, it computes the challenge that the RFC's Appendix B gives:
+One attempt's secrets fit in a small class. Its constructor with arguments takes a fixed state and verifier, which makes the challenge testable:
 
 ```csharp
 using System;
@@ -563,6 +583,19 @@ public sealed class PkceAttempt
     static string Base64Url(byte[] bytes) =>
         Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
+```
+
+With RFC 7636's sample verifier, `new PkceAttempt("xyz", "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk").Challenge` must return the challenge that the RFC's Appendix B gives, `E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM`. A test that pins this pair catches a wrong hash or a wrong Base64 alphabet. The `"xyz"` state is a placeholder, since the RFC has no sample state.
+
+One attempt from the button to the session, with what each step holds. The values are illustrative:
+
+```text
+game, on the button   makes state S1, verifier V1, challenge C1 = hash(V1); stores S1 and V1
+game -> browser       authorization request carrying S1 and C1
+browser, redirect     redirect URI carrying state S1 and code K1
+game                  compares S1 with the stored attempt; on a match, sends K1 and V1 to its backend
+backend -> provider   token request carrying K1 and V1; the provider checks hash(V1) against C1
+backend               creates the game's session
 ```
 
 The redirect arrives differently on each platform. On Android, the browser opens the redirect URI, which is a link to the game, so it arrives like any other link: through `onNewIntent` and `Application.deepLinkActivated`, or in `Application.absoluteURL` at a cold start. On iOS, `ASWebAuthenticationSession` hands the callback URL to the completion handler of the session that started the attempt. It does not pass through the app's URL handlers or `deepLinkActivated`, it reports `canceledLogin` when the player cancels, and an https callback needs its domain among the app's associated domains. Either way, the game compares the state, then sends the code and the verifier to its backend, which redeems them at the provider's token endpoint and creates the game's session.

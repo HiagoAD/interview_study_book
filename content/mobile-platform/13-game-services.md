@@ -25,7 +25,7 @@ CREATE TABLE identity (
 
 Keying every service's data by the game's own id lets a player add or remove a way of signing in without moving any data, and keeps each provider's id where it belongs, as a way in. Those ids have scopes of their own. Game Center's `teamPlayerID` identifies a player across the games that one developer account distributes, and Sign in with Apple's user identifiers are scoped to the developer team, so that moving the game to another team means migrating them, as Apple's technote on app transfers describes. An account keyed by either would depend on the team that publishes the game. The server takes none of these ids from the client as it stands. It verifies each sign-in: Apple's identity token is a [[JSON Web Token]] that Apple signs, and the server checks its signature with Apple's public key, its issuer, its expiry, and its audience, which must be the app's own client id; Google Play Games gives the client a one-time code that the server exchanges with Google for an access token. An id that arrives unverified is one more value from an untrusted client, like the score of [[#design-round-method]].
 
-Most mobile games start the player as a guest. The first launch creates an account and a credential for it on the device, so that the player is playing within seconds, and asks for a sign-in later. The credential lives on the device, stored as chapter 4 stores secrets, in the [[Keychain]] or encrypted under a key from the [[Android Keystore]], and the guest account lasts as long as the credential does. The anonymous sign-in of Unity Authentication, part of [[Unity Gaming Services]], works this way, and its documentation warns that an anonymous account that was never linked cannot be recovered once its session token is lost. A lost phone, a reset, or cleared app data on Android ends the player's own way into a guest account; on iOS, a Keychain item may move to a new phone restored from a backup, unless it is marked `ThisDeviceOnly`. The account itself stays on the server, where support alone can reach it. So the game asks the player to link a platform sign-in at the moments when losing the account would hurt: after the first purchase, after a few days of play, and in the settings, where a player about to change phones looks.
+Most mobile games start the player as a guest. The first launch creates an account and a credential for it on the device, so that the player is playing within seconds, and asks for a sign-in later. The credential lives on the device, stored as chapter 4 stores secrets, in the [[Keychain]] or encrypted under a key from the [[Android Keystore]], and the guest account lasts as long as the credential does. The anonymous sign-in of Unity Authentication, part of [[Unity Gaming Services]], works this way, and its documentation warns that an anonymous account that was never linked cannot be recovered once its session token is lost. A lost phone, a reset, or cleared app data on Android ends the player's own way into a guest account; on iOS, a Keychain item may move to a new phone restored from a backup, unless it is marked `ThisDeviceOnly`. The account remains on the server. Without the guest credential or a linked sign-in, the player needs support to recover access. So the game asks the player to link a platform sign-in at the moments when losing the account would hurt: after the first purchase, after a few days of play, and in the settings, where a player about to change phones looks.
 
 Linking is where two accounts can collide. A player who has played for a year on an old phone installs the game on a new one, plays the tutorial as a new guest, and then taps “Sign in with Apple”. The server verifies the token and inserts the link, and the primary key refuses it: that Apple id already belongs to the year-old account. Two accounts now claim one person:
 
@@ -131,6 +131,8 @@ Exercise: Draw the account model for a game with guest play and two platform sig
 
 The economy follows the untrusted client of [[#design-round-method]] to its end: the client asks, and the server checks and grants. “Buy offer 12” and “claim the reward of mission m-2291” are requests, and the server looks up the price or the reward, checks that the player may have it, and records the result. The first book, *The Game Layer*, granted a mission's reward this way in its chapter on missions and rewards: one operation saved the reward together with a record of the claim's id, so that a retried claim returned the recorded result instead of a second reward. The economy does the same for each change to each balance.
 
+### The ledger
+
 Balances come from a [[ledger]]. Each change is an entry that is appended and never updated: the player, the currency, a signed amount, the operation's id, a reason and a source. A grant adds a positive entry, a spend a negative one, and a correction is a new entry that reverses an old one. The balance is the sum of the player's entries. Two things follow. Each balance can be explained entry by entry, which is what support needs when a player writes that their gems vanished, and what finance needs to reconcile the game's revenue with the stores' reports. And each grant is [[idempotent]] for its operation's id, since the id is unique in the ledger itself, which puts chapter 12's `GrantOnce`, with its record of processed ids and its grant, into one table:
 
 ```sql
@@ -148,6 +150,8 @@ CREATE TABLE ledger (
 
 Summing a long history at each spend grows slow, so a design can keep the running balance in a wallet row as well, changed in the same transaction as each entry. A spend debits the wallet with an `UPDATE` whose condition, that the balance covers the price, makes it change no row when the player is short. The rule sits on the spend rather than on the wallet, where the `CHECK` constraint of [[#design-storage]] would put it, because a refund's reversal, later in this section, has to be recorded even when it takes the balance below zero. The ledger stays the record: a job that compares each wallet with the sum of its entries finds any code that wrote one without the other.
 
+### The purchase flow
+
 A store purchase adds the store to the operation, and the order of its steps decides what a failure costs:
 
 ```text
@@ -160,9 +164,23 @@ backend   the grant                                         -> client
 client    finish the transaction, or acknowledge it         -> store
 ```
 
+### Verify before granting
+
 The server verifies before it grants. On iOS, StoreKit gives the client a transaction that the App Store signed as a JSON Web Signature, the signed form that [[JSON Web Token | JSON Web Tokens]] use. The server verifies the signature, from the information in its header or with Apple's App Store Server Library, or it fetches the transaction again by its id through the [App Store Server API](https://developer.apple.com/documentation/appstoreserverapi). It then checks the fields that say what was bought and where: the app's bundle id, the product id, the environment, which says Sandbox or Production, and whether a revocation date says that the App Store refunded or revoked it. On Android, the client sends the purchase token, and the server looks it up through the Google Play Developer API for the game's own package name, currently with `purchases.productsv2.getproductpurchasev2`. Google Play's guide says to check that the purchase is in the purchased state, since a pending purchase is one whose payment the player has not completed. The server then records the store's id for the purchase, the transaction id on iOS and the purchase token on Android, and grants, in one database transaction; Google Play's guide has the backend check that each purchase token has not been used before, so that nothing is granted twice. Google Play's order id is the wrong key for it, since some purchases have none.
 
-Then the client finishes. StoreKit's `finish()` tells the App Store that the app delivered what was bought, and Apple's documentation says to call it after delivering. Until then the transaction stays unfinished, and StoreKit hands it to the app again, at the next launch if need be. Google Play needs each purchase acknowledged, or consumed if it is a consumable, which fulfills the acknowledgement as well, and its guide describes either as telling Google Play that the app has granted the purchase, whether the client or the backend does it. A purchase left unacknowledged for three days is refunded and revoked, by [Google Play's integration guide](https://developer.android.com/google/play/billing/integrate) in September 2026.
+### Completing the purchase
+
+The flow ends with the client finishing the purchase on iOS. On Android it ends the same way or with the backend doing it, as the table below shows. StoreKit's `finish()` tells the App Store that the app delivered what was bought, and Apple's documentation says to call it after delivering. Until then the transaction stays unfinished, and StoreKit hands it to the app again, at the next launch if need be. Google Play needs each purchase acknowledged, or consumed if it is a consumable, which fulfills the acknowledgement as well, and its guide describes either as telling Google Play that the app has granted the purchase, whether the client or the backend does it. A purchase left unacknowledged for three days is refunded and revoked, by [Google Play's integration guide](https://developer.android.com/google/play/billing/integrate) in September 2026.
+
+The three completion calls compare as follows, from the text above:
+
+| | StoreKit | Play, consumable | Play, non-consumable |
+| --- | --- | --- | --- |
+| The call | `finish()` | Consume, which acknowledges as well | Acknowledge |
+| Who makes it | The client | The client or the backend | The client or the backend |
+| Left undone | StoreKit hands the transaction over again, at the next launch if need be | Google Play refunds and revokes the purchase after three days | The same, and the purchase stays in the list of the player's purchases either way |
+
+### Orders that fail
 
 Each other order loses something:
 
@@ -177,6 +195,8 @@ Acknowledging first is less final on Google Play than consuming: a purchase that
 
 The order that works also recovers by itself. When the game is closed after the server granted and before the client finished, StoreKit hands over the unfinished transaction at the next launch, the client sends it again, and the server finds the store's id already recorded and answers with the grant it recorded, not with an error. The client then finishes it. On Android, the unacknowledged purchase shows up again when the game queries the player's purchases, and takes the same path. The store's id is the idempotency key of [[#network-idempotency]], chosen by the store and the same on each attempt.
 
+### Refunds and reversals
+
 A purchase can be undone after the grant. Players ask the stores for refunds, a purchase shared with a family can be revoked, and subscriptions renew and lapse. Both stores tell the server. Apple's App Store Server Notifications post a signed payload to a URL that the team sets, with a type such as `REFUND`, `REVOKE` or `DID_RENEW`, and Apple sends a notification again when the server does not answer it with success, five more times over the following days by its documentation in September 2026. Google Play's real-time developer notifications are published to a [[pub/sub]] topic that the team sets up in Google's cloud; a notification about a one-time purchase carries its purchase token, which the server looks up for the purchase's current state, and Google Play recommends removing duplicate notifications by their message id. Google Play also lists voided purchases, those refunded, canceled or charged back, through its Voided Purchases API, which a server reads to catch any that it missed. A refund is written to the ledger as a reversal, with an operation id made from the purchase's, so a notification delivered twice reverses the grant once:
 
 ```sql
@@ -189,6 +209,8 @@ ON CONFLICT (operation_id) DO NOTHING;
 ```
 
 The purchase's own entry was written under the operation id `app-store:2000000912345678`, the store's name and its transaction id. The reversal is written whatever the balance, since the store has refunded the money already. What happens when the player has spent the gems is a policy that the game chooses and writes down: the balance goes below zero and the shop refuses spends until it recovers, or the items bought with the gems are taken back, or small amounts are written off, each recorded as entries of their own.
+
+### Fraud controls
 
 The same design stops the usual frauds:
 
@@ -276,19 +298,23 @@ Lab exercise: Model the ledger in SQLite with the table above. Grant a purchase,
 
 ## Leaderboards {#design-leaderboards}
 
-A leaderboard answers five queries: submit a score, show the top N, show a player's rank, show the players around a player, and show a board of the player's friends. [[#design-storage]] chose the store for the first four, the [[sorted set]], and this section builds the board on Redis's. Each board is one sorted set whose members are player ids and whose scores are what the board ranks by:
+A leaderboard answers five queries: submit a score, show the top K, show a player's rank, show the players around a player, and show a board of the player's friends. [[#design-storage]] chose the store for the first four, the [[sorted set]], and this section builds the board on Redis's. Each board is one sorted set whose members are player ids and whose scores are what the board ranks by:
 
-| Query | Command | Time for N members |
+| Query | Command | Time, for N members on the board |
 | --- | --- | --- |
 | Submit a score, keeping each player's best | `ZADD board GT CH score player` | O(log N) |
-| The top N | `ZRANGE board 0 N-1 REV WITHSCORES` | O(log N + M) for M entries |
+| The top K | `ZRANGE board 0 K-1 REV WITHSCORES` | O(log N + K) |
 | A player's rank | `ZREVRANK board player` | O(log N) |
-| The players around a player | `ZRANGE board from to REV WITHSCORES` | O(log N + M) |
+| The players around a player | `ZRANGE board from to REV WITHSCORES` | O(log N + K) for K entries |
 | A friends' board | `ZMSCORE board friend friend …` | O(F) for F friends |
 
 `GT` changes a member only when the new score is greater, and still adds a member that was not there, so the board keeps each player's best; a board that keeps the latest score uses a plain `ZADD`, and one that adds scores up uses `ZINCRBY`. `CH` makes the reply count the entries that changed, which tells the service whether the run set a new best. `ZREVRANK` counts from the highest score, starting at 0, and the players around rank r are the range from r − 5 to r + 5, with the start held at 0 near the top, since a negative index counts from the end of the set. Older examples use `ZREVRANGE`, which Redis's reference marks as deprecated in favor of `ZRANGE` with `REV`. Each command's time complexity is the one that [Redis's command reference](https://redis.io/docs/latest/commands/zadd/) states for it.
 
 The sorted set is an index over the scores, and the database keeps the record. Each accepted score is written first to a table in the database, with the run it came from, and reaches the set through the outbox of [[#design-caches-queues]], so that a crash between the two writes delays the update instead of losing it; a job can read a period's scores back into a new key if the Redis node is lost. Redis can persist its data, with snapshots and an append-only file, but a snapshot loses the writes made since it was taken, while a board rebuilt from the database is exact. The database's copy also answers what the set cannot: which run produced a score, and whether it passed its checks.
+
+The commands and the database record above are the complete baseline: a board that submits, ranks and survives the loss of a Redis node. The rest of the section makes it fair under ties and resets, and then says what to do when one node is not enough.
+
+### Ties and resets
 
 Equal scores need a rule. Redis orders members with equal scores lexicographically, by the member itself, so in a reverse range “p-b” ranks above “p-a”, for no reason a player would accept. The usual rule is that whoever reached the score first ranks higher, and the time goes into the stored value. For a weekly board, with t the seconds since the week began:
 
@@ -310,17 +336,21 @@ redis-cli ZMSCORE lb:week:2026-09-21 p-17 p-99            # a nil for a friend w
 
 Daily, weekly and seasonal boards are separate keys, such as `lb:week:2026-09-21` for the week that begins that Monday. The reset is a moment in UTC, and the design says what it means in each time zone: a weekly reset at 00:00 UTC on Monday falls at 5 p.m. on Sunday in California in summer and at 9 a.m. on Monday in Japan, so the board's last hours come at a different part of each player's day. At the reset, new scores go to the next week's key, and a job closes the old board once: it takes the final standings from the database's scores, the complete copy, rather than from the set, which may still be applying the last updates, archives them, pays each player's reward under an operation id made of the board and the player, so that a rerun of the job pays nobody twice, and gives the old key an expiry with `EXPIREAT`, which takes a time in Unix seconds. Unity's Leaderboards service offers resets on a schedule that keep an archive of the previous scores.
 
-How much memory a board takes is the estimate of [[#design-estimation]], which assumed 100 bytes per entry. In this chapter's run on Redis 8.10.2, built with the macOS allocator, `MEMORY USAGE` counted a board of a million players at 77 bytes per entry with ten-character player ids and at 109 with 36-character UUIDs, and a board of 10 million ten-character ids at 895 MB, 89 bytes per entry. A server with another allocator gives somewhat different figures, and the estimate holds: one weekly board of 10 million players fits in one node's memory.
+### Scaling past one node
 
-A board outgrows one node when a game keeps many of them, or writes to one faster than one node takes, and a key does not spread over nodes: Redis Cluster places each key in one hash slot, which one node serves. Two designs go further. The first splits a board into shards by player id, each a sorted set on its own node: the top N is the merge of the shards' top N, and a player's rank is the sum, over the shards, of the players with a higher stored value, one `ZCOUNT` on each; two players with equal stored values, which the time makes rare, then share a rank, where one board would order them by member. The second changes the product. Players are placed in cohorts of fifty to a hundred, each with a small board of its own. Each board is then bounded, a cohort of a hundred stays in Redis's compact encoding at 22 bytes per entry in the same run, and nothing needs merging. It also gives each player a race they can win. At rank 3,456,789 of 9 million, a better run changes nothing the player can see, while fifth of a hundred is a place that a good evening can change, and rewards are paid by place in the cohort. Unity's Leaderboards calls these buckets: with a bucket size of 100, each player sees 99 others. Placing each player in a cohort at their first score of the period fills cohorts with players who are playing now, rather than with accounts that stopped months ago.
+How much memory a board takes is the estimate of [[#design-estimation]], which assumed 100 bytes per entry. Evidence note: in this chapter's run on Redis 8.10.2, built with the macOS allocator, `MEMORY USAGE` counted a board of a million players at 77 bytes per entry with ten-character player ids and at 109 with 36-character UUIDs, and a board of 10 million ten-character ids at 895 MB, 89 bytes per entry. A server with another allocator gives somewhat different figures, and the estimate holds: one weekly board of 10 million players fits in one node's memory.
 
-A cohort design gives up the exact global rank, and an approximate one is what a player deep in a board wants anyway: “top 38%”. A histogram of scores answers it: a count of players in each bucket of, say, 100 points, updated when a player's best moves from one bucket to another. The share of players above a score is the count in the buckets above it, plus a share of the player's own bucket, divided by the total, and a few hundred counters answer it for any number of players.
+A board outgrows one node when a game keeps many of them, or writes to one faster than one node takes, and a key does not spread over nodes: Redis Cluster places each key in one hash slot, which one node serves. Two designs go further. The first splits a board into shards by player id, each a sorted set on its own node: the top K is the merge of the shards' top K, and a player's rank is the sum, over the shards, of the players with a higher stored value, one `ZCOUNT` on each; two players with equal stored values, which the time makes rare, then share a rank, where one board would order them by member. The second changes the product. Players are placed in cohorts of fifty to a hundred, each with a small board of its own. Each board is then bounded, a cohort of a hundred stays in Redis's compact encoding at 22 bytes per entry in the same run, and nothing needs merging. It also gives each player a race they can win. At rank 3,456,789 of 9 million, a better run changes nothing the player can see, while fifth of a hundred is a place that a good evening can change, and rewards are paid by place in the cohort. Unity's Leaderboards calls these buckets: with a bucket size of 100, each player sees 99 others. Placing each player in a cohort at their first score of the period fills cohorts with players who are playing now, rather than with accounts that stopped months ago.
+
+A cohort design gives up exact global rank. For players far down the global board, an approximate position such as “top 38%” may be more useful. A histogram of scores answers it: a count of players in each bucket of, say, 100 points, updated when a player's best moves from one bucket to another. The share of players above a score is the count in the buckets above it, plus a share of the player's own bucket, divided by the total, and a few hundred counters answer it for any number of players.
+
+### Friends and cheating
 
 A friends' board reads the friends' scores when it is asked for, with `ZMSCORE`, sorts them in the service, and caches the result for a minute. The call grows with the friends list, which suits lists in the hundreds. A board kept for each player and updated whenever a friend scores would multiply each score's writes by the number of friends.
 
 The score itself is the board's weakest point, since it comes from the client ([[#design-round-method]]). The server computes it from what the run recorded, or checks it against what the run allows: the run's duration, the level's highest possible score, the player's history. It limits how often a player can submit, and refuses values outside a plausible range. A player removed for cheating leaves the board with `ZREM`, their scores in the database are marked with the reason, and the end-of-period job passes over them, so the rewards go to the players below.
 
-Lab exercise: Implement submit, top N, rank and around-me against a local Redis, or in .NET with a sorted structure if you have no Redis, with ties broken by the time a score was reached. Test two players who reach the same score a minute apart, a player who repeats their best score later, and a stored value past 2^53.
+Lab exercise: Implement submit, top K, rank and around-me against a local Redis, or in .NET with a sorted structure if you have no Redis, with ties broken by the time a score was reached. Test two players who reach the same score a minute apart, a player who repeats their best score later, and a stored value past 2^53.
 
 ?? design-leaderboard-structure Which pair serves a weekly leaderboard of 10 million players?
 * A sorted set for ranks, and a database that holds each accepted score
@@ -354,7 +384,7 @@ Lab exercise: Implement submit, top N, rank and around-me against a local Redis,
 - `ZADD` with `XX`, which updates the players already on the board
 > `GT` adds new players and changes an existing entry when the new score is greater, so a worse run leaves the best in place. A plain `ZADD` lets a worse run lower the entry, `ZINCRBY` sums the runs, `NX` keeps the first score all week, and `XX` does not add a player who has no entry yet.
 
-?+ How does the service show the ten players around a player?
+?+ How does the service show a player with the five players above and the five below?
 * It reads the player's rank, then the range of ranks around it
 - It reads the whole board, then finds the player in the service
 - It reads the players whose scores are within ten points of theirs
@@ -518,9 +548,9 @@ Entity interpolation smooths the other players. Their states arrive 20 times a s
 
 Lag compensation makes aiming at what the player sees work. When a shot arrives, the server rewinds the other players to where the shooter saw them, by the shooter's latency and interpolation delay, and checks the hit there. The shooter's view decides, and the target pays for it, now and then hit after reaching cover.
 
-Deterministic lockstep drops the state altogether. Each client runs the same simulation, and the clients exchange only their inputs for each turn, so the traffic stays small however many units the game moves. It needs the simulation to give identical results on each device, which floating-point code does not do across compilers and processor architectures without deliberate work, and the game advances at the pace of the slowest player's inputs.
+Deterministic lockstep is a different approach, not a fifth technique to add to the four above. It drops the state altogether. Each client runs the same simulation, and the clients exchange only their inputs for each turn, so the traffic stays small however many units the game moves. It needs the simulation to give identical results on each device, which floating-point code does not do across compilers and processor architectures without deliberate work, and the game advances at the pace of the slowest player's inputs.
 
-Together they explain why a shooter and a card game need different servers. A competitive shooter needs dedicated servers near its players at a high tick rate, with prediction, interpolation and lag compensation, because the authority has to stay out of the players' hands and each millisecond shows. A turn-based card battler needs no real-time server: each move is an HTTP request that the backend checks against the rules, and the opponent learns of it over the persistent connection or by a push. Between them, a co-op builder can run on a client host through a relay, since players who cooperate have little to gain by cheating each other, with the world saved to the backend so that it outlives its host.
+These approaches explain why a shooter and a card game need different servers. A competitive shooter needs dedicated servers near its players at a high tick rate, with prediction, interpolation and lag compensation, because the authority has to stay out of the players' hands and each millisecond shows. A turn-based card battler needs no real-time server: each move is an HTTP request that the backend checks against the rules, and the opponent learns of it over the persistent connection or by a push. Between them, a co-op builder can run on a client host through a relay, since players who cooperate have little to gain by cheating each other, with the world saved to the backend so that it outlives its host.
 
 Exercise: Choose a topology for a real-time shooter, a co-op builder and a turn-based card battler, and justify each in two sentences: one on where the authority runs, and one on what the choice costs.
 
@@ -622,6 +652,8 @@ Push notifications leave the backend through a send service. The client register
 
 A send to each player at once is a spike that the send service causes itself. A push to 2 million players sent in one minute brings the players who tap it in the same few minutes: if one in ten taps, 200,000 sessions start together, each with the sign-in and loading of [[#design-estimation]]. Sent in slices over 20 minutes, the same taps arrive at a twentieth of the rate, and FCM's own guidance warns that sudden, unsmoothed changes in traffic cause spikes. Chapter 14 takes up the spike that such a push still causes.
 
+A moderation decision has to reach the server that accepts messages before it reaches any screen. Take a guild officer who mutes a member for an hour. The guild service checks that the officer's role in the guild outranks the member's, and writes a mute record: the guild, the muted player, who muted them, and the time the mute ends. The chat service reads that record when a message arrives, before it stores or publishes it, and rejects a send from a muted player with a reason the client can show. A client that ignores the mute, or one that has not heard of it yet, therefore gains nothing. The mute is also published to the guild's channel as an event with a sequence number of its own, so that connected clients update their screens at once, and a client that reconnects asks for the events after the last sequence number it holds and receives the mute in order with the messages. The record, not the event, is the authority: a client that missed every update is still refused at the next send, and learns why from the rejection.
+
 Exercise: Design chat for guilds of fifty with a week of history. Estimate its messages a second at the peak, and say how a member who was offline for a day catches up, and how a guild officer's mute reaches each member's client.
 
 ?? design-presence-ttl Why does presence expire on a timer instead of being cleared when the player logs out?
@@ -688,6 +720,30 @@ Exercise: Design chat for guilds of fifty with a week of history. Estimate its m
 - The client, which hides pushes that arrive too close together
 > Many features notify the same player, and none knows what the others sent, so the cap lives where each push passes: the send service, which counts each player's sends, holds or drops those over the cap, and keeps quiet hours in the player's time zone. A push that the client hides has still woken the phone, and the operating system does not cap a game's notifications for it.
 
+?? design-chat-order-moderation How does the design keep a guild channel in order, and keep a muted member from posting?
+* The chat service numbers each message per channel, and checks the mute record before storing
+- Each client stamps a message with its clock, and the service checks the mute record at login
+- The chat service numbers messages across all channels, and clients hide the muted member's posts
+- Each client sorts messages by arrival, and the guild service deletes the muted member's messages later
+- The chat service orders messages by sender id, and clients ignore a send from a muted player
+> The channel's sequence number, given when the message is stored, is the one order every client shows, and the mute record is read on each send before the message is stored or published, so a client that ignores or has not heard of the mute gains nothing. Client clocks disagree, and hiding on the client does not stop the server from storing and delivering the message.
+
+?+ A guild member was offline for a day and reconnects. How does their client catch up on messages and on a mute that began meanwhile?
+* It asks for the events after the last sequence number it holds and receives them in order
+- It waits for pub/sub to replay what it missed, since the subscription remembers its place
+- It downloads the whole week of history and drops the messages that it already shows
+- It asks the presence service which members spoke while it was away, then loads their messages
+- It asks for the messages sent after its own clock time when it went offline
+> Pub/sub delivers each message at most once, so a subscriber that was away misses it, and the history store is keyed by channel and ordered by sequence number. The client asks for everything after the last number it holds, and the mute arrives as an event with a number of its own, in order with the messages.
+
+?+ A muted member edits their app so that it ignores the mute event. What happens when they send a message?
+* The chat service finds the mute record and rejects the send with a reason
+- The message is stored, and other clients hide it once they receive the mute event
+- The message is delivered, and a moderator removes it after a report arrives
+- The message is accepted, since the client the player runs decides its own state
+- The message is held until the mute ends, then published in order
+> The record is the authority, and the chat service reads it when the message arrives, before it stores or publishes it. A client that missed or ignored every update is refused at the send and learns why from the rejection, and the event only updates the screens of clients that are connected.
+
 ## Live events, content, and telemetry {#design-live-events}
 
 A live event is data, which the game runs without a new build. Its record holds an id, a start and an end in UTC, the players it targets by platform, app version or segment, a configuration version, which holds its rules and rewards, and a content version, which names its art and levels. The client's code knows the kinds of event the game has, and the data says which one runs, when, and for whom. The configuration reaches clients through [[remote configuration]], within the environment of [[#release-environments]]. Unity's Remote Config expresses an event as a Game Override: settings for a targeted group of players, with a start and an end in UTC and a priority that decides between overrides that overlap.
@@ -707,6 +763,8 @@ consumers    drop repeated ids, check the schema    -> warehouse, by event time
 ```
 
 The client gives each event an id and the time it happened, keeps it in the bounded queue of [[#network-offline]], and sends batches on a timer and when the game goes to the background, since a paused game may not run again ([[#os-lifecycle]]). Unity's Analytics works this way: its SDK fills in each event's id and timestamp and uploads batches every 60 seconds. A batch whose response is lost is sent again with the same ids, and the queue delivers at least once ([[#design-caches-queues]]), so the consumers remove duplicates by the event's id; Unity's Analytics ingestion describes its `eventUUID` as the way to prevent duplicates after a network timeout. The id is made on the device, because the device alone knows that a batch is a resend. Each event names the version of its schema, so that the warehouse can read the events of clients that are months old, and events that no consumer understands go to a dead-letter store instead of vanishing. High-volume events, such as frame times, are sampled by session, one session in a hundred for instance, with the rate recorded so that counts can be scaled back up. And consent comes first: as [[#sdk-consent-init]] sets out, nothing is collected before the player's answer where the law asks for consent, and Unity's Analytics records its standard events once consent is given.
+
+Retention of the events and retention of their ids are separate choices. The warehouse may keep events for two years, while the consumers need to remember ids only for as long as a repeat can still arrive. Take a phone that records an event on Monday and loses its connection before the upload. The queue of [[#network-offline]] holds the batch, and the phone sends it on the following Sunday, and if that response is lost as well, once more in the next session. The first upload was counted on Sunday. A consumer that forgot the id after a day counts the resend as new, so the horizon of remembered ids has to cover the longest time the client keeps a batch, plus the time a queue may take to redeliver.
 
 Exercise: Trace one analytics event from a tap to a dashboard, marking each place where it can be lost or counted twice, and what prevents each.
 

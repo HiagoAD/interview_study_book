@@ -1,0 +1,123 @@
+{
+  "about": "Question-structure changes applied from the reader review in docs/reader-reviews/2026-09-29-b53e4f0/, with the user's consent on 2026-09-29. npm run guard -- questions --base b53e4f0 --allow structure --changes docs/reader-reviews/structure-changes.json checks them. Two concepts made only of new variants, network-reconciliation and design-chat-order-moderation, cannot be listed in this format and are reported as new by the guard. Variants are numbered from 1: a source variant by its place before the change, an added variant by its place after it.",
+  "newConcepts": [
+    {
+      "id": "http-json-serializer-limits",
+      "section": "http-dtos",
+      "variants": [
+        {
+          "from": "http-dto-mapping",
+          "variant": 3
+        },
+        {
+          "from": "http-dto-mapping",
+          "variant": 4
+        }
+      ]
+    },
+    {
+      "id": "http-wire-numbers",
+      "section": "http-dtos",
+      "variants": [
+        {
+          "from": "http-dto-mapping",
+          "variant": 5
+        },
+        {
+          "from": "http-dto-mapping",
+          "variant": 6
+        }
+      ]
+    },
+    {
+      "id": "http-token-storage",
+      "section": "http-sessions",
+      "variants": [
+        {
+          "from": "http-client-secrets",
+          "variant": 2
+        }
+      ]
+    },
+    {
+      "id": "http-client-attestation",
+      "section": "http-sessions",
+      "variants": [
+        {
+          "from": "http-client-secrets",
+          "variant": 3
+        }
+      ]
+    },
+    {
+      "id": "design-load-shedding",
+      "section": "design-spikes",
+      "variants": [
+        {
+          "from": "design-autoscaling-lag",
+          "variant": 4
+        },
+        {
+          "from": "design-autoscaling-lag",
+          "variant": 5
+        },
+        {
+          "from": "design-autoscaling-lag",
+          "variant": 6
+        }
+      ]
+    },
+    {
+      "id": "design-privacy-rules",
+      "section": "design-abuse-privacy",
+      "variants": [
+        {
+          "from": "design-data-retention",
+          "variant": 4
+        },
+        {
+          "from": "design-data-retention",
+          "variant": 5
+        }
+      ]
+    },
+    {
+      "id": "boundary-platform-mechanisms",
+      "section": "boundary-editor-device",
+      "variants": [
+        {
+          "from": "boundary-first-split",
+          "variant": 4
+        },
+        {
+          "from": "boundary-first-split",
+          "variant": 5
+        },
+        {
+          "from": "boundary-first-split",
+          "variant": 6
+        },
+        {
+          "from": "boundary-first-split",
+          "variant": 7
+        },
+        {
+          "from": "boundary-first-split",
+          "variant": 8
+        }
+      ]
+    }
+  ],
+  "movedVariants": [],
+  "addedVariants": [
+    {
+      "concept": "boundary-first-split",
+      "variant": 4
+    },
+    {
+      "concept": "boundary-first-split",
+      "variant": 5
+    }
+  ],
+  "addedAnswers": []
+}

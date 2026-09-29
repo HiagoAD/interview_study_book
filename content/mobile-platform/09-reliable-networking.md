@@ -51,6 +51,34 @@ static async Task<ApiResponse> SendAttemptAsync(Func<ApiRequest, CancellationTok
 
 One wait escapes the timer. When chapter 8's session layer has to refresh the access token first, the request waits for a refresh that every waiting request shares, and that refresh takes no single caller's token. Only the transport's guard against a stall limits it, so an attempt that waits for a refresh can end later than its own timer.
 
+The wait can be bounded without touching the refresh. Each caller waits for the shared refresh and for its own deadline, whichever comes first, and leaves the refresh running for the callers that still need it. The sketch below shows the wait only, as something chapter 8's session layer would call before it sends. The code that calls it must check the remaining deadline again after the wait:
+
+```csharp
+// Wait for the shared refresh, but only until this operation's deadline.
+// Stopping the wait does not cancel the refresh: other callers may still need it.
+static async Task<bool> WaitForRefresh(Task refresh, DateTime deadlineUtc, CancellationToken owner)
+{
+    TimeSpan left = deadlineUtc - DateTime.UtcNow;
+    if (left <= TimeSpan.Zero)
+        return false;
+
+    using var stop = CancellationTokenSource.CreateLinkedTokenSource(owner);
+    Task timer = Task.Delay(left, stop.Token);
+    Task first = await Task.WhenAny(refresh, timer);
+    stop.Cancel();                        // release the timer; the refresh is untouched
+
+    if (first != refresh)
+    {
+        owner.ThrowIfCancellationRequested(); // the owner left: not a timeout
+        return false;                         // the deadline passed while waiting
+    }
+    await refresh;                        // rethrows if the refresh failed
+    return true;
+}
+```
+
+Take two callers with deadlines of 3 and 30 seconds, both waiting on one refresh that takes 8 seconds. At 3 seconds the first caller's wait ends and its operation fails with a timeout, while the refresh goes on. At 8 seconds the refresh completes, the second caller checks that it has about 22 seconds left, and sends its request with the new token.
+
 A timeout and a cancellation must stay apart, because a policy may retry the first and never the second: the player who left the screen is not waiting for another attempt. Both reach the attempt as an `OperationCanceledException`, since the timer works by cancelling, as `HttpClient`'s own timeout does. The test is the one chapter 8 gives for `HttpClient`, the owner's token, which does not depend on the runtime: an `OperationCanceledException` while the owner's token is not cancelled is a timeout. The attempt turns that into a response with no status, and lets the owner's cancellation go on up as an exception, so nothing above it retries for an owner that has gone.
 
 Cancellation ends the client's waiting, not necessarily the server's work. A request that has reached the server may run to its end there, or may have committed before the client gave up: in the same .NET test, the server finished both requests whose client had stopped waiting, one by its timeout and one by its token, and in the Unity tests above, the local server completed every slow request after the client had stopped waiting for it. A cancelled write is therefore an unknown outcome, just as a timed-out one is. Its pending record stays, as the section on [[idempotency]] keys below describes, and a purchase screen that closed while it was verifying cannot conclude that nothing happened.
@@ -191,6 +219,25 @@ public static class RetryRules
 }
 ```
 
+The table only answers whether a failed attempt may be repeated. The HTTP layer around it decides the rest, in this order, for each attempt:
+
+```csharp
+// Pseudocode for the HTTP layer's loop; the feature calls it once per operation.
+// deadline = now + policy.DeadlineSeconds
+// for attempt = 1 .. policy.MaxAttempts:
+//     if the circuit breaker for this endpoint is open: fail at once, and the feature shows its offline state
+//     if the deadline has passed: fail with a timeout
+//     response = session layer sends the request, with the attempt's timeout clipped to the time left
+//     if response is a success or an answer a retry would repeat: return it
+//     if attempt == MaxAttempts or !ShouldRetry(policy, status, sent, keyInFlight): return the failure
+//     if the retry budget is spent: return the failure
+//     wait = max(random backoff for this attempt, Retry-After if given)
+//     if now + wait is past the deadline: return the failure
+//     sleep for wait, unless the owner cancels
+```
+
+The transport supplies the status, or 0 when nothing arrived, and the `sent` flag, which for `UnityWebRequest` comes only from the error text. Everything else, the budget, the breaker and the wait, belongs to the HTTP layer. As a trace, take `POST /rewards/claim`, which carries a key. Attempt 1 sends the request, the server commits it, and the connection drops: status 0 and `sent` true, so the policy retries because the request is idempotent. It waits about a second and sends attempt 2 with the same key and body. The server returns the stored result, and the player gets one reward.
+
 Exercise: Find every retry loop in a codebase, including those inside SDKs, whose documentation says what each one retries and how often. Then compute the worst-case number of attempts that one player action can make at the backend.
 
 ?? network-retry-classes A reward claim, a POST without an idempotency key, fails. After which failure can the policy resend it without risking a second reward?
@@ -282,7 +329,7 @@ A backend written before the draft may expect the key without quotes, or in a he
 | The same key with a different payload | 422 Unprocessable Content |
 | No key, on an endpoint that requires one | 400 Bad Request |
 
-The client's half comes down to four rules.
+The client's half comes down to five rules.
 
 The key belongs to one logical operation. It is created once, when the player acts, and every attempt of that operation carries it; a key made per attempt, per screen or per session breaks the link between the attempts. In a .NET test, a fake server committed a write and closed the connection without answering; the retry with the same key got the recorded result and the server applied the write once, while a retry with a new key made the server apply it a second time.
 
@@ -290,7 +337,7 @@ The key is saved before the first send. A key that exists only in memory dies wi
 
 The payload is the same every time. A server that follows the draft compares each request's payload with the one stored under its key, and answers 422 when they differ. The client builds the body once, stores it with the key, and resends the stored body; anything that changes from one attempt to the next, such as an attempt number or a send time, goes in a header.
 
-The key's lifetime is shorter than the server's. The draft lets a server expire keys, and asks it to publish its expiry policy; a backend might keep them for a day. Past that window, a resent request is a new operation to the server. So the client resends a pending operation only within the window, and after it asks the server what became of the operation, which the backend's API has to make possible, instead of resending it.
+The client stops resending before the server forgets the key. The draft lets a server expire the keys it has stored, and asks it to publish its expiry policy; a backend might keep them for a day. Past that window, a resent request is a new operation to the server. So the client's resend window has to be shorter than the server's retention, and the client resends a pending operation only within its own window. After it, the client asks the server what became of the operation, which the backend's API has to make possible, instead of resending it. Suppose the server keeps keys for 24 hours and the client resends for at most 12. A claim that is still pending after 12 hours is looked up, not sent again. Had the client resent it at hour 30, the server would have treated it as a new claim and paid twice.
 
 A key is never reused for a different operation. Reused for a second purchase of the same item with in-game coins, where the payload is the same, it returns the first purchase's stored result, and the second purchase silently does nothing; with a different payload, it gets 422. Where the client can name the operation's result itself, the address can carry the identity instead of a header: a `PUT /claims/{claimId}`, with an id the client chose, is idempotent by HTTP's definition of PUT.
 
@@ -323,6 +370,8 @@ public static class Operations
 ```
 
 The feature creates the operation, saves it with the game's other pending records, and hands it to the HTTP layer. For each attempt, under the endpoint's policy from the previous section, that layer sends the request `ToRequest` builds through chapter 8's session layer, which adds the current access token, and its transport.
+
+For the exercise, a minimal fake is a local listener with a dictionary from key to stored result and a counter of writes applied. On a key it has not seen, it increments the counter, stores the result, and closes the socket without writing a response; on a key it has seen, it returns the stored result. The counter is what the test reads. To cover a restart, serialize the `PendingOperation` to a file after the first attempt fails, build a new client, load the file, and resend. A fake at the transport layer, one that returns a scripted “no response” to the HTTP layer, shows that the policy retries and reuses the key. Only a real socket shows how the platform's networking stack reports a connection that closes without an answer.
 
 Lab exercise: Add an idempotency key to one write in a sample client, and test the lost-response case against a fake server that commits the write and then closes the connection without answering. Check that the retry gets the recorded result and that the server applied the write once. Then give the retry a new key, and watch the second write appear.
 
@@ -475,6 +524,30 @@ Exercise: In airplane mode, go through three parts of your game, such as a purch
 - `VALIDATED` alone, since the probe reached the portal
 - `CAPTIVE_PORTAL` alone, without `INTERNET`
 > The network is set up for the internet, so it has `INTERNET`, and the probe found a portal, so it has `CAPTIVE_PORTAL`. It lacks `VALIDATED` until the user signs in, when it gains `VALIDATED` and loses `CAPTIVE_PORTAL`.
+
+?? network-reconciliation A player saved on a phone while a tablet was offline with an older copy of the same cloud save. The tablet reconnects and uploads with `If-Match` set to the `ETag` it last downloaded, and the server answers 412. What should the game do?
+* Download the newer save, then merge it or ask the player, keeping the upload pending
+- Send the same upload again with the same `If-Match`, until the server accepts it
+- Send the upload again without `If-Match`, so that the tablet's copy is kept
+- Drop the tablet's copy and show the phone's save, without telling the player
+- Treat the 412 as a lost response and repeat the upload with its idempotency key
+> A 412 means another device saved in between, so the conditional write refused to overwrite it. Repeating it with the same `If-Match` fails the same way, and dropping the condition is the lost update it exists to prevent. The client downloads the newer version, merges it by the game's rules or asks the player, and the tablet's progress stays pending until that is settled.
+
+?+ A reward claim is sent, and the operation's deadline passes with no answer from the server. What does the player see?
+* The claim as pending, since the server may have applied it
+- The claim as failed, since no answer came before the deadline
+- The claim as confirmed, since the request left the device
+- The claim as rejected, since the server did not reply in time
+- The claim as cancelled, with the claim button offered again
+> A timeout says only that no answer arrived, not that the server did nothing. The operation stays pending, and reconciliation settles it later when the server can say whether it applied the claim, so showing it as failed or offering the button again invites a second claim.
+
+?+ Two devices were offline and each spent gems from the same balance. On reconnecting, how is the balance settled?
+* A server-side ledger applies each spend as an operation, and both devices show its balance
+- The game keeps the higher of the two balances, as it does for best scores
+- The game keeps the balance from the device that reconnects last
+- The game asks the player which of the two balances is correct
+- Each device subtracts the other's spend from the balance it holds
+> No rule applied to two balances can tell what each device spent, so a merge such as the higher value would either lose a spend or invent gems. The server-side ledger owns the currency: it receives each spend as a pending operation, applies it once, and the devices then show the ledger's balance, with a spend it refused shown as failed and why.
 
 ## Trace a request: ids, logs, and privacy {#network-observability}
 

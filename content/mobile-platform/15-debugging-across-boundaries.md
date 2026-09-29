@@ -155,37 +155,53 @@ Debugging exercise: Choose a device-only bug. List the rows one unchanged releas
 * Preservation of the managed members the serializer accesses
 - R8 keep rules for the Java class that initializes the SDK
 - Certificate trust for the request that delivered the JSON body
-- The product catalog stored in the operating system's cache
-- The request timeout used before the response was downloaded
+- The DTO field names compared with the keys in the received body
+- The character encoding used to decode the downloaded response
 > The input is present and deserialization changes with managed stripping. Preserve the required managed members and retest at the release setting. R8 rules affect Java or Kotlin code rather than C# DTO metadata.
 
 ?+ A request that works on desktop fails on Android before returning an HTTP status. Its configured URL begins with `http`. What should be checked first?
 * The final URL, transport error and applicable cleartext policy
-- The backend's JSON parsing of the response it sent to the device
-- The correct mapping of a successful purchase result to the screen
+- The certificate chain the host presents to the device
+- The DNS answer the device receives for the host name
 - The database constraint that prevents repeated reward grants
 - The managed fields preserved for deserializing a completed response
 > A cleartext URL makes transport policy a useful early split. The platform's error and the networking stack decide whether that policy caused the failure; the URL alone does not prove it.
 
-?+ An iOS launch report names `dyld` and a missing framework. Which check fits that evidence?
+?+ A build changes R8 settings, managed stripping and the SDK version together, and a device failure disappears. What does that comparison show?
+* That one of the three changes matters, with no way yet to tell which
+- That minification caused the failure because it is the first setting listed
+- That the SDK version was responsible because it is the newest change
+- That managed stripping was the cause because it is the setting closest to C#
+- That the Editor result was correct because the device run has now passed
+> A comparison that changes several settings at once cannot attribute the result to any one of them. Change one setting at a time, or record the packaged output for each, before naming a cause.
+
+?+ A session vanishes on a phone under memory pressure, with no C# exception logged. Which observation separates the explanations first?
+* The exit reason the OS recorded and the memory measured before it
+- The stack of a managed exception caught by the game's top-level handler
+- The order in which the SDK's callbacks reached the main thread
+- The keep rules that were packaged with the release build
+- The serialized purchase request sent before the session ended
+> An operating system termination leaves evidence outside the managed runtime. The exit reason and memory measurements distinguish it from a caught exception, a callback ordering problem or a packaging change.
+
+?? boundary-platform-mechanisms An iOS launch report names `dyld` and a missing framework. Which check fits that evidence?
 * Inspect the framework's embedding and dependencies in the built app
 - Add a camera purpose string to the app's source property list
-- Increase the timeout of the first backend request made at launch
+- Compare the provisioning profile's entitlements with the app's capabilities
 - Preserve the C# fields used by the first JSON response at sign-in
-- Change the backend endpoint selected by the release configuration
+- Compare the app's minimum iOS version with the framework's requirement
 > A dynamic linker report naming a missing framework directs the investigation to the built app's native dependencies. A privacy termination naming a purpose string would direct it to a different configuration.
 
 ?+ An iOS termination message explicitly names a missing camera usage description. What should be inspected?
 * The built app's `NSCameraUsageDescription` and the camera call path
 - The debug symbols archived for the previous successful app version
-- The APNs destination used by the production notification sender
+- The provisioning profile's entitlements for the camera capability
 - The native library's exported names used by the purchase bridge
-- The Java keep rules packaged with the updated analytics dependency
+- The framework embedding settings for the camera-using SDK
 > The privacy message names the configuration the camera API requires. Inspect the built app and why the SDK reached that API, including whether a newly enabled feature is intended to use it.
 
 ?+ A callback updates a Unity object from a Java worker thread on the phone. The fake calls it from the main thread. Which comparison addresses the failure?
 * Callback and dispatch thread ids in the real adapter and fake
-- Callback payload sizes before and after JSON serialization
+- Whether the Java proxy class for the callback survived minification
 - Native library versions before and after the latest SDK upgrade
 - The SDK initialization order on the phone and in the Editor
 - The completion timeout used by the real adapter and the fake
@@ -194,8 +210,8 @@ Debugging exercise: Choose a device-only bug. List the rows one unchanged releas
 ?+ A `System.IO` read of an Android `StreamingAssets` path fails, while the desktop read succeeds. What is the first useful inspection?
 * Whether the runtime path is an APK URL requiring another access API
 - Whether managed stripping renamed the string containing the file path
-- Whether Play App Signing removed the file while signing the APK
-- Whether the backend response omitted the file's local directory name
+- Whether the file's name differs in letter case from the requested one
+- Whether the app lacks the storage permission to read its own package
 - Whether the SDK's worker thread has permission to open a purchase sheet
 > Android StreamingAssets is inside the compressed APK and the path is a URL. Inspect the path, exact filename and access API before treating the failure as an ordinary missing desktop file.
 
@@ -299,7 +315,11 @@ Exercise: Write a development-against-production difference list for one integra
 
 This case is invented. After an Android SDK update, players on the new release report that payment completes but currency does not arrive. The previous client version is still succeeding. The purchase-start count is normal, while grants per started purchase fall for the new version. Separate store cancellations and pending payments from verified purchases without a grant; a single “purchase error” total conceals those differences.
 
+### Containment
+
 The incident owner halts the [[staged rollout]] and disables new purchase starts on affected clients through an existing flag, while keeping purchase recovery and the backend's reconciliation worker running. Players already on the release remain affected after a rollout halt. The client explains that completion is delayed and does not invite another purchase to repair the first. Preserve the release's binary, symbols, configuration snapshot, dependency diff and logs, following [[#design-slos]].
+
+### Evidence
 
 The update is a lead. Several mechanisms fit its timing:
 
@@ -325,9 +345,13 @@ client op=p41 stage=adapter-result result=verification-failed
 
 The native callback reached the client. The server received the verification request and rejected its shape. This narrows the immediate failure to the adapter's outgoing contract. It does not establish that the store token is valid or that the purchase belongs to this player; validation has not reached those checks yet. It also gives no reason to alter R8 rules for this operation.
 
+### Contract repair
+
 The integration copied the updated SDK object's `token` property into the request by serializing that object directly. The backend's existing contract still expects `purchaseToken`. A recorded, sanitized fixture reproduces the mismatch without starting another payment. The fix maps the SDK result into the game's stable request DTO, as [[#http-dtos]] recommends. An SDK's internal object is not the game's network contract.
 
 A compatible backend patch can also accept either field while affected clients remain installed, rejecting conflicting values and applying the same authentication, store verification, ownership and duplicate-grant checks to both forms. That is an explicit compatibility path, not acceptance of an unverified receipt. Keep the old field working for older clients and retire the temporary input only under the compatibility policy from [[#http-versioning]].
+
+### Backlog recovery
 
 Fixing new attempts leaves purchases from the incident unresolved. Use the durable records from [[#design-economy]], client purchase queries and store notifications to identify them. A Google Play real-time notification says that state changed; the backend queries the Developer API for the current state before acting. For the one-time consumable in this case, the recovery sequence is:
 
@@ -340,6 +364,8 @@ Fixing new attempts leaves purchases from the incident unresolved. Use the durab
 Google Play's [billing integration guide](https://developer.android.com/google/play/billing/integrate), checked September 27, 2026, requires acknowledgement within three days of a purchase reaching `PURCHASED`; consumption satisfies that requirement for consumables. The window does not run while payment is `PENDING`. This requirement predates this imaginary SDK update. The test environment uses an accelerated interval, so test timing is not evidence of the production deadline.
 
 Work through the backlog promptly, before acknowledgement deadlines expire. An expired, refunded or revoked purchase needs its current store state reconciled with any existing grant; do not credit it as a newly verified paid purchase merely because an old client log says `PURCHASED`. If a grant already exists, apply the refund and entitlement policy, keeping an audit record. If the player paid but received neither content nor a refund, track the case to delivery or a refund through support. A gesture of compensation is a separate recorded decision. There is no single “refund window” that settles these cases across stores. On iOS, verified delivery precedes finishing the StoreKit transaction; apply Apple's transaction and revocation states rather than copying Play's acknowledgement deadline.
+
+### Verification and prevention
 
 Verify the fix with the release-configured candidate on the internal testing track. Follow a test purchase from callback through server verification, one durable grant and successful consumption. Repeat recovery after a lost response and a restart, and send a duplicate callback for the same purchase through a controlled test. Check the balance and grant record, not just the screen's success message. Also run an old-client request against the compatible backend.
 
@@ -492,13 +518,40 @@ A missing library commonly produces a load failure; it does not explain a later 
 
 Duplicate native files also have two different stages. Android's build documentation shows a native merge failure for two files with the same APK path. A `pickFirsts` packaging rule can select one of them, as the [Android Gradle Plugin reference](https://developer.android.com/reference/tools/gradle-api/8.10/com/android/build/api/dsl/JniLibsPackaging) specifies, but that selection proves nothing about its compatibility with both callers. Inspect which file was selected and the versions each SDK expects. Prefer a compatible dependency set to hiding a collision with a broad packaging rule.
 
-In this case, the evidence eventually shows a worker-thread callback entering a Unity object API. The previous adapter queued that work; the update bypassed the queue on an error path. A minimal project reproduces the same stack when that error is triggered, and restoring the handoff removes the failure across repeated runs on the affected configuration. This is the case's evidence for the fix. The top SDK frame alone was not: a library can crash while using a pointer corrupted or freed by its caller. Apple's [memory-access crash guide](https://developer.apple.com/documentation/xcode/investigating-memory-access-crashes) explains why the offending write may be absent from the stack at the later crash.
+In this case, the evidence eventually shows a worker-thread callback entering a Unity object API. The observations that select this explanation are a pair of fictional traces from the same reproduction, one per client version. Each line records the thread that ran the code. The main thread's identity is logged once at startup:
+
+```text
+main-thread id=t1
+old client: native op=c7 stage=error-callback thread=t9
+old client: bridge op=c7 stage=enqueue target=main
+old client: main op=c7 stage=apply-result thread=t1
+new client: native op=c7 stage=error-callback thread=t9
+new client: adapter op=c7 stage=apply-result thread=t9
+new client: crash signal=SIGSEGV op=c7
+```
+
+The old client hands the error result to the main thread through the bridge's queue. The new client has no enqueue line and applies the result on thread `t9`, then crashes at the first Unity object call. The adapter's error branch explains the difference: the previous code queued that work, and the update bypassed the queue on an error path, while the success path still queued it.
+
+Each observation weakens some rows of the table. The `t9` line on the crash path, with the crash tied to a Unity object call, weakens the page-size, missing-ABI and missing-symbol rows, because those would fail at load or on any path. The success path, which still queues and still runs, weakens a general memory-corruption explanation, although it does not remove it. No single line proves the cause. A stack that ends in the SDK library would also fit corrupted memory, so the thread evidence must line up with the code path and with the result of the repair. A minimal project reproduces the same stack when that error is triggered, and restoring the handoff removes the failure across repeated runs on the affected configuration. This is the case's evidence for the fix. The top SDK frame alone was not: a library can crash while using a pointer corrupted or freed by its caller. Apple's [memory-access crash guide](https://developer.apple.com/documentation/xcode/investigating-memory-access-crashes) explains why the offending write may be absent from the stack at the later crash.
 
 On iOS, use the complete OS crash report and read its exception and termination reason before its frames. A [[dynamic linker]] failure, a watchdog termination, a memory termination and a bad memory access need different investigations ([[#ios-failure-evidence]]). Locate each binary's [[dSYM]] by the UUID in the report, checking it with `dwarfdump --uuid`. Apple's [symbol-file guide](https://developer.apple.com/documentation/xcode/locating-a-missing-debug-symbol-file) requires the binary and dSYM UUIDs to match. A device report needs the device build's symbols; a simulator reproduction can help isolate code without replacing that evidence.
 
 If the SDK still appears responsible, prepare a minimal project before escalation. Keep the exact SDK, Unity and build-tool versions, the relevant stripping and packaging settings, and the lifecycle or callback sequence that reproduces it. Remove unrelated gameplay in steps, rerunning after each reduction so the failure remains. Give the vendor the expected and observed behavior, affected OS and ABI, steps and frequency, complete symbolicated reports, binary identities and the comparison with the last working version. Redact player data and credentials without removing the stack, identity or configuration evidence needed to reproduce. An SDK stack frame makes a useful investigation lead; a reproducible failure under its documented contract makes a useful vendor report.
 
-Lab exercise: Reduce one SDK problem to a minimal project while preserving its failure. Keep a short record of each removed component and rerun, then assemble the version list, reproduction steps and matching crash artifacts another engineer would need.
+### A practice packet
+
+The packet is fictional. It holds the two traces above, a crash report whose top frame is in `libexample.so`, and a reduction log that starts like this:
+
+```text
+run 1  full game, error callback forced            crash    keep
+run 2  remove menus and audio                      crash    keep
+run 3  remove purchase flow, keep SDK init + error callback   crash    keep
+run 4  remove the SDK's error-path adapter branch  no crash  restore it
+```
+
+Continue the log on paper until the project holds only SDK initialization, the forced error callback and the adapter branch. Then write the report. It is acceptable when it names the exact versions, the trigger, the expected and observed behavior, the thread evidence from both traces, and the comparison with the last working version. It also says what was not shown, such as whether the SDK itself contributes. The real-project version of this exercise remains the fuller one.
+
+Lab exercise: Reduce one SDK problem to a minimal project while preserving its failure. Keep a short record of each removed component and rerun, then assemble the version list, reproduction steps and matching crash artifacts another engineer would need. If you have no reproducible SDK fault, use the invented packet above on paper, and do the same for the earlier exercises if you have no incident of your own.
 
 ?? boundary-crash-cluster Most crash reports come from the most popular device model. What comparison should precede attributing the regression to that model?
 * Failures relative to exposure within each build and device group

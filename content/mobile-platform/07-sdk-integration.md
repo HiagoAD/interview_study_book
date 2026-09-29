@@ -19,7 +19,17 @@ What it adds shows in the build:
 | Minimum OS versions | The `minSdk` in each library's manifest, and the deployment target of each pod ([[#xcode-cocoapods]]) |
 | Tool versions | Its release notes: the Unity, [[Android Gradle Plugin]] and Xcode versions it supports |
 
-The vendor's documentation lists what the vendor meant to add, and a build diff shows what was added. Build the probe project, a copy of the game's project or an empty one with the same Unity version, settings and other SDKs, once without the SDK and once with it, export both, and compare them item by item. Transitive dependencies are where the two can part: the SDK's library depends on others, each with a manifest of its own, and their permissions, components and privacy manifests arrive with it whether or not the SDK's guide mentions them. In a test for this chapter, one dependency, Firebase Analytics 22.4.0, added to a copy of the probe's Gradle export changed its release build well beyond that one line: 20 more libraries resolved, the APK grew from 17.3 MB to 19.1 MB, and the merged manifest gained six permissions, among them `INTERNET`, `AD_ID` and two for Android's Ad Services APIs, with three services, a receiver, an activity and `FirebaseInitProvider`, a [[content provider]] that starts the SDK as the app launches. The merger's report traced that provider to `firebase-common`, a library the one dependency pulled in. On iOS, the matching pod added to a copy of the Xcode export resolved to nine [[pods]], among them GoogleUtilities with a subspec named `AppDelegateSwizzler`, and six of their sources carried privacy manifests, while the exported `Info.plist` did not change. An archive of that copy then failed in Xcode 27, which builds for iOS 15.0 and later, because four of those pods still declared iOS 9.0 or 12.0 as their deployment target: the kind of mismatch the row for tool versions is there to catch.
+The vendor's documentation lists what the vendor meant to add, and a build diff shows what was added. Build the probe project, a copy of the game's project or an empty one with the same Unity version, settings and other SDKs, once without the SDK and once with it, export both, and compare them item by item. Transitive dependencies are where the two can part: the SDK's library depends on others, each with a manifest of its own, and their permissions, components and privacy manifests arrive with it whether or not the SDK's guide mentions them. In a test for this chapter, one dependency, Firebase Analytics 22.4.0, was added to a copy of the probe's Gradle export and its matching pod to a copy of the Xcode export, and each build was diffed against the build without it. The exact figures are provenance, and each row of the table is a line for the evaluation sheet:
+
+| Platform | What the diff showed | What it means for the sheet |
+| --- | --- | --- |
+| Android | 20 more libraries resolved for the one dependency | The transitive dependencies are part of the cost, and each brings a manifest |
+| Android | The APK grew from 17.3 MB to 19.1 MB | The size row is measured on the release build, not read from the guide |
+| Android | The merged manifest gained six permissions, among them `INTERNET`, `AD_ID` and two for Android's Ad Services APIs, with three services, a receiver and an activity | The permissions row and the store's data declarations change with the SDK |
+| Android | `FirebaseInitProvider`, a [[content provider]] that starts the SDK as the app launches, was traced by the merger's report to `firebase-common`, a library the one dependency pulled in | The SDK can start itself before the game calls it, which a later section of this chapter takes up |
+| iOS | The pod resolved to nine [[pods]], among them GoogleUtilities with a subspec named `AppDelegateSwizzler`; the exported `Info.plist` did not change | The swizzling row has a subspec to check, and an unchanged `Info.plist` does not mean an unchanged app |
+| iOS | Six of those pods carried privacy manifests | The privacy row covers the pods as well as the SDK |
+| iOS | An archive of the copy failed in Xcode 27, which builds for iOS 15.0 and later, because four pods still declared iOS 9.0 or 12.0 as their deployment target | The minimum-version and tool-version rows are what catch this mismatch |
 
 How it behaves shows only when it runs. Measure it on a device, in a release-configured build, with and without the SDK:
 
@@ -37,6 +47,18 @@ How it ships decides how hard it will be to upgrade and to remove:
 | Native libraries alone | AARs, frameworks and xcframeworks that the team places, configures and updates itself |
 
 Many SDKs combine forms: a C# layer in a package, with a `*Dependencies.xml` file that [[EDM4U]] turns into Maven and CocoaPods dependencies. The vendor counts as much as the files: how often it releases, whether its changelog states changed behavior and raised minimum versions, whether it answers support requests, and how it has handled deprecations before.
+
+For readers with no SDK at hand, here is an invented packet to practise on. An imaginary SDK, ExampleStats 3.0, has a guide that lists one permission, `INTERNET`, and one dependency. The two builds of a probe project differ like this:
+
+```text
+Merged manifest      without: 9 permissions    with: 12   (added: INTERNET, AD_ID, ACCESS_NETWORK_STATE)
+Gradle libraries     without: 31               with: 38
+Release APK          without: 21.0 MB          with: 22.4 MB
+Manifest providers   without: 1                with: 2    (added: com.example.stats.StatsInitProvider)
+Pods added on iOS    4, two with privacy manifests, one with deployment target iOS 11.0
+```
+
+Fill the sheet from these lines alone, and mark each item where the diff disagrees with the guide.
 
 Lab exercise: Produce an evaluation sheet for one SDK from a build diff of the probe project: the libraries, permissions, components, `Info.plist` keys, privacy manifest entries and size it adds on each platform, and the start-up time on a device with and without it.
 
@@ -124,9 +146,16 @@ public static class GameEvents
 
 Each vendor gets an adapter that turns a `GameEvent` into its SDK's call, and the adapter is the one place that names the vendor. It also applies the vendor's rules. [Firebase Analytics' reference](https://firebase.google.com/docs/reference/cpp/group/event-names), for example, said in September 2026 that an event name has at most 40 characters, letters, digits and underscores, starting with a letter, and that an app can report 500 types of event with up to 25 parameters each. The adapter's tests check the schema against those rules, so an event the vendor would refuse fails in a test instead of vanishing on a device.
 
+`EventSchema` is a game-owned class, still to be written for the game: it loads the schema file and checks a name, its parameter keys and their types. A tiny fixture shows the file's shape:
+
+```json
+{ "level_completed": { "level": "int", "stars": "int", "duration_s": "int" },
+  "purchase_started": { "product_id": "string" } }
+```
+
 A schema kept in one file and events built in another drift apart, so two checks hold them together. An [[Edit Mode tests|Edit Mode test]] builds each event that `GameEvents` can make and validates it against the schema file. A development build validates each event again as it is tracked, which covers what the test cannot build, such as parameters that come from data. Both fail loudly, so a misspelled name surfaces in the first playtest instead of as a gap in a report weeks later. `Debug.isDebugBuild` is true in development builds and always true in the Editor, so release builds skip the check.
 
-Events start before the SDK can take them. The first scene reports that the game opened, the tutorial's first step fires while the consent prompt is still on screen, and the SDK may still be initializing. What an SDK does with a call made before it is ready is its vendor's choice, and its documentation may not say, so the game's own layer holds the events. It keeps them in a bounded queue until two things are true: the SDK is initialized, and the player's consent allows collection. Then it sends them in order, and each keeps the time it happened, which the time the SDK receives it would misstate. If the player denies consent, the queue is discarded. The bound is there because the wait can last as long as the player leaves the prompt open, and a full queue drops its oldest event and counts the drop, so the loss appears in the data instead of hiding in it:
+Events start before the SDK can take them. The first scene reports that the game opened, the tutorial's first step fires while the consent prompt is still on screen, and the SDK may still be initializing. What an SDK does with a call made before it is ready is its vendor's choice, and its documentation may not say, so the game's own layer holds the events. It keeps them in a bounded queue until two things are true: the SDK is initialized, and the player's consent allows collection. Then it sends them in order, and each keeps the time it happened, which the time the SDK receives it would misstate. The adapter passes that time on as a parameter of its own, `occurred_at_ms`, in milliseconds since the Unix epoch in UTC, taken from `OccurredUtc`. Whether a vendor also has a native field for an event's time is for its documentation to say. Either way the value means when the player did it, and the vendor's own ingestion or session time means when the vendor saw it, so the two must not be mixed in one report. If the player denies consent, the queue is discarded. The bound is there because the wait can last as long as the player leaves the prompt open, and a full queue drops its oldest event and counts the drop, so the loss appears in the data instead of hiding in it:
 
 ```csharp
 // One per vendor, in the vendor's assembly.
@@ -209,6 +238,8 @@ Three mistakes recur:
 - Personal data in events: a player's name or email address in a parameter, free text from a chat box, a precise location. [Google Analytics' policy](https://support.google.com/analytics/answer/6004245?hl=en) says its contracts prohibit sending personally identifiable information, and [Firebase's guide to user ids](https://firebase.google.com/docs/analytics/userid) says an id must not contain information that a third party could use to identify the user. The schema review is where it is stopped.
 - Editor sessions in production data. If the Editor runs the real adapter, each play session in the Editor sends events. The composition root of [[#platform-composition]] gives the Editor an implementation that logs, and development builds send to a separate project, so testers' sessions stay out of the numbers the business reads.
 
+Optional scripted trace, to test the queue: the queue holds at most three events, consent is unknown, and the calls arrive in this order: track A, B, C, D, then `Open()`. Write what each adapter receives, in order, and what the drop count is. Then run the same calls with `Deny()` in place of `Open()`, and again with `Deny()` called after `Open()`.
+
 Exercise: Write the interface and three event types for a feature you know, and name who approves a new event.
 
 ?? sdk-event-schema A team adds a second analytics SDK to a game that already has one. Where should the names and parameters of the game's events be defined?
@@ -264,7 +295,7 @@ Exercise: Write the interface and three event types for a feature you know, and 
 
 ## Consent, privacy, and initialization order {#sdk-consent-init}
 
-Consent comes before collection. Where the law or a store's policy requires the player's agreement, an SDK that collects data for analytics or advertising collects nothing until the player has given it, and whether a region requires it is a question for the game's privacy policy, not for the platform code. What the platform code owns is the mechanism. It keeps a consent state for each purpose the game asks about, unknown until the player answers and then granted or denied, and each adapter consults it before its SDK starts. The state can change at any time, since the player can change their mind in the settings, and a change reaches each SDK it concerns:
+Consent comes before collection. Three things can happen to an event, and the rest of this section keeps them apart: the game can buffer it locally, an SDK can collect it, and it can be transmitted off the device. The analytics queue of the previous section buffers events while consent is unknown, and sends or discards them once the player answers. Whether even that temporary buffering is allowed depends on the privacy policy the game chose. Where it is not, the game discards each event at the source, so nothing is held until the answer and events that fire in the meantime are lost. This is a question of clarity for the design, not a legal determination. Where the law or a store's policy requires the player's agreement, an SDK that collects data for analytics or advertising collects nothing until the player has given it, and whether a region requires it is a question for the game's privacy policy, not for the platform code. What the platform code owns is the mechanism. It keeps a consent state for each purpose the game asks about, unknown until the player answers and then granted or denied, and each adapter consults it before its SDK starts. The state can change at any time, since the player can change their mind in the settings, and a change reaches each SDK it concerns:
 
 ```csharp
 public enum ConsentPurpose { Analytics, Advertising, AdPersonalization }
@@ -337,6 +368,18 @@ public static async Task<bool> StartWithinBudget(Func<Task> start, TimeSpan budg
     }
 }
 ```
+
+A start that runs out of its budget may still finish afterward, and the helper does not stop it. In a small timeline, with a budget of five seconds:
+
+```text
+0 s    start() returns a task; the wait begins. Analytics is unavailable.
+5 s    The budget ends and the helper returns false. The game plays on.
+8 s    The SDK's start succeeds, or fails, in the background.
+       A failure reaches nobody: the helper stopped observing the task.
+       A success has not opened collection either: the game's capability is still unavailable.
+```
+
+Two owners fix the gaps. The caller that gets `false` keeps the task, observes its exception (a continuation that logs it is enough) and, if the task succeeds, checks the consent state again before it publishes the capability. So a player who withdrew consent during the wait does not find collection opened by a late success, and the adapter's `StopCollection` still runs for an SDK that started after the withdrawal. The helper is meant as a teaching sketch of the bound, and a lifecycle with cancellation and retries is beyond it.
 
 The stores' privacy declarations follow from the SDKs in the build. [Google Play's Data safety form](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en) covers data collected and handled through the third-party libraries and SDKs in the app, and Apple's page on user privacy asks the developer to describe what third-party code, such as an analytics or advertising SDK, collects, how it is used and whether it tracks. Adding or upgrading an SDK is therefore also a change to those declarations, and the evaluation sheet of [[#sdk-evaluation]] holds the answers: what the SDK's documentation says it collects, its privacy manifest, and Xcode's privacy report.
 
@@ -533,7 +576,7 @@ internal sealed class IosAnalyticsShim : IAnalyticsShim
 #endif
 ```
 
-The iOS half exports the same five functions from an Objective-C++ file. Each copies its string arguments before it returns, since the marshaled copies are freed when the call ends ([[#ios-native-calls]]), and then calls the SDK on the [[main queue]]:
+The iOS half exports the same five functions from an Objective-C++ file. The block below shows one of the five, `AnalyticsShim_LogEvent`, and `VendorAnalytics` is a placeholder, so it is not a complete plugin that links. `AnalyticsShim_Start`, `AnalyticsShim_SetCollectionEnabled`, `AnalyticsShim_SetUserId` and `AnalyticsShim_Flush` remain to be written the same way. Each copies its string arguments before it returns, since the marshaled copies are freed when the call ends ([[#ios-native-calls]]), and then calls the SDK on the [[main queue]]:
 
 ```objective-cpp
 #import <Foundation/Foundation.h>
@@ -727,6 +770,8 @@ The method is the same for each collision:
 3. Route the others through the owner. The owner receives each event and passes it to the SDK it belongs to, through the method that SDK documents for being handed events by the app, with that SDK's own handling turned off.
 4. Escalate to the vendors with a minimal reproduction: an empty project with the two SDKs and nothing else, which takes the game out of the question.
 5. Write the decision down where the next upgrade will find it: which component owns which resource, and why.
+
+A small invented packet can stand in for a project. Game G uses three SDKs. A crash reporter installs an uncaught-exception handler at start. A push SDK and an ads SDK each declare a messaging service in their manifests, and both replace the application delegate's notification methods on iOS. An attribution SDK reads the launch URL from the activity's intent and expects to extend the activity. Name each shared resource, the owner you would pick, and how the others would be routed through it.
 
 Exercise: List every process-wide resource that the SDKs in a project you know touch, such as crash handlers, push callbacks, the application delegate, the activity and the main thread at start-up, with the owner of each.
 

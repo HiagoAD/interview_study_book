@@ -5,7 +5,7 @@ chapter: 11: CI/CD and Jenkins for Unity mobile builds
 
 ## The shape of a mobile pipeline {#ci-pipeline-shape}
 
-Continuous integration, CI, builds and tests every change on machines that nobody works on, and continuous delivery, CD, carries the builds it makes toward the stores. For a Unity mobile game, one change goes through Unity, then through [[Gradle]] for Android ([[#gradle-project]]) and Xcode for iOS, which runs only on macOS ([[#xcode-build-flow]]). A pipeline is the ordered list of those steps, written down so that a machine repeats them, and the machines that run them are called agents. What a developer checks by eye, a message that says the build succeeded or a file in a folder, a pipeline checks in code, because nobody watches it.
+Continuous integration, CI, builds and tests every change on machines that nobody works on, and continuous delivery, CD, carries the builds it makes toward the stores. For a Unity mobile game, one change goes through Unity, then through [[Gradle]] for Android ([[#gradle-project]]) and Xcode for iOS, which runs only on macOS ([[#xcode-build-flow]]). A pipeline is the ordered list of those steps, written down so that a machine repeats them, and the machines that run them are called agents. A pipeline checks success in code, because nobody watches it: each stage verifies the message or the file that a developer would otherwise check by eye.
 
 A pipeline for a Unity mobile game has these stages. Each one leaves evidence that it did its work, and the stage fails when the evidence is missing:
 
@@ -151,19 +151,40 @@ rm -rf results
 ci/unity.sh editmode -runTests -testPlatform EditMode -testResults results/editmode.xml
 ```
 
-The Test Framework's runner ends the Editor itself when the run is over and sets the exit code, so the command has no `-quit`, which [Unity's reference for the runner](https://docs.unity3d.com/6000.3/Documentation/Manual/test-framework/reference-command-line.html) says is not supported while tests run. In the source of version 1.6, the one Unity 6.3 includes, a run with a failed test returns 2, a run that could not start, for example because the scripts did not compile, returns 3, and a run that completes without executing any test returns 0, like a run that passed. A filter that matches nothing ends that way, and so does a test assembly that the platform leaves out. In a Unity 6.3 test, a run whose filter matched no test exited with 0 and wrote a results file that reported `Passed`. The results file follows NUnit's XML format, and its `test-run` element's `total` attribute counts the test cases of the run, 0 in that file, so the stage checks that it is above zero; the next section shows the Jenkins step that does. Unity's `total` includes skipped tests, and so does the step's check, so a run whose tests were all skipped passes both; `passed`, beside `total`, counts the tests that ran and passed. The `rm -rf` matters because an agent keeps its workspace between builds, and a stage that reads an old results file reports an old run.
+The Test Framework's runner ends the Editor itself when the run is over and sets the exit code, so the command has no `-quit`, which [Unity's reference for the runner](https://docs.unity3d.com/6000.3/Documentation/Manual/test-framework/reference-command-line.html) says is not supported while tests run. In the source of version 1.6, the one Unity 6.3 includes, a run with a failed test returns 2, a run that could not start, for example because the scripts did not compile, returns 3, and a run that completes without executing any test returns 0, like a run that passed. A filter that matches nothing ends that way, and so does a test assembly that the platform leaves out. In a Unity 6.3 test, a run whose filter matched no test exited with 0 and wrote a results file that reported `Passed`. The results file follows NUnit's XML format, and its `test-run` element's `total` attribute counts the test cases of the run, 0 in that file, so the stage checks the file with a script, below. `total` includes skipped tests, so a check of `total` alone would pass a run in which every test was skipped; `passed`, beside `total`, counts the tests that ran and passed, and `failed` and `skipped` count the rest. The `rm -rf` matters because an agent keeps its workspace between builds, and a stage that reads an old results file reports an old run.
+
+```bash
+#!/bin/bash
+# ci/check-results.sh <results file>: passes only when this run executed tests and none failed.
+set -euo pipefail
+file="$1"
+if [ ! -s "$file" ]; then
+  echo "No results file at $file" >&2
+  exit 1
+fi
+run="$(grep -m1 -o '<test-run [^>]*' "$file" || true)"
+count() { echo "$run" | grep -o " $1=\"[0-9]*\"" | grep -o '[0-9]*' || echo 0; }
+total=$(count total) passed=$(count passed) failed=$(count failed) skipped=$(count skipped)
+echo "tests: total=$total passed=$passed failed=$failed skipped=$skipped"
+if [ "$failed" -gt 0 ] || [ "$passed" -eq 0 ]; then
+  echo "A run must pass at least one test and fail none" >&2
+  exit 1
+fi
+```
+
+The policy is that a run passes when at least one test passed and none failed, and the script prints the skipped count so that a rise shows in the log; a project that forbids skips adds `[ "$skipped" -eq 0 ]` to the condition. A missing counter reads as 0, so a file without a `test-run` element fails too. The script is small enough to test on its own, with six hand-written results files: none at all, an empty one, one with `total="0"`, one with every test skipped, one with a failed test and one with only passing tests. The first four and the failed one must exit with 1, and the last with 0. A stale file cannot pass because of the `rm -rf`; to see that, make Unity crash before it writes anything, and the stage fails on the missing file.
 
 The toolchain is an input of the build, like the code. `ProjectVersion.txt` names the Editor version that the project was saved with, and `ci/unity.sh` runs that version or stops. Unity 6.3's Android module installs the JDK, SDK and NDK that its Gradle project expects ([[#gradle-project]]), and the pipeline builds with those, not with whatever the agent's `PATH` finds. On a Mac with several Xcodes, `xcode-select -switch` selects the default Xcode for the command-line tools and `xcode-select --print-path` shows which one it is; the default belongs to the whole machine, so the pipeline checks it at the start of each build. CocoaPods is pinned through Bundler, as [[#xcode-cocoapods]] describes. Each build prints every tool's version into its log, so a build that broke overnight can be compared with the last one that passed, line by line.
 
 Exercise: Write your pipeline's stages as a table like the one above, with the evidence that each must produce, and mark the stages that pass today on an exit code alone.
 
 ?? ci-batchmode-evidence A test stage runs Unity's Test Framework in batch mode, and the Editor exits with code 0. What else does the stage check before it reports a pass?
-* That a results file from this run exists and counts more than zero tests
+* A results file from this run with a passed test and no failed one
 - Nothing more, since the runner returns 0 once tests have run and passed
 - That the last lines of the log hold no error, since failures print last
 - That the Editor's log file exists, which shows that the run started
 - That the run took longer than a minute, which shows that tests executed
-> An exit code of 0 says that the runner found no failure, and a run that executed nothing has none: in the Test Framework's source, as read for this chapter, a run that completes without executing a test returns the same code as a passing run. A filter that matched nothing ends that way. A results file written by this run, whose `total` is above zero, is the evidence that the run found tests, and its `passed` count shows that they ran rather than being skipped.
+> An exit code of 0 says that the runner found no failure, and a run that executed nothing has none: in the Test Framework's source, as read for this chapter, a run that completes without executing a test returns the same code as a passing run. A filter that matched nothing ends that way. A results file written by this run is the evidence that the run found tests, but `total` includes skipped tests, so the stage's policy, as `ci/check-results.sh` applies it, is that at least one test passed and none failed: the `passed` count is what shows that a test ran, and a run in which every test was skipped reports a `total` above zero and no pass.
 
 ?+ An Android build stage runs Unity with `-executeMethod` and `-quit`. Unity exits with 0, and `build/` holds no AAB. What does the stage report?
 * A failure, since the artifact it exists to produce is missing
@@ -218,6 +239,41 @@ The pipeline is code: a `Jenkinsfile` at the root of the game's repository, revi
 - `stages` holds `stage` blocks, and each stage has exactly one of `steps`, `stages`, `parallel` or `matrix`.
 - `when` decides whether a stage runs, and `post` runs steps after a stage or the pipeline, chosen by the result.
 
+The smallest useful pipeline is a test stage. A declarative pipeline checks out the repository by itself when its agent starts, so the skeleton needs no checkout stage:
+
+```groovy
+pipeline {
+    agent { label 'unity' }
+    options { timeout(time: 1, unit: 'HOURS') }
+    stages {
+        stage('Edit Mode tests') {
+            steps {
+                sh 'rm -rf results'
+                sh 'ci/unity.sh editmode -runTests -testPlatform EditMode -testResults results/editmode.xml'
+                sh 'ci/check-results.sh results/editmode.xml'
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'logs/*.log, results/*.xml', allowEmptyArchive: true
+        }
+    }
+}
+```
+
+The full Jenkinsfile below grows from it: the Prepare stage, a parallel build for each platform with its signing, the uploads for a Store build, and a message on failure. It calls scripts in `ci/`, and the chapter supplies most of them:
+
+| Script or method | Where it is supplied |
+| --- | --- |
+| `ci/unity.sh`, `Game.Pipeline.CiBuild` | The first section |
+| `ci/check-results.sh` | The first section |
+| `ci/ios-archive-and-export.sh`, `ci/ios-remove-signing.sh` | The section on secrets, with `ci/ExportOptions.plist` in [[#xcode-build-flow]] |
+| `ci/version-stamp.sh`, `ci/check-store-hosts.sh` | The last section |
+| `ci/play-upload.sh`, `ci/testflight-upload.sh` | Not supplied: project-specific placeholders for the upload paths that the last section describes |
+
+The labels are a sample's choices too. Because `ci/unity.sh` assumes the Hub's macOS install folder, every agent labeled `unity` here is a Mac, so the `unity` label on the test and Android stages does not mean that any operating system will do. The credential ids, the profile paths and the mail address are placeholders for a project's own.
+
 This Jenkinsfile builds both platforms in parallel, with a parameter that names the variant to build:
 
 ```groovy
@@ -247,6 +303,7 @@ pipeline {
             steps {
                 sh 'rm -rf results'
                 sh 'ci/unity.sh editmode -runTests -testPlatform EditMode -testResults results/editmode.xml'
+                sh 'ci/check-results.sh results/editmode.xml'
             }
             post {
                 always {
@@ -429,13 +486,13 @@ Exercise: Write a declarative Jenkinsfile skeleton for your game with the stages
 - The build fails, since `archiveArtifacts` is refused inside `post`
 > `success` runs only for a stage or pipeline whose status is success. Logs matter most when a build fails, so they go under `always`, which runs whatever the result, while the artifacts that exist only after a successful build, such as the [[AAB]], go under `success`.
 
-?+ A stage fails. In which order do its `post` blocks `cleanup`, `failure` and `always` run?
-* `always`, then `failure`, then `cleanup` after every other condition
-- `cleanup` first, so that the later blocks start from a clean workspace
-- `failure` first, since it matches the result, and then `always`
-- `failure` alone, since a failed stage skips `always` and `cleanup`
-- In the order that the Jenkinsfile lists them, from top to bottom
-> Jenkins runs post conditions in a fixed order: `always`, `changed`, `fixed`, `regression`, `aborted`, `failure`, `success`, `unstable`, `unsuccessful`, and last `cleanup`, which runs after every other condition has been evaluated, whatever the status. That makes `cleanup` the place for work that must follow all the reporting.
+?+ A stage's `failure` block reads a file from the workspace to write its report, and a cleanup step deletes the workspace. Why does the deletion belong in `cleanup`?
+* `cleanup` runs after every other condition, so the report is written first
+- `cleanup` runs only when the stage fails, so a good workspace stays intact
+- `cleanup` runs before `failure`, so the report reads a fresh workspace
+- `cleanup` is the one condition that can delete files after a failure
+- `cleanup` runs in the order that the Jenkinsfile lists its blocks
+> Jenkins runs `always` first and `cleanup` last, after every other condition has been evaluated, whatever the status. A deletion under `always` would run before the `failure` block and remove what it reads, so work that must follow all the reporting goes under `cleanup`.
 
 ?+ The pipeline's `post { failure { ... } }` sends a message, and a user aborts a run. Does the message go out?
 * No: the run's status is aborted, which `failure` does not match
@@ -445,13 +502,13 @@ Exercise: Write a declarative Jenkinsfile skeleton for your game with the stages
 - If the abort came while a step was already failing, and not otherwise
 > A run that someone stops has the aborted status, and `aborted` is the condition that matches it; `failure` matches the failed status. `post` still runs after an abort, so a pipeline that should report both uses `unsuccessful`, which matches any status but success, or both conditions.
 
-?+ Which `post` condition sends a message only when a build succeeds after a failed or unstable one?
-* `fixed`, which compares with the previous run's status
-- `success`, which runs on the first success after a failure
-- `changed`, which runs when the status went from bad to good
-- `always`, with the message saying whether the build recovered
-- `cleanup`, which runs once the failure has been cleaned up
-> `fixed` runs when the current run succeeds and the previous one failed or was unstable. `success` runs after each successful run, and `changed` after any change of status, including a success that turns into a failure.
+?+ A team wants one chat message when a broken pipeline turns green again, and none on the builds that were green already. Why is `fixed` the right condition?
+* It needs a success whose previous run failed or was unstable
+- `success` runs only on the first success after a failure
+- `changed` runs only when the status improves from the last run
+- `always` runs once per recovery, since it compares two runs
+- `cleanup` runs once the failure has been cleaned up
+> `fixed` runs when the current run succeeds and the previous one failed or was unstable, which is a recovery and nothing else. `success` runs after each successful run, so it would repeat the message on every green build, and `changed` runs after any change of status, including a success that turns into a failure.
 
 ## Secrets, credentials, and signing in CI {#ci-secrets-signing}
 
@@ -515,7 +572,26 @@ xcodebuild -exportArchive -archivePath build/Game.xcarchive \
   -exportOptionsPlist ci/ExportOptions.plist -exportPath build/ipa > logs/xcodebuild-export.log 2>&1
 ```
 
-Each `security` command does one thing, and the tool's manual explains the choices. The keychain gets a random password, which only this build knows; the manual calls `-p` insecure, since a process listing can show it, and what that exposes is one keychain that lives for one build. `set-keychain-settings -lut` locks it when the machine sleeps and after the timeout. `import` takes the `.p12` file's passphrase with `-P`, because without it the tool asks for the passphrase in a window, which nobody on an agent can answer, and `-T` lets `codesign` use the key. `set-key-partition-list` is the step that is easy to miss: the partition list limits access to a key by the code signature of the program that asks, the manual says that `codesign` needs `apple:` in it, and changing it takes the keychain's password. `list-keychains -s` sets the search list, and the command puts the new keychain first, with `xargs` passing on the keychains already in the list. On a Mac, with a throwaway keychain and a self-signed identity, these lines let `codesign` sign without a prompt, and the search list held the new keychain and then the login keychain. The profile goes where Xcode 16 and later keep downloaded profiles. The archive is built unsigned, and the export signs it with the team, profile and method that `ci/ExportOptions.plist` names, the property list that [[#xcode-build-flow]] shows.
+The stage has a fixed lifecycle, and each step has a reason:
+
+1. The script makes a keychain with a random password, and records its path in `.signing-keychain`.
+2. It imports the key, gives `codesign` access to it, puts the keychain first in the search list and copies the provisioning profile where Xcode looks for it.
+3. It archives the project unsigned, and the export signs it with the team, profile and method that `ci/ExportOptions.plist` names, the property list that [[#xcode-build-flow]] shows.
+4. Whatever happened in steps 1 to 3, `post { always }` runs the cleanup script below, which deletes the keychain, its directory and the copied profile.
+
+Each `security` command does one thing, and the tool's manual explains the choices:
+
+| Command | What it does here |
+| --- | --- |
+| `create-keychain -p` | Makes the keychain with a random password that only this build knows. The manual calls `-p` insecure, since a process listing can show it, and what that exposes is one keychain that lives for one build |
+| `set-keychain-settings -lut` | Locks the keychain when the machine sleeps and after the timeout |
+| `import -P -T` | Takes the `.p12` file's passphrase with `-P`, because without it the tool asks in a window that nobody on an agent can answer, and `-T` lets `codesign` use the key |
+| `set-key-partition-list` | The step that is easy to miss: the partition list limits access to a key by the code signature of the program that asks, the manual says that `codesign` needs `apple:` in it, and changing it takes the keychain's password |
+| `list-keychains -s` | Sets the search list, with the new keychain first and `xargs` passing on the keychains already in the list |
+
+The profile goes where Xcode 16 and later keep downloaded profiles.
+
+The evidence for this sequence comes from a local test on a Mac, with a throwaway keychain and a self-signed identity: these lines let `codesign` sign without a prompt, and the search list held the new keychain and then the login keychain.
 
 ```bash
 #!/bin/bash
@@ -528,7 +604,7 @@ fi
 rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/ci-game-app-store.mobileprovision"
 ```
 
-`delete-keychain` deletes the keychain and removes it from the search list, and in the same test the cleanup left the search list as it had been. The cleanup runs under `always` because a failed archive ends the stage's steps, and a deletion placed after it would never run; Jenkins deletes the file that it bound, not what a script made from it. Unity itself needs a license on each agent too. With a Unity Pro license, the pipeline activates it from the command line, with `-serial`, `-username` and `-password` taken from the same credentials store, and returns it with `-returnlicense` when the agent is retired; Unity's page on these commands says that they do not apply to Unity Personal. With floating licensing, the organization runs a licensing server, and each agent takes a license from its pool when the Editor starts and gives it back when the last Editor on that machine closes.
+`delete-keychain` deletes the keychain and removes it from the search list, and in the same test the cleanup left the search list as it had been. The temporary file that the `file` binding wrote is a different thing from what the script made: Jenkins deletes its own bound file when the block ends, and the keychain, its directory and the copied profile are the script's, so the script removes them. The cleanup runs under `always` because a failed archive ends the stage's steps, and a deletion placed after it would never run; Unity itself needs a license on each agent too. With a Unity Pro license, the pipeline activates it from the command line, with `-serial`, `-username` and `-password` taken from the same credentials store, and returns it with `-returnlicense` when the agent is retired; Unity's page on these commands says that they do not apply to Unity Personal. With floating licensing, the organization runs a licensing server, and each agent takes a license from its pool when the Editor starts and gives it back when the last Editor on that machine closes.
 
 Exercise: List every secret your pipeline uses, where it is stored, who can read it, which steps bind it, and how it is rotated.
 
@@ -608,7 +684,7 @@ The native tools keep caches on the agent too. Gradle keeps the dependencies it 
 
 Release candidates build clean. Daily builds use the caches; a candidate builds from a fresh checkout, with no `Library` and no output from earlier builds, with `deleteDir()` or a new workspace. Then nothing but the commit and the pinned tools decides what ships, a fault in a cache cannot reach players, and each release proves that the game still builds from its repository alone. It costs one slow build per release.
 
-Exercise: Time each stage of your pipeline with and without its cache, decide which caches pay for themselves, and write down what each one's key must include.
+Exercise: Time each stage of your pipeline with and without its cache, decide which caches pay for themselves, and write down what each one's key must include. Without a pipeline, use two invented timings instead: a build with a restored `Library` that takes 6 minutes, and a clean build of the same commit that takes 31. Say which stage accounts for most of the gap, whether restoring the cache pays for its storage and transfer, and which three inputs the key must name.
 
 ?? ci-cache-key Which key suits a cached `Library` folder that the Android builds of one project share from one commit to the next?
 * The Unity version, the build target and a hash of the package lock file
@@ -652,33 +728,26 @@ Exercise: Time each stage of your pipeline with and without its cache, decide wh
 
 ## Failures that happen only in CI {#ci-only-failures}
 
-A build that passes on a developer's machine and fails on an agent is the most common CI failure, and the cause is a difference between the two machines. These are the usual ones:
-
-- A clean checkout holds what was committed and nothing more. A file that the developer's build relied on but nobody committed, or that `.gitignore` excludes, is missing. A file that [[Git LFS]] stores arrives as a pointer when the agent does not have Git LFS installed or the checkout does not pull LFS files; Jenkins's Git plugin pulls them after the checkout when the job asks it to.
-- Tool versions differ unless the pipeline pins them and prints them, as the first section does.
-- The environment differs: the variables that a developer's shell sets, and the locale and time zone, which change how numbers and dates are parsed and printed.
-- An agent may have no graphics device. Under `-nographics` Unity initializes none, and a step that needs one fails, such as baking lighting, which Unity's command-line reference says needs a GPU.
-- Signing state differs, with a locked keychain or a certificate that expired ([[#xcode-signing-model]]).
-- A firewall or proxy can stand between the agent and a package repository.
-- State is shared: a workspace keeps the files of earlier builds, two builds can share a [[Gradle]] daemon or a `Library`, and disks fill up.
-- File systems differ in case. A path written `Hero.png` for a file named `hero.png` works on a case-insensitive file system and fails on a case-sensitive one, as a Linux agent's usually is.
-- Git records whether a file is executable, and a script that runs on the developer's machine fails with `Permission denied` on an agent when the repository has it without that bit.
-- A stage that grows past its timeout is aborted.
-
-The method starts with the whole log. The console's last lines usually hold the last symptom, a message that the build failed, and the first error holds the cause; later errors often follow from it. The pipeline writes Unity's log and `xcodebuild`'s to files and archives them under `always`, so the log of a failed build is complete and in one place. Next, reproduce the failure with the pipeline's exact command in a fresh clone of the same commit, on a machine with the agent's tool versions; because the Jenkinsfile calls scripts in `ci/`, the command is the same one that a developer runs. Compare the tool versions that the failing build printed with those of the last build that passed. And when the pipeline itself changed, bisect it: the Jenkinsfile and its scripts are in the repository, so `git bisect` finds a change to the build as it finds one to the game.
+A build that passes on a developer's machine and fails on an agent is the most common CI failure, and the cause is a difference between the two machines: what the checkout holds, the tools, the environment, the signing state, the network, the state that builds share, or a limit such as the timeout. The table lists the usual symptoms with a first check for each. The environment row covers the variables that a developer's shell sets, and the locale and time zone, which change how numbers and dates are parsed and printed.
 
 | Symptom | Likely cause | First check |
 | --- | --- | --- |
-| An asset fails to import, and its file is a few lines of text | A Git LFS pointer instead of the file | The file's first line, which in a pointer names the LFS specification |
-| A file is missing on every agent and present on developers' machines | It was never committed, or it is ignored | A fresh clone of the commit |
+| An asset fails to import, and its file is a few lines of text | A [[Git LFS]] pointer instead of the file, because the agent lacks Git LFS or the checkout does not pull its files; Jenkins's Git plugin pulls them after the checkout when the job asks it to | The file's first line, which in a pointer names the LFS specification |
+| A file is missing on every agent and present on developers' machines | It was never committed, or `.gitignore` excludes it | A fresh clone of the commit |
 | A file is missing on a Linux agent only | A path whose case differs from the file's name | The path in the code against the name in the repository |
-| `codesign` fails, or waits until the stage's timeout | A locked keychain, a key that `codesign` may not use, or an expired certificate | `security find-identity -p codesigning` on the agent |
-| `Permission denied` when a script starts | The script is not executable in the repository | `ls -l` on the script in a fresh clone |
+| `codesign` fails, or waits until the stage's timeout | A locked keychain, a key that `codesign` may not use, or an expired certificate ([[#xcode-signing-model]]) | `security find-identity -p codesigning` on the agent |
+| `Permission denied` when a script starts | Git records whether a file is executable, and the repository has the script without that bit | `ls -l` on the script in a fresh clone |
 | A test fails on the agent only, around dates or numbers | The agent's locale or time zone | The locale and time zone, printed in the log |
 | Steps fail at random with write errors | A full disk | The free space, printed at the start of the build |
+| The same commit builds on one agent and fails on another | Tool versions differ, because the pipeline does not pin and print them | The versions in the two logs, as the first section prints them |
+| A step fails under `-nographics`, such as baking lighting | The agent has no graphics device, and Unity's command-line reference says that baking needs a GPU | The step against Unity's command-line reference |
+| A package or dependency download fails on the agent only | A firewall or proxy between the agent and the repository | The same download from a shell on the agent |
+| A build fails after an earlier build passed on the same agent | Shared state: the workspace keeps earlier builds' files, and two builds can share a [[Gradle]] daemon or a `Library` | The same commit in a clean workspace |
 | A stage is aborted with no error of its own | Its timeout | The stage's duration over the last builds |
 
-Debugging exercise: Take your last CI failure and reproduce it from a fresh clone of its commit with the pipeline's exact command. Write down what differed from your machine and which row of the table it belongs to.
+The method starts with the whole log. The last lines often report only that the build failed; the first error usually holds the cause, and later errors often follow from it. The pipeline writes Unity's log and `xcodebuild`'s to files and archives them under `always`, so the log of a failed build is complete and in one place. Next, reproduce the failure with the pipeline's exact command in a fresh clone of the same commit, on a machine with the agent's tool versions; because the Jenkinsfile calls scripts in `ci/`, the command is the same one that a developer runs. Compare the tool versions that the failing build printed with those of the last build that passed. And when the pipeline itself changed, bisect it: the Jenkinsfile and its scripts are in the repository, so `git bisect` finds a change to the build as it finds one to the game.
+
+Debugging exercise: Take your last CI failure and reproduce it from a fresh clone of its commit with the pipeline's exact command. Write down what differed from your machine and which row of the table it belongs to. Without a failure of your own, invent one from the table: write the two log lines that a missing file on a Linux agent would leave, and the command that reproduces it in a fresh clone.
 
 ?? ci-clean-clone A build passes on a developer's machine and fails on every agent with a missing file. What is the first step?
 * Run the pipeline's exact command in a fresh clone of the same commit
@@ -776,7 +845,7 @@ Build the candidate once and promote that artifact. On Google Play, a release on
 
 The pipeline uploads and archives the symbols of every build that may reach players, because a crash report arrives with addresses, and only that build's symbols turn them into names. On iOS, the [[dSYMs]] are in the archive and go to Apple with the build when the export's `uploadSymbols` option is on ([[#xcode-build-flow]]). On Android, the bundle carries [[R8]]'s mapping file to Google Play ([[#gradle-r8-symbols]]): in the test bundle it sat under `BUNDLE-METADATA`, and Unity also wrote it beside the bundle, as `build/Game_mapping.txt`, which the Jenkinsfile archives. With Debug Symbols set to a zip, Unity writes the native symbols beside the bundle as well, named with the version and version code, and the Developer API uploads them to Play Console for that version as a deobfuscation file; Unity can also put them into the bundle. The game's crash reporter, the single one that chapter 7 calls for ([[#sdk-conflicts]]), needs its own copy of each file, uploaded with the tool its vendor provides. The pipeline also keeps a copy of its own, named by version and build number, outside Jenkins: `buildDiscarder` deletes old runs with their artifacts, while a version stays on players' devices for months, and a dSYM fits no build but its own. Development builds' artifacts can go after a few weeks; a release's symbols stay as long as any player can run it.
 
-Exercise: Trace a production crash back to its commit and its symbols using only what your pipeline records today, and list what was missing.
+Exercise: Trace a production crash back to its commit and its symbols using only what your pipeline records today, and list what was missing. Without archived releases, write a manifest for an invented build, `v1.8.0-512`, listing the files that must be kept to symbolicate its crashes and where each one is stored, and mark the entry that a rebuilt binary could not replace.
 
 ?? ci-build-once Candidate 1.8.0 (512) passed its checks on Google Play's internal track. How does it reach production?
 * By releasing version code 512 on the production track, the tested bundle
