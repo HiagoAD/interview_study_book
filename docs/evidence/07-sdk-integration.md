@@ -1,6 +1,6 @@
 # Evidence for chapter 07: Integrating third-party SDKs
 
-What Phase 25 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 25 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 ## Checked, and against what
 

@@ -1,6 +1,6 @@
 # Evidence for chapter 15: Debugging across boundaries
 
-What Phase 33 checked the chapter's claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 33 checked the chapter's claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 The sources were read on September 27, 2026. Unity documentation is pinned to 6000.3, and the installed tools are from 6000.3.11f1. The native packaging reference is pinned to Android Gradle Plugin 8.10, the version used by the probe's exports. The two worked incidents and their diagnostic records are explicitly invented teaching cases, not reports of device tests.
 
@@ -99,4 +99,4 @@ The purchase example has one explicit invented cause, the adapter's request-cont
 - Inline teacher's read: checked all prose, 50 variants, explanations, glossary additions and evidence. Replaced an off-concept timestamp-ordering variant with a completion-boundary variant. Replaced implausible distractors in three variants with competing diagnostic actions. Replaced a loose chapter cross-reference for StreamingAssets with the exact Unity API reference. Checked that every correct answer avoids changeable version numbers, dates and limits, and that explanations distinguish evidence from hypotheses.
 - Prose detector: ran the bundled engine per section and per added glossary entry with technical context and rendered-Markdown source mode. The CLI wrapper lacks the source-mode flag, so a scratch Node script supplied both options directly. The final section scores were all 1; glossary scores were zero. Remaining flags were narrow technical vocabulary. The earlier section-id hashtag flag disappeared when the StreamingAssets cross-reference was replaced for accuracy. The judgment-only read found no further justified prose edit.
 
-Automated completion figures are recorded in the Phase 33 log in PLAN.md. The user's manual reading and answering of the chapter remains the plan's manual check.
+Automated completion figures are recorded in the Phase 33 log in plan-history.md. The user's manual reading and answering of the chapter remains the plan's manual check.

@@ -1,6 +1,6 @@
 # Evidence for chapter 03: Calling iOS from C# and back
 
-What Phase 21 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 21 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 ## Checked, and against what
 

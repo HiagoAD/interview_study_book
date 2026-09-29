@@ -6,7 +6,7 @@ usage: python3 docs/evidence/codex/check_receipts.py <evidence.json> [--rerun]
 Prints one line per failed receipt and a summary. --rerun also re-runs a receipt's command when its program is a
 read-only tool (javap, monodis, grep and so on) and looks for the quote in the fresh output. Fetched pages are cached
 in RECEIPTS_CACHE, by default receipts-pages/ in the system's temporary folder, with index.tsv mapping URLs to files.
-Apple's documentation pages are read through their JSON, and RFC page headers are dropped. See docs/PLAN.md,
+Apple's documentation pages are read through their JSON, and RFC page headers are dropped. See docs/plan-history.md,
 "Delegated evidence".
 """
 import hashlib, html, json, os, re, shlex, subprocess, sys, tempfile, unicodedata

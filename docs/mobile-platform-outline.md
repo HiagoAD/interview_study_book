@@ -1,6 +1,6 @@
 # Outline: The Platform Layer
 
-The specification for the second book. [PLAN.md](PLAN.md), under “Feature: second book”, says
+The specification for the second book. [plan-history.md](plan-history.md), under “Feature: second book”, says
 how the phases write it and holds the rules every chapter follows. This file says what each
 chapter teaches and tests.
 
@@ -94,7 +94,7 @@ proposals until the phase that writes them commits: a phase may rename or replac
 in its log. After that commit they are progress and never change.
 
 Each section below lists what it must teach, the concepts it tests (one idea each), the evidence
-its claims need beyond the defaults in PLAN.md, and an idea for its closing exercise.
+its claims need beyond the defaults in plan-history.md, and an idea for its closing exercise.
 
 ## 01: The platform layer and the call path
 

@@ -1,6 +1,6 @@
 # Evidence for chapter 13: Designing core game services
 
-What Phase 31 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 31 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 The documentation was read on September 26, 2026. The Redis command pages are the current reference at that date. The Addressables pages below are pinned to package 2.9. Numerical service limits and store windows are dated to this read.
 

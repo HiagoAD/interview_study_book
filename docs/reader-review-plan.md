@@ -45,7 +45,7 @@ its absence does not block this review. Do not invoke an automatic rewrite mode.
 ## Preparation and checkpoints
 
 1. Read `CLAUDE.md`, `PROJECT.md`, this plan, the outline's scope and reader, and
-   `docs/PLAN.md`'s writing rules and Phase 35. Read relevant evidence or phase
+   `docs/plan-history.md`'s writing rules and Phase 35. Read relevant evidence or phase
    decisions only when needed to interpret a passage.
 2. Record the starting commit and working-tree status. Review the actual working
    tree, including pre-existing edits, and never revert them. Record SHA-256
@@ -208,5 +208,5 @@ plan is a separate task with whatever authorization the user gives then.
   links to the summary and editing plan.
 
 No application build or network link sweep is needed for report-only work.
-Later content edits use the checks required by `docs/PLAN.md`, including content
+Later content edits use the checks required by `docs/PLAN.md` and `docs/plan-history.md`, including content
 validation, style and question guards; reviews themselves do not waive them.

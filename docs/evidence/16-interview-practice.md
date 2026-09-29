@@ -1,6 +1,6 @@
 # Evidence for chapter 16: Interview practice for platform roles
 
-What Phase 34 checked the chapter's claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 34 checked the chapter's claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 This chapter teaches how to answer, not how a platform behaves. Nearly every technical statement in it restates a section of chapters 1 to 15, and each of those sections was checked against its own evidence when it was written (see the evidence file named like it). So the check here is that each restatement matches its source section, read on September 29, 2026 against the working tree at `7d2c7e0`. The chapter adds no external link and no new figure.
 
@@ -42,7 +42,7 @@ Codex was not used. The previous phase found the delegated CLI unable to start i
 
 ## Rests on documentation alone
 
-Nothing new. The claims about interview practice (what interviewers grade, a stated assumption, follow-ups that change a constraint) are the book's teaching advice, drawn from the design-round guides cited under **Decisions: system design** in PLAN.md and from the first book; they are not presented as any studio's policy.
+Nothing new. The claims about interview practice (what interviewers grade, a stated assumption, follow-ups that change a constraint) are the book's teaching advice, drawn from the design-round guides cited under **Decisions: system design** in plan-history.md and from the first book; they are not presented as any studio's policy.
 
 ## Narrowed or cut
 

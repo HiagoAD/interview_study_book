@@ -1,6 +1,6 @@
 # Evidence for chapter 08: Backend clients: HTTP, sessions, and data contracts
 
-What Phase 26 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence. Codex was close to the end of its allowance, so the session gathered the evidence itself under the plan’s fallback, rule A, and wrote the receipts in the checker’s format: 190 receipts for 111 claims, none failed on re-fetch (114 documentation, 18 shipped files, 58 from runs). The session’s teacher’s read took the place of the blind review; what it caught is at the end.
+What Phase 26 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence. Codex was close to the end of its allowance, so the session gathered the evidence itself under the plan’s fallback, rule A, and wrote the receipts in the checker’s format: 190 receipts for 111 claims, none failed on re-fetch (114 documentation, 18 shipped files, 58 from runs). The session’s teacher’s read took the place of the blind review; what it caught is at the end.
 
 ## Checked, and against what
 

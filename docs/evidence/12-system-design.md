@@ -1,6 +1,6 @@
 # Evidence for chapter 12: System design for game services: method and building blocks
 
-What Phase 30 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 30 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 The documentation was fetched on September 26, 2026. PostgreSQL pages under `/docs/current/` describe major version 18. The Redis commands reference lists version 8.10, the Kafka sources are pinned to 4.3, and the RabbitMQ reference identifies version 4.3.6. The chapter gives Unity's service names and quotas with that date.
 
@@ -8,18 +8,18 @@ The documentation was fetched on September 26, 2026. PostgreSQL pages under `/do
 
 ### design-round-method
 
-- Published guides report a round of roughly 45 to 60 minutes; this is reported practice, not a guarantee: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
+- Published guides report a round of roughly 45 to 60 minutes; this is reported practice, not a guarantee: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
 - Published guides report a round of roughly 45 to 60 minutes; this is reported practice, not a guarantee: confirmed. Source: https://www.techgrind.io/system-design/system-design-framework
 - A generic guide covers scoping, estimation, API design and deep dives: confirmed. Source: https://www.techgrind.io/system-design/system-design-framework
 - A generic guide advises following the interviewer toward two or three hard design problems: confirmed. Source: https://www.techgrind.io/system-design/system-design-framework
-- A guide reports grading requirements gathering, the component diagram, scaling reasoning and honest trade-offs: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
-- A published game-backend guide reports a leaderboard prompt: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
-- A published game-backend guide reports a matchmaking prompt: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
-- A published game-backend guide reports a session service with disconnects: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
-- A published game-backend guide reports pushing a live event to many clients: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
-- A published game-backend guide reports collecting gameplay events for later queries: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
-- A candidate's report names a payment system among a game studio's design prompts: confirmed. Source: The guides that PLAN.md lists under “Decisions: system design”.
-- The guide mentions an inventory as an object-oriented sketch, not clearly a backend system-design prompt: narrowed to Inventory appears as an object-oriented design exercise in this guide, not as a documented backend prompt. Source: The guides that PLAN.md lists under “Decisions: system design”.
+- A guide reports grading requirements gathering, the component diagram, scaling reasoning and honest trade-offs: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
+- A published game-backend guide reports a leaderboard prompt: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
+- A published game-backend guide reports a matchmaking prompt: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
+- A published game-backend guide reports a session service with disconnects: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
+- A published game-backend guide reports pushing a live event to many clients: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
+- A published game-backend guide reports collecting gameplay events for later queries: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
+- A candidate's report names a payment system among a game studio's design prompts: confirmed. Source: The guides that plan-history.md lists under “Decisions: system design”.
+- The guide mentions an inventory as an object-oriented sketch, not clearly a backend system-design prompt: narrowed to Inventory appears as an object-oriented design exercise in this guide, not as a documented backend prompt. Source: The guides that plan-history.md lists under “Decisions: system design”.
 - A mobile-system-design framework asks for offline operation using cached data: confirmed. Source: https://github.com/weeeBox/mobile-system-design
 - The mobile framework explicitly calls for conflict resolution: confirmed. Source: https://github.com/weeeBox/mobile-system-design
 - The mobile framework includes pagination for long feeds: confirmed. Source: https://github.com/weeeBox/mobile-system-design

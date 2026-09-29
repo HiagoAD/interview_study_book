@@ -1,6 +1,6 @@
 # Evidence for chapter 14: Running game services at scale
 
-What Phase 32 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 32 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 The documentation was read on September 27, 2026. Figures that change with time, such as Kubernetes's defaults and the status of the stores' age-range APIs, are dated to this read, and the chapter states them in prose alone.
 
@@ -29,7 +29,7 @@ Codex (GPT-6 Sol, `xhigh`) gathered 100 receipts in 26 minutes and 279,222 token
 - A load test should inspect whether popular clients queue work during an outage and use randomized backoff: confirmed. Source: https://sre.google/sre-book/addressing-cascading-failures/
 - Health checks that fail during overload can prevent the service from stabilizing: confirmed. Source: https://sre.google/sre-book/addressing-cascading-failures/
 
-- A survey of launch incidents describes a login queue as admission control that protects the database tier, admitting players at a rate that the storage layer can absorb: confirmed. Source: the survey of launch incidents that PLAN.md lists under “Decisions: system design”.
+- A survey of launch incidents describes a login queue as admission control that protects the database tier, admitting players at a rate that the storage layer can absorb: confirmed. Source: the survey of launch incidents that plan-history.md lists under “Decisions: system design”.
 - The same survey describes a 2021 outage of about 73 hours on a large game platform that ended with capacity restored in slices, since a cold fleet that accepts each client at once produces a thundering herd: confirmed. Source: the same survey.
 - The survey describes a weekend before a launch whose stated purpose was to push the live infrastructure until something gave: confirmed. Source: the same survey.
 - Servers that spend resources on requests that will exceed their deadlines on the client are a common theme of cascading outages: confirmed. Source: https://sre.google/sre-book/addressing-cascading-failures/
@@ -155,7 +155,7 @@ Codex (GPT-6 Sol, `xhigh`) gathered 100 receipts in 26 minutes and 279,222 token
 
 - The Kubernetes autoscaler, rolling deployment and termination behavior; cloud scaling and waiting room behavior; PostgreSQL lock and replication behavior; service level practice; store policies; and age signal status are documentation claims. No cluster, cloud account, production workload or store account was used to test them. The source URLs above are the receipts.
 
-- The survey of launch incidents that PLAN.md lists under Decisions: system design (https://www.cgmagonline.com/articles/how-online-games-stay-up) supplies context for login queues and staged recovery. It is a survey, so the design claims above use software documentation as their primary evidence. No incident name from that survey belongs in the chapter.
+- The survey of launch incidents that plan-history.md lists under Decisions: system design (https://www.cgmagonline.com/articles/how-online-games-stay-up) supplies context for login queues and staged recovery. It is a survey, so the design claims above use software documentation as their primary evidence. No incident name from that survey belongs in the chapter.
 
 - The SRE book describes restoring a cascading service by allowing a small share of traffic, waiting for servers to recover, and raising traffic gradually. The survey supplies an incident example. The chapter can describe that mechanism without identifying any game, studio or publisher.
 
@@ -199,7 +199,7 @@ Codex (GPT-6 Sol, `xhigh`) gathered 100 receipts in 26 minutes and 279,222 token
 
 - The outline gives no deletion procedure for backups or processors in this chapter. Chapter 13 already covers account deletion and backup handling. This chapter should connect its retention table to those workflows and avoid promising immediate physical removal from immutable backups.
 
-- The outline asks for incidents from published postmortems. The chapter describes what the survey that PLAN.md lists reports, a login queue's purpose, a 2021 outage restored in slices and a weekend of load before a launch, without naming a game, studio or publisher, and takes the mechanism of each from the SRE book. No primary postmortem was needed.
+- The outline asks for incidents from published postmortems. The chapter describes what the survey that plan-history.md lists reports, a login queue's purpose, a 2021 outage restored in slices and a weekend of load before a launch, without naming a game, studio or publisher, and takes the mechanism of each from the SRE book. No primary postmortem was needed.
 - The outline gives the login queue, rate limits and load shedding no concept of their own. The chapter tests them as variants of `design-autoscaling-lag`, since they are the admission control that the outline pairs with scheduled capacity as the answer to autoscaling's lag.
 
 ## Runs

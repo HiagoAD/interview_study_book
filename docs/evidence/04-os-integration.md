@@ -1,6 +1,6 @@
 # Evidence for chapter 04: Lifecycle, permissions, links, notifications, and sign-in
 
-What Phase 22 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 22 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 The reference Editor is Unity 6000.3.11f1. Editor paths below are relative to that installation. Export paths are relative to the separate PlatformLayerProbe project. No chapter content was read or written. The managed and native compile checks passed; no lifecycle or delivery behavior is presented as a completed device run.
 

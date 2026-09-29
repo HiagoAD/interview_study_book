@@ -1,6 +1,6 @@
 # Evidence for chapter 06: iOS builds: Xcode, signing, and CocoaPods
 
-What Phase 24 checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence. Documentation was read on 2026-09-25. The reference Editor is Unity 6000.3.11f1. Export paths below are relative to the probe project.
+What Phase 24 checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence. Documentation was read on 2026-09-25. The reference Editor is Unity 6000.3.11f1. Export paths below are relative to the probe project.
 
 ## Checked, and against what
 

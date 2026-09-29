@@ -1,6 +1,6 @@
 # Evidence for chapter 05: Android builds: Gradle, manifests, and dependencies
 
-What Phase 23 checked the chapter's claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase 23 checked the chapter's claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 ## Where it was checked
 

@@ -1,11 +1,11 @@
-<!-- Template for the evidence run in docs/PLAN.md, “Delegated evidence”. The session replaces each {{…}} and deletes this comment. -->
+<!-- Template for the evidence run in docs/plan-history.md, “Delegated evidence”. The session replaces each {{…}} and deletes this comment. -->
 # Evidence for chapter {{NN}} of The Platform Layer
 
 You gather evidence for a chapter that someone else will write from your results. You do not write the chapter. You check claims and return receipts, and a script verifies every receipt before anyone trusts it: each `quote` is searched for, after whitespace, entity and quote-mark normalization, in the page at its `url`, in the file at its `file` from its `line`, or in the output at its `log`. A quote that is not found counts as a failed receipt. So copy quotes exactly: one contiguous passage, never paraphrased, never two sentences joined across a gap, no ellipses. A quote must state the claim, not just name its subject: a bare setting or API name proves that the name exists and nothing more, so quote the sentence that says what the claim says.
 
 ## Where things are
 
-- The site's repo is the working directory, `~/Documents/InterviewWebsite`. The book is `content/mobile-platform/`. Do not read the chapter files; this brief holds what you need. The project's evidence rules are in `docs/PLAN.md` under “Decisions: evidence”.
+- The site's repo is the working directory, `~/Documents/InterviewWebsite`. The book is `content/mobile-platform/`. Do not read the chapter files; this brief holds what you need. The project's evidence rules are in `docs/plan-history.md` under “Decisions: evidence”.
 - Reference version: Unity 6000.3.11f1, installed at `/Applications/Unity/Hub/Editor/6000.3.11f1/` (call it `$E`).
   - iOS Trampoline sources: `$E/PlaybackEngines/iOSSupport/Trampoline/` (`Classes/UnityAppController.mm`, `Classes/UI/UnityScene.mm`, `Classes/PluginBase/`, `Classes/Preprocessor.h`, `Info.plist`).
   - Android: `$E/PlaybackEngines/AndroidPlayer/`: `Tools/GradleTemplates/`, `Variations/il2cpp/Release/Classes/classes.jar`, `OpenJDK/bin/javap` and `javac`, `SDK/platforms/android-NN/android.jar` (use the highest NN present).
@@ -52,7 +52,7 @@ Write `docs/evidence/{{NN}}-{{SLUG}}.md` in this form, in plain English prose an
 ```
 # Evidence for chapter {{NN}}: {{TITLE}}
 
-What Phase {{PHASE}} checked the chapter’s claims against, and where the outline was wrong. [PLAN.md](../PLAN.md), under “Decisions: evidence”, says what counts as evidence.
+What Phase {{PHASE}} checked the chapter’s claims against, and where the outline was wrong. [plan-history.md](../plan-history.md), under “Decisions: evidence”, says what counts as evidence.
 
 ## Checked, and against what
 
